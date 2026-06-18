@@ -19,6 +19,142 @@
 | iapetus | code counting | [patterns/iapetus-code-counting.md](patterns/iapetus-code-counting.md) | Grammar coverage vs. real-world source variety |
 | hyperion | network listener | [patterns/hyperion-network-listener.md](patterns/hyperion-network-listener.md) | Connection establishment vs. request processing gap |
 
+### Veloren (veloren/veloren)
+
+A multiplayer voxel RPG written in Rust with an ECS architecture and client/server split.
+
+| Veloren crate / module | Problem Pattern | Rationale |
+|------------------------|----------------|-----------|
+| `server/` | **hyperion** (network listener) + **mars** (persist) | Game server: world simulation, player persistence, NPC AI, physics |
+| `client/` (voxygen/) | **mercury** (display) + **hyperion** (network listener) | Client: 3D rendering (vulkan), input handling, UI, audio |
+| `common/` | **neptune** (transform) | Shared types: components, protocol messages, math, world model |
+| `common/src/comp/` | **neptune** (transform) | ECS components: position, velocity, health, inventory, stats |
+| `common/src/sys/` | **saturn** (route) | ECS systems: physics, combat, AI, animation, interactions |
+| `common/src/terrain/` | **mars** (persist) | Voxel terrain: generation, modification, lighting, LOD |
+| `common/src/trade/` | **neptune** (transform) | Trading: item economy, buy/sell, market simulation |
+| `common/src/agent/` | **saturn** (route) | Agent AI: behaviour trees, pathfinding, combat tactics |
+| `assets/` | **europa** (configuration assembly) | Game data: ability definitions, item stats, NPC behaviour, loot tables — in `.ron` files |
+
+## Low-Level / Systems Projects
+
+### tock (tock/tock)
+
+An embedded OS for Cortex-M and RISC-V, written in Rust, with kernel/arch/board layering and MPU-based isolation.
+
+| tock crate / module | Problem Pattern | Rationale |
+|---------------------|----------------|-----------|
+| `kernel/` | (orchestration) | Core kernel: scheduler, process management, grant system, callback dispatch |
+| `kernel/src/sched/` | **saturn** (route) | Scheduler: cooperative round-robin, timer-based preemption, context switching |
+| `kernel/src/process/` | **mars** (persist) | Process management: memory layout, stack, app state, syscall context |
+| `kernel/src/grant.rs` | **uranus** (authenticate) | Grant system: per-process kernel capability allocation, memory isolation verification |
+| `kernel/src/syscall.rs` | **hyperion** (network listener) + **neptune** (transform) | Syscall interface: process→kernel→driver dispatch, argument marshalling |
+| `arch/` | **neptune** (transform) | Architecture support: Cortex-M, RISC-V, x86 — CSR/SFR abstractions, MPU, NVIC |
+| `arch/cortex-m/src/syscall.rs` | **neptune** (transform) | Context switch: `switch_to_user`, stack save/restore, SWI handling |
+| `arch/cortex-m/src/mpu.rs` | **jupiter** (validate) | MPU configuration: region programming, permission enforcement, context switch |
+| `arch/riscv/src/pmp.rs` | **jupiter** (validate) | Physical Memory Protection: PMP configuration for RISC-V |
+| `chips/` | **neptune** (transform) | Chip support: peripheral register maps, interrupt mapping, clock tree — HAL layer |
+| `chips/sam4l/src/` | **neptune** (transform) | Specific chip: GPIO, UART, SPI, I2C, ADC, timer — peripheral driver implementations |
+| `boards/` | **europa** (configuration assembly) | Board definitions: pin mappings, peripheral allocation, component wiring |
+| `capsules/` | **neptune** (transform) | Drivers in Rust: virtual alarms, I2C, SPI, UART, sensors, radio, storage — in-kernel driver framework |
+| `capsules/core/src/virtualizers/` | **saturn** (route) | Virtualiser: muxes a single hardware peripheral across multiple capsules (e.g., virtual alarm, virtual I2C) |
+| `libraries/tickv/` | **mars** (persist) | Tock-flash: log-structured key-value store for flash storage |
+| `tools/` | **jupiter** (validate) | Build tools: board dependency generation, ELF size analysis, TBF (Tock Binary Format) creation |
+
+### jemalloc (jemalloc/jemalloc)
+
+A general-purpose malloc(3) implementation emphasising fragmentation avoidance and scalable concurrency.
+
+| jemalloc module | Problem Pattern | Rationale |
+|-----------------|----------------|-----------|
+| `include/jemalloc/internal/arena.h` | **saturn** (route) | Arena: per-CPU allocation region — routes allocation requests by thread to minimise contention |
+| `include/jemalloc/internal/tcache.h` | **mars** (persist) | Thread-local cache: hot-slot cache for frequently used size classes, avoids arena locking |
+| `include/jemalloc/internal/bin.h` | **saturn** (route) | Bin: per-size-class slab allocator within an arena — routes allocations to the correct free list |
+| `include/jemalloc/internal/extent.h` | **neptune** (transform) | Extent: contiguous virtual memory region from OS — manages chunk allocation and deallocation |
+| `include/jemalloc/internal/pa.h` | **mars** (persist) | PA (Page Allocator): physical page management, coalescing, dirty page tracking |
+| `include/jemalloc/internal/ecache.h` | **mars** (persist) | Extent cache: recently freed extents kept for reuse without returning to OS |
+| `include/jemalloc/internal/hpa.h` | **mars** (persist) | HPA (Huge Page Allocator): transparent 2 MiB huge page support for large allocations |
+| `include/jemalloc/internal/san.h` | **jupiter** (validate) | Sanitizer support: guard pages, quarantines, UAF detection — optional safety via overhead |
+| `include/jemalloc/internal/sz.h` | **neptune** (transform) | Size classes: quantisation of allocation sizes into ~200 buckets (8B…4M), with slab sizing |
+| `include/jemalloc/internal/prof.h` | **mercury** (display) | Heap profiling: call-stack backtrace, allocation sampling, `jeprof` dump format |
+| `include/jemalloc/internal/ctl.h` | **europa** (configuration assembly) | Runtime control: `MALLOC_CONF` env var parsing, `mallctl` namespace for live tuning |
+| `include/jemalloc/internal/stats.h` | **mercury** (display) | Statistics: arena/bin/tcache stats, fragmentation analysis, printed via `malloc_stats_print()` |
+| `include/jemalloc/internal/emap.h` | **neptune** (transform) | Extent map: radix tree mapping virtual address → extent metadata — fast lookup for free/alloc tracking |
+| `include/jemalloc/internal/rtree.h` | **neptune** (transform) | Radix tree: compressed multi-level radix tree for virtual address to extent metadata lookup |
+| `include/jemalloc/internal/sec.h` | **mars** (persist) | SEC (Sanitizer Enabled Cache): bounded cache with quarantine zones for sanitizer builds |
+| `include/jemalloc/internal/eset.h` | **mars** (persist) | Extent set: non-overlapping extent data structure for coalescing buddies |
+
+### picolibc (keith-packard/picolibc)
+
+A C standard library for embedded systems, derived from Newlib, targeting small RAM footprints.
+
+| picolibc module | Problem Pattern | Rationale |
+|-----------------|----------------|-----------|
+| `libc/` | (orchestration) | Full C library: ctype, stdio, stdlib, string, time, math — per-architecture |
+| `libc/tinystdio/` | **mercury** (display) | Minimal stdio: printf/scanf without heap allocation, bare-metal file descriptors (getc/putc) |
+| `libc/tinystdio/printf` | **ganymede** (output formatting) | Printf: integer + float formatting without malloc — position-based, reentrant |
+| `libc/tinystdio/setvbuf.c` | **ganymede** (output formatting) | Buffering: unbuffered, line-buffered, fully-buffered modes for constrained systems |
+| `libc/string/` | **neptune** (transform) | String ops: memcpy, strlen, strchr — often implemented in assembly for speed |
+| `libc/machine/` | **neptune** (transform) | Machine-specific: setjmp/longjmp (assembly), TLS init — per-architecture overrides |
+| `picocrt/` | **saturn** (route) | Startup code: `.init` / `.fini` / `.ctors`, stack pointer init, BSS zeroing — arch-specific |
+| `libc/picolib/` | **mars** (persist) | TLS support: `__tls_get_addr`, thread-local errno (4 bytes vs traditional giant struct) |
+| `libc/picolib/atexit.c` | **mars** (persist) | `atexit` chain: linked list of cleanup handlers, registered at program start |
+| `newlib/libm/` | **neptune** (transform) | Math library: sin, cos, sqrt, etc — pure C or arch-specific optimised versions |
+| `semihost/` | **hyperion** (network listener) + **mercury** (display) | Semihosting: debug I/O via JTAG/SWD — ARM and RISC-V breakpoint-based console |
+| `scripts/` | **europa** (configuration assembly) | Build scripts: cross-compilation `.txt` files for meson — target-specific flag config |
+
+### libfuse (libfuse/libfuse)
+
+Reference implementation of the FUSE protocol, allowing userspace programs to export filesystems to the Linux kernel.
+
+| libfuse module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `lib/fuse_lowlevel.c` | **hyperion** (network listener) | Low-level API: reads kernel requests from `/dev/fuse`, dispatches, sends responses — async event loop |
+| `lib/fuse.c` | **neptune** (transform) | High-level API: wraps kernel inode→path translation, maintains a path-based callback contract |
+| `lib/fuse_loop.c` | **hyperion** (network listener) | Single-threaded event loop: `fuse_session_loop()` — reads request → calls handler → writes reply |
+| `lib/fuse_loop_mt.c` | **hyperion** (network listener) | Multi-threaded event loop: worker thread pool, request queue, concurrency control |
+| `lib/fuse_uring.c` | **hyperion** (network listener) | io_uring backend: async I/O via kernel submission/completion queues for zero-copy |
+| `lib/fuse_opt.c` | **europa** (configuration assembly) | Option parsing: `fuse_opt_parse()` — mount options, sub-type arguments |
+| `lib/fuse_signals.c` | **hyperion** (network listener) | Signal handling: SIGINT/SIGTERM → session exit, daemonisation |
+| `lib/fuse_daemonize.c` | **neptune** (transform) | Daemonisation: fork, detach, `setsid()`, redirect stdin/stdout/stderr |
+| `lib/mount.c` | **neptune** (transform) | Mount: `mount()` syscall with FUSE-specific options, `/etc/mtab` update |
+| `lib/mount_util.c` | **neptune** (transform) | Mount utilities: `fusermount` path resolution, `/dev/fuse` opening |
+| `util/fusermount.c` | **uranus** (authenticate) | `fusermount3` (setuid): validates mountpoint (no sticky, ownership check), `allow_other` via config |
+| `include/fuse_kernel.h` | **neptune** (transform) | Kernel ABI: struct definitions for FUSE protocol messages (readdir, open, write, etc.) |
+| `include/fuse.h` | **neptune** (transform) | High-level API: `fuse_operations` callback struct — 40+ operations mapped to userspace handler |
+| `include/fuse_lowlevel.h` | **hyperion** (network listener) | Low-level API: `fuse_lowlevel_ops` — raw kernel message handlers with inode-level interface |
+| `lib/buffer.c` | **ganymede** (output formatting) | Buffer management: segment-based buffer chain for FUSE message serialisation/deserialisation |
+| `example/` | **mercury** (display) | Examples: passthrough, hello, poll, notify — reference implementations of FUSE filesystems |
+
+### fio (axboe/fio)
+
+Flexible I/O tester: a low-level benchmarking tool that simulates user-specified I/O workloads against storage devices.
+
+| fio module | Problem Pattern | Rationale |
+|------------|----------------|-----------|
+| `backend.c` | **saturn** (route) | Job backend: rates, I/O flow engine, completion tracking — main I/O dispatch loop |
+| `engines/` | **neptune** (transform) | I/O engine abstraction: sync, mmap, libaio, io_uring, nvme, sg, nbd, http, rdma — 30+ backends |
+| `engines/io_uring.c` | **hyperion** (network listener) | io_uring engine: kernel submission/completion queue rings, SQ-poll, fixed buffers |
+| `engines/sync.c` | **hyperion** (network listener) | Sync engine: `pread`/`pwrite` syscall — simplest, no async |
+| `engines/libaio.c` | **hyperion** (network listener) | Linux AIO engine: `io_submit`/`io_getevents` — async with completion event polling |
+| `engines/nvme.c` | **hyperion** (network listener) | NVMe engine: `/dev/ng0n1` char device — `ioctl`-based I/O, submission queues |
+| `server.c` / `client.c` | **hyperion** (network listener) | fio server/client: TCP-based distributed I/O, receives jobs from client, sends results |
+| `stat.c` | **iapetus** (code counting) | Statistics: latency histogram (bucketed), IOPS, bandwidth, percentiles, clat/slat data |
+| `eta.c` | **iapetus** (code counting) | ETA calculation: time remaining, bandwidth estimate based on completed/duration ratio |
+| `lib/axmap.c` | **mars** (persist) | Axmap: atomic bitmap for block-level tracking — used for verify state and dedup |
+| `lib/lfsr.c` | **neptune** (transform) | LFSR: linear-feedback shift register for deterministic pseudo-random I/O offsets |
+| `lib/flist.h` | **mars** (persist) | Inline doubly-linked list: embeddable intrusive list with overlap detection |
+| `lib/prio_tree.c` | **saturn** (route) | Priority tree: interval-based overlapping I/O tracking for latency-sensitive scheduling |
+| `lib/strntol.c` | **neptune** (transform) | Numeric parsing: SI unit suffixes (K, M, G, T, P), percentage, time duration parsing |
+| `options.c` | **europa** (configuration assembly) | Job options: parses ~200+ CLI/job file parameters into `thread_options` struct |
+| `parse.c` | **europa** (configuration assembly) | Config parser: job file parser, variable substitution, includes, group assignment |
+| `verify.c` | **jupiter** (validate) | Data verification: writes known patterns (md5, sha*, crc*) then reads back to validate |
+| `os/` | **neptune** (transform) | OS abstraction: POSIX, Solaris, Windows — platform-specific file locking, time, threading |
+| `arch/` | **neptune** (transform) | CPU architecture: x86, ARM, RISC-V — memory barriers, NUMA, CPU-specific optimisation |
+| `blktrace.c` | **callisto** (filesystem walk) | Blktrace replay: reads `blktrace` binary logs, replays I/O operations |
+| `diskutil.c` | **mercury** (display) | Disk utilisation: reads `/sys/block/*/stat`, reports utilization % during run |
+| `cgroup.c` | **jupiter** (validate) | Cgroup support: places fio jobs into cgroup v1/v2 for CPU/mem/blkio isolation |
+| `gfio.c` | **mercury** (display) | GTK3 UI: graphical frontend for fio job configuration and live result display |
+
 ## Unused Planet Names
 
 `adrastea`, `amalthea`, `ananke`, `ariel`, `atlas`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `dione`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `janus`, `juliet`, `larissa`, `leda`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pan`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
