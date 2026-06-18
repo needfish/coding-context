@@ -360,6 +360,40 @@ A font rendering engine that supports TrueType, OpenType, Type1, and many other 
 | `include/freetype/config/` | **europa** (configuration assembly) | Build configuration: `FT_CONFIG_OPTION_*` — feature enabling, module inclusion |
 | `src/bzip2/`, `src/gzip/`, `src/lzw/` | **neptune** (transform) | Stream compression: transparent decompression of font data streams |
 
+### Helix (helix-editor/helix)
+
+A modal code editor in Rust with tree-sitter, LSP, multiple selections, and a transaction-based undo system.
+
+| Helix crate / module | Problem Pattern | Rationale |
+|----------------------|----------------|-----------|
+| `helix-core/src/transaction.rs` | **mars** (persist) | Transaction: groups primitive edits (insert, delete, replace) into undoable units with cursor preservation and coalescing |
+| `helix-core/src/syntax.rs` | **titan** (syntax highlighting) + **neptune** (transform) | Tree-sitter integration: incremental parse, query captures → highlighted ranges, injection languages |
+| `helix-core/src/selection.rs` | **saturn** (route) | Multiple selections: range set with primary cursor, operations dispatched across all cursors (associative edit) |
+| `helix-core/src/movement.rs` | **saturn** (route) | Cursor movement: word, line, paragraph, bracket, matching pair — routes position deltas through the document model |
+| `helix-core/src/search.rs` | **venus** (filter) | Search/replace: regex and literal search with selection filtering, incremental search state |
+| `helix-core/src/history.rs` | **mars** (persist) | Undo/redo stack: branching undo tree, merge policy for adjacent edits, cursor memory per revision |
+| `helix-core/src/indent.rs` | **neptune** (transform) | Indentation: tree-sitter query-driven indentation, mode detection (tabs vs spaces) |
+| `helix-core/src/diff.rs` | **venus** (filter) + **mercury** (display) | Diff hunk: computes line-granular diff between buffer and disk, gutter markers |
+| `helix-core/src/snippets.rs` | **mars** (persist) | Snippet engine: template placeholders, tab stops, mirrors, variable interpolation — edit-time state machine |
+| `helix-core/src/doc_formatter/` | **neptune** (transform) | Document formatting: external formatter (rustfmt, prettier) integration, range format |
+| `helix-core/src/rope_reader.rs` | **neptune** (transform) | Rope reader: gap buffer / rope abstraction over the document for efficient slice operations |
+| `helix-core/src/text_annotations.rs` | **mercury** (display) | Text annotations: inline diagnostics, virtual text from LSP, gutter decorations |
+| `helix-core/src/auto_pairs.rs` | **neptune** (transform) | Auto-pair insertion: bracket/quote completion with selection-wrapping, smart deletion |
+| `helix-view/src/editor.rs` | **saturn** (route) | Editor state: document set, views, focus management, mode dispatch (normal/insert/select) |
+| `helix-view/src/view.rs` | **mercury** (display) | View: scroll offset, anchor, viewport calculation, visual line mapping |
+| `helix-view/src/document.rs` | **mars** (persist) + **neptune** (transform) | Document: path, language, encoding, history, LSP snapshot — the central workpiece |
+| `helix-view/src/theme.rs` | **europa** (configuration assembly) | Theme: colour palette merging, scope-to-colour mapping, base16 inheritance |
+| `helix-view/src/annotations.rs` | **mercury** (display) | Annotation rendering: diagnostic icons, gutter markers, inlay hints |
+| `helix-lsp/src/transport.rs` | **hyperion** (network listener) | LSP transport: JSON-RPC over stdin/stdout, message framing, request IDs |
+| `helix-lsp/src/client.rs` | **hyperion** (network listener) | LSP client: capability negotiation, server lifecycle, request queue, notification dispatch |
+| `helix-lsp/src/jsonrpc.rs` | **neptune** (transform) | JSON-RPC protocol: request/notification/response serialisation, method dispatch |
+| `helix-lsp/src/file_operations.rs` | **callisto** (filesystem walk) | LSP file operations: file rename/create/delete via workspace/didChangeWatchedFiles |
+| `helix-term/src/` | **mercury** (display) + **hyperion** (network listener) | Terminal UI: compositor, prompt, picker, status line, key bindings, input dispatch |
+| `helix-tui/src/` | **mercury** (display) + **ganymede** (output formatting) | TUI framework: compositor, widget rendering, surface management |
+| `helix-loader/src/` | **callisto** (filesystem walk) + **europa** (configuration assembly) | Runtime loading: language config, theme files, tree-sitter queries, text objects |
+| `helix-vcs/src/` | **venus** (filter) | VCS integration: git status, blame info, diff gutter — file-level status filtering |
+| `helix-dap/src/` | **hyperion** (network listener) + **mars** (persist) | Debug Adapter Protocol: breakpoint management, thread state, variable inspection |
+
 ## Unused Planet Names
 
 `adrastea`, `amalthea`, `ananke`, `ariel`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `janus`, `juliet`, `larissa`, `leda`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`

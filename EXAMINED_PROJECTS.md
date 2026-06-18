@@ -109,3 +109,11 @@ repository. It prevents redundant analysis across sessions.
 | 34 | **stb** | nothings/stb | Single-file libraries: image I/O, font raster, rect pack, voxel render |
 | 35 | **Freetype** | freetype/freetype | Font rendering engine: hinting, anti-alias, glyph caching, GX/AAT/OpenType |
 | 36 | **Cairo** | freedesktop/cairo | (not yet fetched — GitLab Anubis blocks, GitHub mirror requires auth)
+
+---
+
+## Editors / IDEs
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 37 | **Helix** | helix-editor/helix | Modal editor: rope document, tree-sitter incremental parse, LSP client, multiple selections, undo transaction |
