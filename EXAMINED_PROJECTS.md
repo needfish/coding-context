@@ -188,3 +188,20 @@ repository. It prevents redundant analysis across sessions.
 | # | Project | Repository | Notes |
 |---|---------|-----------|-------|
 | 53 | **MiniJinja** | mitsuhiko/minijinja | Template engine in Rust: Jinja2-compatible, compiled templates, expression evaluation, CLI |
+
+---
+
+## Cryptography
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 54 | **Monocypher** | (monocypher.org) | Easy-to-use crypto library in ~2K LOC C: X25519, Ed25519, SHA-512, ChaCha20, Poly1305, Argon2 |
+
+---
+
+## Web / HTTP Tools
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 55 | **crawley** | s0rg/crawley | Unix-way web crawler in Go (~1.5K LOC): parallel fetch, HTML/JS/CSS parsing, link extraction, retry |
+| 56 | **thinproxy** | renaudallard/thinproxy | Single-file HTTP/HTTPS proxy in C: async I/O, CONNECT tunneling, seccomp sandboxing |

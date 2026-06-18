@@ -1153,3 +1153,41 @@ A Jinja2-compatible template engine in Rust with compiled templates, expression 
 | `src/filters.rs` | **venus** (filter) + **neptune** (transform) | Built-in filters: value transformation pipeline (upper, trim, join, etc.) |
 | `src/value/` | **neptune** (transform) | Dynamic value handling: Rust types → template values → rendered output |
 | `minijinja-py/`, `minijinja-js/` | **neptune** (transform) | Language bindings: Rust → Python/JS/WASM — cross-language template rendering |
+
+## Cryptography
+
+### Monocypher
+
+An easy-to-use cryptography library in ~2K LOC C, providing X25519, Ed25519, SHA-512, ChaCha20, Poly1305, and Argon2.
+
+| Monocypher module | Problem Pattern | Rationale |
+|-------------------|----------------|-----------|
+| `src/monocypher.c` — AEAD | **neptune** (transform) | Encryption/decryption: plaintext → ciphertext + tag (ChaCha20-Poly1305) |
+| `src/monocypher.c` — X25519 | **neptune** (transform) | Key exchange: private key + public key → shared secret |
+| `src/monocypher.c` — Ed25519 | **neptune** (transform) | Signatures: message → signature, signature → verification |
+| `src/monocypher.c` — Argon2 | **neptune** (transform) | Password hashing: password + salt → hash (memory-hard transform) |
+| `src/monocypher.c` — SHA-512 | **neptune** (transform) | Hashing: input bytes → digest (one-way transform) |
+
+## Web / HTTP Tools
+
+### crawley (s0rg/crawley)
+
+A unix-way web crawler in Go (~1.5K LOC): parallel HTTP fetch, HTML/JS/CSS parsing, link extraction, output.
+
+| crawley module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `crawley.go` — fetcher | **hyperion** (network listener) | HTTP fetch: parallel requests, rate limiting, retry with backoff |
+| `crawley.go` — parser | **neptune** (transform) | HTML/JS/CSS → parsed DOM/link graph |
+| `crawley.go` — extractor | **venus** (filter) | Link/URL extraction: filter by type (img, script, form, video) |
+| `crawley.go` — output | **mercury** (display) | Result display: stdout, JSON, CSV — configurable output |
+
+### thinproxy (renaudallard/thinproxy)
+
+A single-file HTTP/HTTPS forward proxy in C with async I/O, CONNECT tunneling, and sandboxing.
+
+| thinproxy module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `thinproxy.c` — listener | **hyperion** (network listener) | TCP accept loop: binds to port, accepts connections, manages event loop |
+| `thinproxy.c` — connect tunnel | **neptune** (transform) | CONNECT tunnel: transforms HTTP CONNECT into raw TCP tunnel |
+| `thinproxy.c` — forward | **saturn** (route) | Request routing: forwards HTTP requests to destination, routes responses back |
+| `thinproxy.c` — sandbox | **uranus** (authenticate) | Seccomp/capsicum sandbox: restricts system calls after initialisation |
