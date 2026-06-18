@@ -148,3 +148,43 @@ repository. It prevents redundant analysis across sessions.
 | 46 | **DaemonDB** | ShubhamNegi4/DaemonDB | Relational DB engine in Go: SQL parser, bytecode VM, B+Tree indexing, WAL, buffer pool, transactions |
 | 47 | **tiny-lsm-go** | Vanilla-Beauty/tiny-lsm-go | LSM-tree KV store: MemTable, SST files, WAL, compaction, block cache, MVCC transactions, bloom filter |
 | 48 | **lite3** | fastserial/lite3 | Zero-copy binary serialization: B-tree encoded wire format, JSON-compatible, schemaless |
+
+---
+
+## Networking / Protocols
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 49 | **smoltcp** | smoltcp-rs/smoltcp | Embedded TCP/IP stack in Rust: Ethernet/IPv4/IPv6/TCP/UDP, event-driven, no-alloc, socket state machines |
+
+---
+
+## Compression / Archival
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 50 | **miniz** | richgel999/miniz | Single-file zlib/deflate compression: tdefl compressor, tinfl decompressor, ZIP archive handling, PNG writer |
+
+---
+
+## Scientific / ML
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 51 | **micrograd** | karpathy/micrograd | Tiny autograd engine (~150 LOC): scalar Value DAG, backpropagation, MLP neural network library |
+
+---
+
+## Workflow / Orchestration
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 52 | **flowstate** | makasim/flowstate | Durable workflow engine in Go: crash recovery, state persistence, step orchestration, retry/timeout |
+
+---
+
+## Template Engines
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 53 | **MiniJinja** | mitsuhiko/minijinja | Template engine in Rust: Jinja2-compatible, compiled templates, expression evaluation, CLI |

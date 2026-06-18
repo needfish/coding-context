@@ -12,6 +12,7 @@
 | **Compiler / interpreter** | eris, neptune, jupiter, phoebe | saturn, mars | hyperion, uranus, mercury |
 | **Database / storage engine** | mars, thebe, atlas, earth | neptune, phoebe, venus | hyperion, uranus, mercury |
 | **Audio / video library** | phoebe, neptune, hyperion, saturn | mars, europa | callisto, io, venus |
+| **Workflow / orchestration** | charon, mars, saturn, pan | phoebe, io | hyperion, uranus, venus |
 | **Graphics / rendering** | ganymede, mercury, neptune | titan, mars, saturn | pandora, callisto, io |
 
 ---
@@ -42,6 +43,7 @@
 | eris | pipeline | Behavior variation | [patterns/eris-pipeline.md](patterns/eris-pipeline.md) | Stage coupling across consecutive transforms |
 | phoebe | resource lifecycle | Object variation | [patterns/phoebe-resource-lifecycle.md](patterns/phoebe-resource-lifecycle.md) | Leak prevention across all exit paths |
 | thebe | background compaction | Behavior variation | [patterns/thebe-background-compaction.md](patterns/thebe-background-compaction.md) | Consistency during concurrent storage reorganisation |
+| charon | durable workflow | Behavior variation | [patterns/charon-durable-workflow.md](patterns/charon-durable-workflow.md) | Progress across failure boundaries |
 
 ### ==== Common Clusters ====
 
@@ -58,6 +60,7 @@ look for the others:
 | eris (pipeline) | neptune (transform) repeated N times |
 | phoebe (lifecycle) | mars (persist), hyperion (listener), atlas (memory) |
 | thebe (compaction) | mars (persist), pan (scheduling), earth (sort) |
+| charon (workflow) | mars (persist), saturn (route), io (exec) |
 
 ## Low-Level / Systems Projects
 
@@ -1077,3 +1080,76 @@ A zero-copy binary serialization format: data is stored as a B-tree in a single 
 | `include/lite3.h` | **phoebe** (resource lifecycle) | Buffer lifecycle: caller provides buffer, library operates on it — no malloc |
 | `src/ctx_api.c` | **phoebe** (resource lifecycle) | Context API lifecycle: `init` → set/get values → `destroy` — internal buffer management |
 | `include/lite3_context_api.h` | **europa** (configuration assembly) | Context configuration: buffer size, initial capacity, error handling flags |
+
+## Networking / Protocols
+
+### smoltcp (smoltcp-rs/smoltcp)
+
+An event-driven TCP/IP stack for bare-metal systems, written in Rust, with Ethernet, IPv4/IPv6, TCP, UDP, ICMP, ARP, and 6LoWPAN support.
+
+| smoltcp module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `src/wire/` | **neptune** (transform) | Packet parsing/serialization: bytes → struct ↔ bytes for each protocol |
+| `src/socket/tcp.rs` | **mars** (persist) + **saturn** (route) | TCP state machine: connection state tracked across transitions, segments routed to correct connection |
+| `src/socket/udp.rs` | **mars** (persist) | UDP endpoint state: port binding, packet buffering |
+| `src/iface/interface/` | **saturn** (route) | Interface dispatch: routes packets to correct socket by protocol/port |
+| `src/iface/route.rs` | **saturn** (route) | IP routing table: CIDR-based route selection for outgoing packets |
+| `src/phy/` | **hyperion** (network listener) | Physical layer: raw socket, TUN/TAP, loopback — platform-specific network I/O |
+| `src/storage/` | **atlas** (memory allocation) | Packet buffers, ring buffers, assembler — no-heap memory management |
+| `src/socket/tcp/congestion/` | **pan** (resource scheduling) | Congestion control: CUBIC, Reno — schedules packet transmission based on network conditions |
+| `src/time.rs` | **mars** (persist) | Timer management: RTT estimation, retransmission timeout, keep-alive interval |
+
+## Compression / Archival
+
+### miniz (richgel999/miniz)
+
+A single-file lossless compression library implementing zlib/deflate with compressor, decompressor, and ZIP archive handling.
+
+| miniz module | Problem Pattern | Rationale |
+|--------------|----------------|-----------|
+| `miniz_tdef.c` | **neptune** (transform) | Compressor: raw data → deflate bitstream via hash-chain LZ77 + Huffman coding |
+| `miniz_tinfl.c` | **neptune** (transform) | Decompressor: deflate bitstream → raw data (inverse transform, coroutine-based) |
+| `miniz_zip.c` | **mars** (persist) + **neptune** (transform) | ZIP archive: file → archive packing, directory listing, CRC validation |
+| `miniz_common.h` | **neptune** (transform) | Checksum, CRC, Adler-32 — data integrity transforms |
+| `miniz.h` | **phoebe** (resource lifecycle) | Stream lifecycle: `tinfl_init` → feed → `tinfl_decompress` → done |
+
+## Scientific / ML
+
+### micrograd (karpathy/micrograd)
+
+A tiny scalar-valued autograd engine (~150 LOC) implementing reverse-mode automatic differentiation over a dynamically built DAG.
+
+| micrograd module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `micrograd/engine.py` | **neptune** (transform) | Forward pass: scalar operations build computation DAG; backward pass: chain rule propagates gradients |
+| `micrograd/nn.py` | **neptune** (transform) | Neural network layers: Neuron, Layer, MLP — composed transforms over the autograd engine |
+
+## Workflow / Orchestration
+
+### flowstate (makasim/flowstate)
+
+A lightweight Go library for building durable, long-running workflows with state persistence, crash recovery, retry, and timeout support.
+
+| flowstate module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `engine.go` | **charon** (durable workflow) | Core engine: executes workflow steps, manages state transitions, coordinates recovery |
+| `state.go` | **mars** (persist) | Execution state: current step, accumulated data, revision tracking |
+| `recovery.go` | **charon** (durable workflow) + **mars** (persist) | Crash recovery: scans incomplete workflows, resumes from last committed step |
+| `flow.go` | **saturn** (route) | Flow registry: routes workflow type to step graph definition |
+| `delay.go` | **pan** (resource scheduling) | Delayed step execution: timeout scheduling, deferred retries |
+| `driver.go` + `memdriver/`, `pgdriver/` | **mars** (persist) + **phoebe** (resource lifecycle) | Persistence backends: state store lifecycle, connection management |
+| `cachedriver.go` | **atlas** (memory allocation) | In-memory state cache: reduces store reads for active workflows |
+
+### MiniJinja (mitsuhiko/minijinja)
+
+A Jinja2-compatible template engine in Rust with compiled templates, expression evaluation, and serde integration.
+
+| MiniJinja module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `src/parser.rs` | **neptune** (transform) | Template text → AST: parses Jinja2 syntax into expression/statement nodes |
+| `src/compiler/` | **eris** (pipeline) + **neptune** (transform) | AST → compiled instructions: template compilation pipeline |
+| `src/vm.rs` | **saturn** (route) | Instruction dispatch: executes compiled template instructions |
+| `src/environment.rs` | **europa** (configuration assembly) | Template environment: loader config, auto-escape, extensions, filter registry |
+| `src/filters.rs` | **venus** (filter) + **neptune** (transform) | Built-in filters: value transformation pipeline (upper, trim, join, etc.) |
+| `src/value/` | **neptune** (transform) | Dynamic value handling: Rust types → template values → rendered output |
+| `minijinja-py/`, `minijinja-js/` | **neptune** (transform) | Language bindings: Rust → Python/JS/WASM — cross-language template rendering |
