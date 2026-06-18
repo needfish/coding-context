@@ -71,6 +71,18 @@ Any project that enumerates filesystem contents — search tools, backup softwar
 - You need to handle symlink cycles, permission errors, or deep trees gracefully.
 - The traversal logic needs independent testing from the consumer logic.
 
+#### Signs you're in this pattern
+- Your code uses `os.Walk`, `glob`, `readdir`, or recursive directory traversal.
+- You need to skip certain directories or file types during traversal.
+- The traversal order matters (depth-first vs breadth-first, lexicographic vs modification-time).
+- You're filtering files as you walk them, mixing traversal with selection logic.
+
+#### Real project examples
+- **Helix editor** (file picker): Recursive directory walk for file picker with `.gitignore` pattern exclusion and max-depth limit.
+- **Lite XL** (project view): Project panel walks the workspace directory tree, skipping hidden directories and binary files.
+- **nano-backup** (source scanning): File discovery walks source directories with include/exclude patterns before feeding the backup pipeline.
+- **crawley** (URL crawl frontier): URL-level "walk" — follows links recursively with depth limit, domain restriction, and visited-set dedup.
+
 #### Common over-engineering traps
 - Building a multi-threaded walker before measuring that single-threaded walk is too slow.
 - Implementing inode sorting before confirming that the consumer needs deterministic order.

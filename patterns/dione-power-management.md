@@ -80,6 +80,17 @@ Run at full speed, never sleep. In embedded: `WFI` (wait for interrupt) in the i
 - Different operating modes have different performance requirements (active sensing vs. periodic reporting).
 - The energy source is intermittent (harvesting) and consumption must track availability.
 
+#### Signs you're in this pattern
+- Your device runs on battery and battery life is a product requirement.
+- Different operating modes consume significantly different power (active vs idle vs sleep).
+- You need to trade off performance for battery life depending on remaining charge.
+- The system generates heat that must be managed (thermal throttling).
+
+#### Real project examples
+- **smoltcp** (no explicit power management): Embedded TCP/IP stack designed for low-power MCUs — the pattern informs the design: poll-based operation avoids interrupt-driven wakeups.
+- **zt terminal emulator** (framebuffer sleep): Terminal renders only on input or screen change — no idle refresh, display sleeps between updates.
+- **tinykvm** (VM power management): KVM-based micro-VMs can be suspended/resumed — host manages VM power state via KVM API.
+
 #### Common over-engineering traps
 - Implementing DVFS before measuring that CPU active power dominates the power budget.
 - Building a tickless scheduler before confirming that periodic timer wakeups drain the battery.

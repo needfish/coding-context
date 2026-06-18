@@ -72,6 +72,16 @@ Count lines with `wc -l` or a script that reads all lines and counts blanks vs. 
 - You need incremental counting (only re-process changed files).
 - The report format needs aggregation (group by language, directory, contributor).
 
+#### Signs you're in this pattern
+- You need statistics about source code: line counts, comment ratios, blank lines, function counts.
+- You're writing regular expressions to identify what counts as a "line of code".
+- Different languages have different comment syntax and you need to handle them all.
+- The counting logic is tangled with file traversal logic.
+
+#### Real project examples
+- **Helix editor** (status line): Shows line count, character count, and cursor line/total-lines ratio — simple counts computed from the document model.
+- **Lite XL** (project view + status bar): Shows file count, line count per file, project-wide line estimates — counts are cached and updated on file save.
+
 #### Common over-engineering traps
 - Implementing a full state-machine parser before confirming that regex-based counting misses critical cases.
 - Supporting embedded languages (SQL in Python) before measuring how often they appear in your corpus.

@@ -69,6 +69,17 @@ Print raw values to stdout with `println!` / `print()` / `console.log()`. Format
 - The user can interact with the display (scroll, click, filter) — events must route back to data.
 - The display needs to survive process restart (session state, window layout).
 
+#### Signs you're in this pattern
+- Your code mixes computation with print/format/write calls.
+- Changing the output format requires editing the same functions that compute results.
+- You need to support multiple output targets (stdout, file, HTML, JSON) and the logic is duplicated.
+- The same data flows through different rendering paths depending on context.
+
+#### Real project examples
+- **crawley** (`output` module): Results rendered as plain text, JSON, or CSV depending on CLI flags — display is a separate concern from crawling.
+- **Helix editor** (View + render): Multiple views (editor, status bar, minimap, picker) render the same document model through different projections.
+- **Lite XL** (view.lua): Renders the document model as lines on screen with scroll offset, cursor, and selection highlight.
+
 #### Common over-engineering traps
 - Building a widget/compositor framework before you have more than one view type.
 - Separating display logic from data fetching before you have a second data source.

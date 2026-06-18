@@ -78,6 +78,18 @@ Use the standard library's HTTP/server module. Python: `http.server` or a framew
 - You need graceful shutdown (drain in-flight connections before exit).
 - You need to bind to multiple addresses (IPv4 + IPv6, multiple ports, Unix socket + TCP).
 
+#### Signs you're in this pattern
+- Your program accepts connections on a network port (TCP, UDP, Unix socket).
+- You have a loop that accepts new connections and dispatches them to handlers.
+- Connection lifecycles (accept, read, write, close) are scattered across the code.
+- You need to handle multiple concurrent connections without blocking each other.
+
+#### Real project examples
+- **smoltcp** (socket dispatch): Embedded TCP/IP stack — manages socket state machines (LISTEN, SYN-RECEIVED, ESTABLISHED), dispatches incoming segments to correct socket.
+- **Flowstate** (netdriver server): gRPC listener accepts workflow engine connections over TCP with TLS termination.
+- **thinproxy** (`thinproxy.c`): Single-threaded async listener using epoll — accepts connections, manages read/write buffers per session.
+- **zt terminal emulator** (PTY listener): Reads from PTY master file descriptor, dispatches output to terminal renderer.
+
 #### Common over-engineering traps
 - Implementing a custom event loop when a framework (tokio, async-std, asyncio) handles it.
 - Building connection pooling before measuring that connection establishment cost is a bottleneck.

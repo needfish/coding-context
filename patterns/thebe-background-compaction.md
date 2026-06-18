@@ -87,6 +87,17 @@ func (db *DB) compact() {
 - You need to control compaction I/O bandwidth independently from foreground reads/writes.
 - Multiple levels or tiers of compaction are needed for the write/read amplification trade-off.
 
+#### Signs you're in this pattern
+- Your storage system accumulates redundant data over time (old versions, deleted entries, fragmented pages).
+- Reads become slower over time because data is scattered across many files/pages.
+- A background process reorganises storage while the system continues serving reads/writes.
+- You need bounded read/write amplification and must compact to maintain it.
+
+#### Real project examples
+- **tiny-lsm-go** (`compaction.go`): Level-based compaction — multiple SST files at level N are merged into a single file at level N+1. Single-threaded compaction with size-tiered triggering.
+- **DaemonDB** (B-tree page compaction): Pages are compacted during checkpoint — merges underfull pages and reclaims free space. Triggered by free-page ratio crossing a threshold.
+- **lite3** (B-tree defrag): Serialisation format uses B-trees with opportunistic compaction on write — free space is reclaimed during insert/update paths.
+
 #### Common over-engineering traps
 - Implementing level-based compaction (multiple levels with fan-in ratios) before confirming that full-merge compaction is too slow.
 - Adding concurrent compaction (multiple compaction workers) before measuring that single-threaded compaction is the bottleneck.

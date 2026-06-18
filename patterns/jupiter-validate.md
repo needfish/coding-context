@@ -68,6 +68,18 @@ Inline `if` checks at the point of use. Python: `if not isinstance(value, int): 
 - Rules need to be composed (AND/OR across fields) or conditional (field A requires field B).
 - Validation needs to produce structured error reports (field-level, code-level).
 
+#### Signs you're in this pattern
+- Your code has guard clauses at the start of a function that check input properties and return errors.
+- The same validation checks appear in multiple functions with slight variations.
+- You need to reject bad input but the checks are interleaved with processing logic.
+- Users submit data that causes crashes because boundary conditions were not checked.
+
+#### Real project examples
+- **chibicc** (semantic analysis): Type-checking validates expressions against declared types — mismatches produce source-located error messages.
+- **Flowstate** (input validation): Workflow step inputs are validated before execution — schema checks prevent downstream corruption.
+- **MiniJinja** (`environment.rs` → template compilation): Template syntax validation catches malformed Jinja2 syntax during compilation, not at render time.
+- **DaemonDB** (SQL parser): Syntax validation during parsing rejects invalid SQL before execution — early failure prevents wasted work.
+
 #### Common over-engineering traps
 - Adopting a schema validation library (JSON Schema, Zod, Pydantic) before you have 5+ fields to validate.
 - Building a declarative rule engine before imperative `if` checks are proven to be the bottleneck.

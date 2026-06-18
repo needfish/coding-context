@@ -67,6 +67,19 @@ A single function that takes source format and returns target format. Write it i
 - The conversion logic becomes complex enough to need its own tests.
 - Round-trip correctness matters (serialise → deserialise → original).
 
+#### Signs you're in this pattern
+- You have a function that takes one type and returns a different type with the same essential data.
+- The same data appears in two different structs with similar field names.
+- Serialisation/deserialisation logic changes whenever the data model changes.
+- You're writing boilerplate copy-code from one object to another.
+
+#### Real project examples
+- **MiniJinja** (`src/parser.rs` → `src/compiler/` → `src/vm.rs`): Template text → AST → compiled instructions → rendered output — a chain of transforms across three representations.
+- **Monocypher** (`src/monocypher.c`): Every crypto primitive is a transform — plaintext → ciphertext, key → shared secret, message → signature.
+- **DaemonDB** (SQL parser → bytecode → execution): SQL text → AST → bytecode instructions → query result — the classic compiler pipeline as transforms.
+- **micrograd** (`engine.py`): Scalar values through forward/backward transforms — the forward pass computes output from inputs, the backward pass computes gradients from loss.
+- **NessMuxer** (packet demuxer): Raw MPEG-TS packets → parsed PES packets → elementary stream — three transform stages in a video pipeline.
+
 #### Common over-engineering traps
 - Building a generic mapper/reflection framework before you have 3+ conversion functions.
 - Using a schema-driven code generator (OpenAPI → types) before the API contract stabilises.

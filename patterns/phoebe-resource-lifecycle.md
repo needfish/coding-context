@@ -96,6 +96,18 @@ void my_uninit(MyResource *r) {
 - Concurrent access to the same resource is possible (reference counting or locking needed).
 - The caller needs to configure the resource differently across invocations.
 
+#### Signs you're in this pattern
+- Your types have `init`/`close` or `open`/`destroy` methods.
+- Forgetting to call the cleanup method causes resource leaks (file handles, sockets, memory).
+- Resources can be in multiple states (uninitialised, ready, paused, closed).
+- Error paths must ensure cleanup happens even when intermediate steps fail.
+
+#### Real project examples
+- **miniaudio** (device lifecycle): `ma_device_init` → `ma_device_start`/`ma_device_stop` → `ma_device_uninit` — every init must have a matching uninit, enforced by convention.
+- **NessMuxer** (muxer lifecycle): `MuxerOpen` → `MuxerWritePacket` (×N) → `MuxerClose` — write errors during the packet loop must still call close to flush and release resources.
+- **Flowstate** (driver lifecycle): Each storage driver (mem, Postgres, BadgerDB) has `Open` → `Commit`/`Rollback` → `Close` — drivers are state machines under a common interface.
+- **DaemonDB** (WAL segment lifecycle): WAL segment is opened, written to, finalised (sealed), and eventually deleted after checkpoint — four distinct states with cross-state invariants.
+
 #### Common over-engineering traps
 - Adding reference counting before confirming concurrent access is a real problem.
 - Implementing a full state machine when a boolean `ready` flag suffices.

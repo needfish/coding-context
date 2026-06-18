@@ -77,6 +77,18 @@ First-come, first-served (FIFO queue). A single-threaded event loop. No prioriti
 - Items have deadlines, and missing them causes real consequences.
 - The scheduling policy needs to be configurable (FIFO vs priority vs round-robin vs EDF).
 
+#### Signs you're in this pattern
+- Multiple tasks compete for a shared resource (CPU time, network bandwidth, disk I/O).
+- Some tasks have deadlines or quality-of-service requirements.
+- Tasks arrive unpredictably and you need to decide which runs next.
+- A naive FIFO or round-robin causes some tasks to starve or miss deadlines.
+
+#### Real project examples
+- **Flowstate** (`delay.go`): Delayed step execution — schedules workflow steps to run after a timeout or at a specific time using a timer heap.
+- **tiny-lsm-go** (compaction scheduler): Background compaction tasks scheduled when write amplification crosses a threshold — priority to level-0 compaction to bound read amplification.
+- **NessMuxer** (packet scheduling): Video packets from multiple streams are scheduled for muxing based on PTS timestamps — deadline-driven scheduling.
+- **smoltcp** (socket polling): Network sockets are polled round-robin with fairness guarantees — prevents a single socket from starving others.
+
 #### Common over-engineering traps
 - Implementing priority queues before confirming that FIFO causes missed deadlines.
 - Building a preemptive scheduler when cooperative yielding handles all cases.

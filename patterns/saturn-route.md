@@ -68,6 +68,17 @@ A single `if/elif/else` chain or a hash map from key to handler function. Python
 - Routes need to be registered from separate files (plugin system).
 - Routing logic needs independent testing from handler logic.
 
+#### Signs you're in this pattern
+- Your code has a chain of `if/elif/else` or `match` that dispatches based on a message property.
+- Adding a new message type requires editing a central dispatch function.
+- Different message types need different middleware or pre-processing.
+- You have a catch-all handler that silently absorbs unmatched messages.
+
+#### Real project examples
+- **Flowstate** (`flow.go`): Flow registry routes workflow type identifiers to step graph definitions — a route table per workflow kind.
+- **smoltcp** (socket dispatch): Incoming TCP/UDP packets are routed to the correct socket based on port/protocol tuple — exact-match routing.
+- **chibicc** (preprocessor directive dispatch): `#include`, `#define`, `#ifdef` directives are routed to different handlers via a function pointer table.
+
 #### Common over-engineering traps
 - Introducing a full middleware stack when you have 3 routes and 1 shared concern.
 - Building a trie-based router when a simple hash map handles your 10 endpoints.

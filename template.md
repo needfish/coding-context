@@ -52,6 +52,15 @@ The simplest implementation that avoids the pattern's characteristic failure mod
 - <symptom that signals a second axis is pushing>
 - <symptom that signals a full pattern instantiation is warranted>
 
+#### Signs you're in this pattern
+- <code smell 1 — a question to ask about your code>
+- <code smell 2 — what to look for in function signatures>
+- <code smell 3 — a design tension that indicates this pattern>
+
+#### Real project examples
+- <project name>: <what they did, which file/dir>
+- <project name>: <what they did, which file/dir>
+
 #### Common over-engineering traps
 
 - <design mistake people make when they apply this pattern too early>

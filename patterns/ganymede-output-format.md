@@ -70,6 +70,17 @@ Print raw values with `println!()`. If colour is needed, use ANSI escape codes d
 - The output includes styled elements (colours, icons, alignment) that need testing.
 - Users ask for custom format templates with field placeholders.
 
+#### Signs you're in this pattern
+- You're formatting data into aligned columns, tables, or structured text for terminal output.
+- The output looks wrong when the terminal is narrow or doesn't support ANSI codes.
+- You need to detect terminal features (width, colour support, Unicode support) to decide how to render.
+- Users request `--json`, `--csv`, or `--color` flags for controlling output format.
+
+#### Real project examples
+- **crawley** (`output` module): Detects terminal width for table formatting, supports JSON/CSV/plain output via CLI flags.
+- **Helix editor** (status line renderer): Formats status information (filename, cursor position, mode) into a fixed-width line with colour-coded segments.
+- **Lite XL** (status view + command view): Two display areas with different formatting — status bar uses fixed layout, command view uses scrollable line history.
+
 #### Common over-engineering traps
 - Building a template engine before confirming users need customisable output.
 - Implementing colour detection before measuring that colours-without-detection causes problems.

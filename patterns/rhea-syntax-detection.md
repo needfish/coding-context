@@ -68,6 +68,17 @@ A hash map from file extension to language name. Python: `{'py': 'python', 'rs':
 - Users need custom overrides for project-specific conventions.
 - Detection needs to work from partial information (stdin with no filename).
 
+#### Signs you're in this pattern
+- Your editor/IDE needs to decide which language rules to apply for a file.
+- The file extension alone is ambiguous (`.h` could be C, C++, or Objective-C; `.js` could be JSX).
+- You're writing rules like "if first line starts with #!/usr/bin/python, it's Python".
+- Users complain that their files have wrong highlighting or wrong formatting.
+
+#### Real project examples
+- **Helix editor** (`syntax.rs`): Language detection is file-extension-first, with content-based shebang detection as fallback. The detection result determines which Tree-sitter grammar to load.
+- **Lite XL** (`core/doc.lua`): File extension maps to language module; shebang detection for scripts without extensions. Detection runs once on file open.
+- **chibicc** (source file type): Compiler detects source language from extension (`.c` vs `.h`) and sets preprocessor dialect accordingly.
+
 #### Common over-engineering traps
 - Implementing content sniffing before confirming that extension-based detection misses too many files.
 - Building a cascading detection pipeline (extension → shebang → content → model) when a single fallback suffices.

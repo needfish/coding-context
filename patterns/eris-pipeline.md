@@ -85,6 +85,18 @@ int process(char *input) {
 - You need to run multiple inputs through the pipeline concurrently.
 - Error recovery becomes complex (warnings vs errors, error count limits, error suppression).
 
+#### Signs you're in this pattern
+- You have a sequence of function calls where each call transforms the output of the previous one.
+- Error handling repeats the same pattern between each stage (check result → abort or continue).
+- The intermediate data types between stages form a chain (type A → type B → type C).
+- You can visualise processing as a linear flow diagram with boxes and arrows.
+
+#### Real project examples
+- **chibicc** (compiler pipeline): `tokenize → preprocess → parse → codegen` — each stage produces a different representation (tokens → AST → assembly), early-stage errors block later stages.
+- **MiniJinja** (template compilation): `parse → compile → VM execute` — template text → AST → bytecode → rendered output, with error propagation from parse to execute.
+- **DaemonDB** (query execution): `SQL parse → AST → bytecode → B-tree traversal` — each stage validates the previous stage's output format.
+- **lite3** (serialisation pipeline): `object → tagged-binary → B-tree leaf → page write` — four distinct representations, shared buffer context.
+
 #### Common over-engineering traps
 - Building an abstract "pipeline framework" before you have a second distinct pipeline.
 - Implementing parallel streaming when batch processing is fast enough.

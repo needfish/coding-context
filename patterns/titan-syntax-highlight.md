@@ -71,6 +71,16 @@ Use an existing highlighting library (syntect, Pygments, highlight.js, Prism). F
 - You need to support embedded languages (JS in HTML, SQL in Python) that the library doesn't handle.
 - The output target changes (terminal vs HTML vs SVG) and needs different renderers.
 
+#### Signs you're in this pattern
+- You're displaying source code and want to colourise keywords, strings, comments, and types.
+- The display flickers or lags on large files because highlighting re-runs on every keystroke.
+- You need to support multiple programming languages with different syntax rules.
+- The highlighting logic and the editing logic are tangled in the same code paths.
+
+#### Real project examples
+- **Helix editor** (`syntax.rs`, Tree-sitter integration): Uses Tree-sitter for full syntax tree → highlighting. Incremental re-highlighting on edit via Tree-sitter's incremental parser.
+- **Lite XL** (`syntax/`): Regex-based highlighting per language. Each language has a tokenizer definition file. Full re-highlight on edit, cached per-view.
+
 #### Common over-engineering traps
 - Writing a grammar engine from scratch when an existing library covers your languages.
 - Building an incremental highlighter before measuring that full-file re-highlight is too slow.

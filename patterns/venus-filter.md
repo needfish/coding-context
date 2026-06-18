@@ -65,6 +65,17 @@ A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rus
 - The source collection is large enough that lazy/streaming filtering matters.
 - The filtering logic needs independent testing from the rest of the pipeline.
 
+#### Signs you're in this pattern
+- Your code has a loop with an `if` inside that decides what to keep or discard.
+- The predicate condition appears in multiple places, slightly different each time.
+- You're passing a collection through a function that returns a smaller collection of the same type.
+- Filter logic is interleaved with display logic, making each harder to change independently.
+
+#### Real project examples
+- **crawley** (`extractor` module): URL link extraction filters parsed HTML by element type (img, script, video) — a predicate per resource type.
+- **smoltcp** (socket dispatch): TCP socket matching filters incoming packets by port/protocol — a predicate per socket type.
+- **MiniJinja** (`filters.rs`): Template filter chain applies predicate tests (defined, string length, regex match) to values before rendering.
+
 #### Common over-engineering traps
 - Building a predicate parser/interpreter before measuring that the fixed predicates are the bottleneck.
 - Abstracting the filter into a generic pipeline stage before you have a second pipeline stage.

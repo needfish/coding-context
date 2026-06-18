@@ -83,6 +83,18 @@ Use the language's built-in allocator. Rust: `Box`, `Vec`, `HashMap`. Python: au
 - Real-time constraints require bounded allocation time (O(1) pool allocator).
 - You need to track allocation statistics or detect leaks programmatically.
 
+#### Signs you're in this pattern
+- Your program allocates and frees many small objects of the same size.
+- Memory fragmentation causes out-of-memory errors even though total free memory is sufficient.
+- Allocation/deallocation is a measurable fraction of CPU time in profiles.
+- You need deterministic allocation latency (real-time or embedded constraints).
+
+#### Real project examples
+- **chibicc** (arena allocator): Tokens and AST nodes are allocated from a linear arena during compilation — single free at end of each source file, no individual frees.
+- **DaemonDB** (buffer pool): Database pages are allocated from a fixed-size buffer pool with clock-sweep eviction — avoids per-page malloc/free overhead.
+- **tiny-lsm-go** (block cache): SST blocks are cached in a fixed-capacity LRU — allocation is pooled to avoid GC pressure.
+- **miniaudio** (audio buffer pool): Audio frames are allocated from ring buffers to avoid allocation during real-time audio callbacks.
+
 #### Common over-engineering traps
 - Writing a custom slab allocator before measuring that the default allocator causes fragmentation.
 - Building per-thread arenas before confirming that lock contention on the global allocator is measurable.

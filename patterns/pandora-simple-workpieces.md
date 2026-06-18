@@ -82,6 +82,17 @@ Store the document as a single string or list of strings. On each edit, replace 
 - Multiple views or split panes show the same document (change notification across views).
 - The document must track whether it differs from the saved copy (dirty flag with history awareness).
 
+#### Signs you're in this pattern
+- Your application lets users create and modify structured content (text, diagrams, spreadsheets).
+- Users complain about losing work on accidental edits (no undo).
+- The document model and the display code are tangled in the same functions.
+- Saving and loading involve converting the in-memory model to/from a file format.
+
+#### Real project examples
+- **Helix editor** (Rope + Transaction): Document model built on a rope data structure with CRDT-style transactions. Undo stack stores inverse operations per transaction group (keystroke coalescing).
+- **Lite XL** (TextDoc + View): Document model as array of lines, view as scroll offset + selection. Undo stack of full-snapshot deltas. Dirty flag computed from save-point checkpoint.
+- **NessMuxer** (VideoEditCommand): Frame-level edit history for video cutting — cut, trim, split operations with undo/redo per edit session.
+
 #### Common over-engineering traps
 - Building a rope data structure before measuring that string replacement is too slow for your file sizes.
 - Implementing a branching undo tree before confirming that linear undo/redo suffices.

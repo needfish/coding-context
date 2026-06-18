@@ -70,6 +70,17 @@ Any project that runs external commands on found items — batch processing, bui
 - Batch execution (passing all items as args) risks `ARG_MAX` overflow.
 - You need to handle subprocess failure modes (timeout, output buffer deadlock, exit code aggregation).
 
+#### Signs you're in this pattern
+- Your code calls external programs using `subprocess`, `os.exec`, `Command`, or `Process`.
+- You need to process a collection of items, where each item requires executing an external command.
+- Error handling around subprocess calls is repetitive (check exit code, capture stderr).
+- You're building pipelines of commands where the output of one feeds the input of another.
+
+#### Real project examples
+- **Helix editor** (language server integration): Spawns LSP processes, communicates via stdin/stdout JSON-RPC — each LSP server is a long-running subprocess.
+- **yarsync** (rsync delegation): File synchronisation delegates to rsync for the actual transfer — yarsync manages the command-line invocation and output parsing.
+- **pnpm** (package scripts): Executes lifecycle scripts (install, build, test) as subprocesses, collecting output and exit codes per script.
+
 #### Common over-engineering traps
 - Building a thread pool before measuring that sequential execution is too slow.
 - Abstracting the executor into a generic pipeline before you have a second pipeline stage.

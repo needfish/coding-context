@@ -74,6 +74,17 @@ Hard-coded constants at the top of `main.rs` / `main.py`. A single optional CLI 
 - Multiple config sources exist (CLI + env + file + defaults) and precedence matters.
 - Configuration needs validation (invalid combinations must be caught at startup).
 
+#### Signs you're in this pattern
+- Your program reads settings from multiple sources (CLI flags, env vars, config files, defaults).
+- The merge order between config sources is ad-hoc and sometimes wrong.
+- Config values are scattered across the codebase as globals or module-level constants.
+- Different environments (dev, test, prod) need different config values.
+
+#### Real project examples
+- **Helix editor** (`config.rs`): Layered config: baked-in defaults → user `config.toml` → language-specific overrides → CLI flags. Each layer overrides the previous.
+- **Lite XL** (`config/`): Config file (user-written Lua) → project-local config → command-line overrides. Lua-based config allows conditional values per OS.
+- **zt terminal emulator** (framebuffer vs X11 vs Wayland): Platform-specific config compiled in, runtime config via environment variables — not a single config file but runtime detection.
+
 #### Common over-engineering traps
 - Adding a config file parser before you have 3+ configurable parameters.
 - Building a layered merge system (CLI overrides env overrides file) before confirming conflicts are common.

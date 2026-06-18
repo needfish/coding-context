@@ -65,6 +65,17 @@ Call the language's built-in sort: Python `sorted(items, key=...)`, Rust `items.
 - The sort direction or key is user-configurable at runtime.
 - The collection is larger than available memory (external sort).
 
+#### Signs you're in this pattern
+- You have a collection that needs ordering, and the default order is wrong.
+- The comparison logic involves multiple fields, some ascending some descending.
+- Different call sites need different orderings of the same data type.
+- A sort-key extraction function appears in multiple places, varying slightly each time.
+
+#### Real project examples
+- **DaemonDB** (`b_tree.go`): B-tree maintains sorted order of keys — the comparator defines the tree's traversal order.
+- **tiny-lsm-go** (`sst.go`, `compaction.go`): SST file keys are sorted within each level; compaction merges sorted runs into a new sorted run.
+- **Helix editor** (picker sorting): File picker, buffer picker, symbol search — each sorts by different criteria (name, recency, relevance).
+
 #### Common over-engineering traps
 - Writing a custom sort algorithm before the built-in sort is proven too slow.
 - Implementing a stable sort when element identity doesn't matter.

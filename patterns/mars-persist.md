@@ -67,6 +67,18 @@ A single JSON/TOML/YAML file read on startup and written on shutdown. Python: `j
 - You need transactional semantics (partial writes must roll back on failure).
 - The storage format needs versioned migration (v1 → v2 schema changes).
 
+#### Signs you're in this pattern
+- Your program loses state when it restarts — configuration, user data, or progress is gone.
+- You're writing data to a file, but the format keeps changing.
+- Two parts of the system read/write the same data and sometimes see inconsistent values.
+- A crash during save corrupts the stored file, requiring manual recovery.
+
+#### Real project examples
+- **Flowstate** (`state.go`, `driver.go`): Execution state is persisted atomically — step completion + state write is a single transaction. Multiple backends (mem, Postgres, BadgerDB) under the same interface.
+- **DaemonDB** (`wal.go`, `bufferpool.go`): WAL + buffer pool provide transactional durability. Write-ahead logging serialises changes before they reach the B-tree.
+- **tiny-lsm-go** (`mem_table.go`, `wal.go`): LSM-tree persists in-memory writes to a WAL before acknowledging — crash recovery replays the WAL.
+- **miniaudio** (device config persistence): Audio device configuration (sample rate, buffer size) stored in a simple JSON file, read once on startup.
+
 #### Common over-engineering traps
 - Adding a database (SQLite, PostgreSQL) when a JSON file suffices.
 - Building a repository abstraction layer on day 1 before you know what queries you need.

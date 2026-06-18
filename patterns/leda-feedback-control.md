@@ -77,6 +77,17 @@ On/off (bang-bang) control with hysteresis: turn the actuator on when the value 
 - The process dynamics change with operating point (gain scheduling needed).
 - Sensor noise or dropouts cause the controller to make bad corrections (filtering/estimation needed).
 
+#### Signs you're in this pattern
+- A system parameter must stay near a setpoint (temperature, speed, position, pressure).
+- The system has inertia — changes to the input don't immediately affect the output.
+- External disturbances push the system away from the desired state.
+- You're writing `if too_high: decrease; if too_low: increase` logic and it oscillates.
+
+#### Real project examples
+- **Flowstate** (retry backoff): Exponential backoff with jitter for workflow step retries — the "controller" adjusts retry delay based on observed failures.
+- **Thebe compaction throttler** (write amplification control): Compaction rate is adjusted based on write amplification ratio — a feedback loop controlling storage throughput.
+- **dione** (DVFS governor): CPU frequency adjusted based on utilisation — measured error (target utilisation vs actual) feeds a PID-like controller.
+
 #### Common over-engineering traps
 - Implementing a full PID controller when on/off with hysteresis meets the spec.
 - Building a state estimator (Kalman filter) before measuring that raw sensor noise causes instability.

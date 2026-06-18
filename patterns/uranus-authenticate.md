@@ -72,6 +72,17 @@ A single hard-coded API key checked with a string comparison. A simple username/
 - Sessions or tokens need to survive beyond a single request (stateful sessions, JWTs).
 - Multiple authentication methods need to coexist (password + OAuth + API key).
 
+#### Signs you're in this pattern
+- Your server code checks a token, API key, or password before processing requests.
+- Different users should see different data or perform different actions.
+- You have a login endpoint or API key verification step.
+- Access control logic is scattered across handler functions.
+
+#### Real project examples
+- **Flowstate** (netdriver server): gRPC server authenticates clients via TLS certificates and API tokens before allowing workflow operations.
+- **thinproxy** (sandbox module): After initialisation, the proxy applies seccomp/capsicum sandbox — authentication of its own execution environment.
+- **smoltcp** (no auth built-in): Embedded stacks typically delegate authentication to the application layer — demonstrates that auth is often external.
+
 #### Common over-engineering traps
 - Integrating OAuth2/OIDC on day 1 when a shared secret suffices.
 - Building a full role/permission system before you have more than one user type.

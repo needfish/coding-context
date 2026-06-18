@@ -93,6 +93,16 @@ func Run(steps []Step) {
 - Steps need compensating actions that run in reverse order on failure.
 - Multiple workflows run concurrently and must not interfere.
 
+#### Signs you're in this pattern
+- You have a multi-step business process that must survive server restarts.
+- Each step may call external services that can fail or hang.
+- You need to track "which step was last completed" to resume after a crash.
+- A failure in a later step requires undoing earlier steps (compensating actions).
+
+#### Real project examples
+- **Flowstate** (`engine.go`, `recovery.go`): The canonical instantiation. Workflow steps are executed via the engine, state is persisted atomically in the driver, recovery scans incomplete workflows on startup and resumes from the last committed step.
+- **DaemonDB** (WAL checkpoint recovery): Database recovery replays the WAL from the last checkpoint — a simpler form of workflow: `BEGIN → WAL entries × N → CHECKPOINT → switch to new WAL → truncate old`.
+
 #### Common over-engineering traps
 - Implementing a full saga orchestration engine before confirming that a single linear retry loop is insufficient.
 - Adding distributed locking before workflows run in a single process.
