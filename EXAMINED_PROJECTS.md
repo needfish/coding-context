@@ -117,3 +117,5 @@ repository. It prevents redundant analysis across sessions.
 | # | Project | Repository | Notes |
 |---|---------|-----------|-------|
 | 37 | **Helix** | helix-editor/helix | Modal editor: rope document, tree-sitter incremental parse, LSP client, multiple selections, undo transaction |
+| 38 | **grbl** | grbl/grbl | CNC motion control: look-ahead trajectory planning, acceleration profiles, stepper pulse generation, spindle PWM |
+| 39 | **ArduPilot** | ArduPilot/ardupilot | Autopilot: cascaded PID attitude/position control, EKF sensor fusion, failsafe state machines, mode hierarchy |

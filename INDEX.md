@@ -21,6 +21,7 @@
 | pan | resource scheduling | [patterns/pan-resource-scheduling.md](patterns/pan-resource-scheduling.md) | Priority assignment vs. actual timeliness |
 | atlas | memory allocation | [patterns/atlas-memory-allocation.md](patterns/atlas-memory-allocation.md) | Request size granularity vs. page granularity |
 | dione | power management | [patterns/dione-power-management.md](patterns/dione-power-management.md) | Energy consumption vs. energy availability |
+| leda | feedback control | [patterns/leda-feedback-control.md](patterns/leda-feedback-control.md) | Measurement noise vs. control stability |
 
 ### Veloren (veloren/veloren)
 
@@ -396,7 +397,55 @@ A modal code editor in Rust with tree-sitter, LSP, multiple selections, and a tr
 
 ## Unused Planet Names
 
-`adrastea`, `amalthea`, `ananke`, `ariel`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `janus`, `juliet`, `larissa`, `leda`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
+`adrastea`, `amalthea`, `ananke`, `ariel`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `janus`, `juliet`, `larissa`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
+
+## Control / Robotics Projects
+
+### grbl (grbl/grbl)
+
+A high-performance CNC motion controller for AVR microcontrollers, implementing G-code execution with look-ahead trajectory planning.
+
+| grbl module | Problem Pattern | Rationale |
+|-------------|----------------|-----------|
+| `planner.c` / `planner.h` | **pan** (resource scheduling) | Look-ahead planner: buffers up to 18 blocks, computes velocity profiles with trapezoidal S-curve acceleration, junction speed optimisation |
+| `stepper.c` | **pan** (resource scheduling) + **neptune** (transform) | Stepper ISR: Bresenham line algorithm for multi-axis coordination, AMASS adaptive multi-axis step-smoothing, acceleration/deceleration ramp execution |
+| `motion_control.c` | **neptune** (transform) | Motion control: arc interpolation (G2/G3), helix, dwell — decomposes curved paths into linear segments for the planner |
+| `spindle_control.c` | **mercury** (display) | Spindle PWM: RPM→PWM duty cycle mapping, direction control, enable/disable — open-loop speed output |
+| `coolant_control.c` | **mercury** (display) | Coolant: flood/mist enable, pin toggling |
+| `gcode.c` | **neptune** (transform) + **jupiter** (validate) | G-code parser: line parsing, modal state tracking, parameter extraction, error detection |
+| `protocol.c` | **hyperion** (network listener) | Serial protocol: real-time command character detection, flow control, status reporting |
+| `limits.c` | **jupiter** (validate) | Limit switches: hardware homing cycle, soft limits, pin state debouncing |
+| `probe.c` | **jupiter** (validate) | Probing: G38.x precision touch-off, latched position capture |
+| `settings.c` | **europa** (configuration assembly) | EEPROM settings: steps/mm, acceleration, max velocity, junction deviation — persistent calibration |
+| `cpu_map.h` | **neptune** (transform) | CPU pin mapping: AVR register abstractions for different Arduino boards |
+| `defaults.h` | **europa** (configuration assembly) | Machine defaults: per-machine profiles (Shapeoko, X-Carve, OxCNC) |
+| `report.c` | **mercury** (display) | Status reports: real-time position, feed rate, buffer state, machine state |
+| `system.c` | **europa** (configuration assembly) | System state machine: idle/alarm/hold/cycle/jog/check — mode transitions with safe guards |
+
+### ArduPilot (ArduPilot/ardupilot)
+
+An open-source autopilot system supporting multiple vehicle types (copter, plane, rover, sub) with cascaded control and sensor fusion.
+
+| ArduPilot module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `libraries/AP_AttitudeControl/` | **pan** (resource scheduling) | Cascaded attitude control: outer loop (angle→rate), inner loop (rate→accel), PID with feed-forward, axis prioritisation |
+| `libraries/AP_InertialNav/` | **mars** (persist) | Inertial navigation: integrates accelerometer to estimate position/velocity, drift correction via GPS/baro |
+| `libraries/AP_NavEKF/` | **mars** (persist) | Extended Kalman Filter: fuses IMU, GPS, compass, baro, airspeed into a consistent state estimate — 22-state covariance |
+| `libraries/AC_PID/` | **pan** (resource scheduling) | PID controller library: proportional/integral/derivative terms, integrator clamping, D-term filtering, notch filters |
+| `libraries/AP_Motors/` | **neptune** (transform) | Motor mixer: maps roll/pitch/yaw/thrust commands to individual motor outputs (quad, hex, octo, coaxial, tilt-rotor) |
+| `libraries/AP_Navigation/` | **saturn** (route) | Navigation: waypoint sequencing, path following, loiter orbit, RTL path generation |
+| `libraries/AP_Camera/` | **mercury** (display) | Camera trigger: servo or relay-based shutter control, time-lapse, geo-tagging |
+| `libraries/AP_RangeFinder/` | **jupiter** (validate) | Range finder: sonar, lidar, infrared — distance measurement with outlier rejection |
+| `libraries/AP_OpticalFlow/` | **mars** (persist) | Optical flow: visual odometry from downward-facing camera, velocity estimation |
+| `libraries/AP_Avoidance/` | **saturn** (route) | Obstacle avoidance: re-plans path around detected obstacles, bendy-ruler algorithm |
+| `libraries/AP_Follow/` | **saturn** (route) | Follow mode: tracks another vehicle or GCS position via MAVLink |
+| `libraries/AP_Terrain/` | **mars** (persist) | Terrain database: cached elevation data, look-ahead terrain following |
+| `ArduCopter/mode_*.cpp` | **saturn** (route) | Flight modes: stabilize, altitude hold, loiter, auto, RTL, acro, guided — each mode is a distinct control law |
+| `ArduCopter/Attitude.cpp` | **pan** (resource scheduling) | Top-level attitude controller: calls AP_AttitudeControl in a 400Hz loop, feeds AP_Motors |
+| `ArduCopter/system.cpp` | **europa** (configuration assembly) | System initialisation: parameter loading, sensor calibration, failsafe arm checks |
+| `libraries/AP_Common/` | **jupiter** (validate) | Common utilities: LOCATION, parameter system, bitfield operations |
+| `libraries/AP_HAL/` | **neptune** (transform) | HAL (Hardware Abstraction Layer): board-specific implementations (Pixhawk, Linux, SITL) for GPIO, SPI, I2C, UART |
+| `libraries/GCS_MAVLink/` | **hyperion** (network listener) + **saturn** (route) | MAVLink protocol: telemetry streams, command dispatch, parameter upload/download |
 
 ---
 
