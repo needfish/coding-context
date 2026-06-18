@@ -31,4 +31,4 @@ See [template.md](./template.md).
 
 Patterns are indexed by planet name. Unused names available for new patterns:
 
-`pluto`, `ceres`, `eris`, `makemake`, `haumea`, `titania`, `oberon`, `miranda`, `ariel`, `umbriel`, `callisto`, `ganymede`, `europa`, `io`, `titan`, `rhea`, `iapetus`, `dione`, `tethys`, `enceladus`, `mimas`, `phobos`, `deimos`, `proteus`, `triton`, `nereld`, `charon`, `styx`, `nyx`, `kerberos`, `hydra`
+`pluto`, `ceres`, `makemake`, `haumea`, `titania`, `oberon`, `miranda`, `ariel`, `umbriel`, `callisto`, `ganymede`, `europa`, `io`, `titan`, `rhea`, `iapetus`, `dione`, `tethys`, `enceladus`, `mimas`, `phobos`, `deimos`, `proteus`, `triton`, `nereld`, `charon`, `styx`, `nyx`, `kerberos`, `hydra`

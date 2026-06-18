@@ -1,44 +1,63 @@
 # Pattern Index
 
-| Planet | Pattern | File | Frame Concern |
-|--------|---------|------|---------------|
-| mercury | display | [patterns/mercury-display.md](patterns/mercury-display.md) | Temporal coupling between source and display |
-| venus | filter | [patterns/venus-filter.md](patterns/venus-filter.md) | Predicate ownership |
-| earth | sort | [patterns/earth-sort.md](patterns/earth-sort.md) | Comparator consistency |
-| mars | persist | [patterns/mars-persist.md](patterns/mars-persist.md) | Durability guarantee boundary |
-| jupiter | validate | [patterns/jupiter-validate.md](patterns/jupiter-validate.md) | Rule set completeness |
-| saturn | route | [patterns/saturn-route.md](patterns/saturn-route.md) | Route table consistency |
-| uranus | authenticate | [patterns/uranus-authenticate.md](patterns/uranus-authenticate.md) | Trust delegation |
-| neptune | transform | [patterns/neptune-transform.md](patterns/neptune-transform.md) | Semantic equivalence across heterogeneous representations |
-| callisto | filesystem walk | [patterns/callisto-filesystem-walk.md](patterns/callisto-filesystem-walk.md) | Gap between filesystem order and consumer order |
-| io | command execution | [patterns/io-exec.md](patterns/io-exec.md) | Subprocess lifecycle vs. consumer expectations |
-| ganymede | output formatting | [patterns/ganymede-output-format.md](patterns/ganymede-output-format.md) | Terminal capability detection |
-| europa | configuration assembly | [patterns/europa-config-assembly.md](patterns/europa-config-assembly.md) | Merge ordering transparency |
-| titan | syntax highlighting | [patterns/titan-syntax-highlight.md](patterns/titan-syntax-highlight.md) | Grammar coverage vs. source variety |
-| rhea | syntax detection | [patterns/rhea-syntax-detection.md](patterns/rhea-syntax-detection.md) | Information deficit at decision time |
-| iapetus | code counting | [patterns/iapetus-code-counting.md](patterns/iapetus-code-counting.md) | Grammar coverage vs. real-world source variety |
-| hyperion | network listener | [patterns/hyperion-network-listener.md](patterns/hyperion-network-listener.md) | Connection establishment vs. request processing gap |
-| pan | resource scheduling | [patterns/pan-resource-scheduling.md](patterns/pan-resource-scheduling.md) | Priority assignment vs. actual timeliness |
-| atlas | memory allocation | [patterns/atlas-memory-allocation.md](patterns/atlas-memory-allocation.md) | Request size granularity vs. page granularity |
-| dione | power management | [patterns/dione-power-management.md](patterns/dione-power-management.md) | Energy consumption vs. energy availability |
-| leda | feedback control | [patterns/leda-feedback-control.md](patterns/leda-feedback-control.md) | Measurement noise vs. control stability |
-| pandora | simple workpieces | [patterns/pandora-simple-workpieces.md](patterns/pandora-simple-workpieces.md) | Edit operations vs. document state consistency |
+## Quick Start — Which Patterns to Read First
 
-### Veloren (veloren/veloren)
+| You're building | Start here | Watch for later | Can ignore |
+|----------------|-----------|----------------|------------|
+| **CLI tool** (search, format, filter) | venus, ganymede, callisto, europa | neptune, mars | titan, rhea, pandora, uranus |
+| **Web server / API** | hyperion, saturn, neptune, europa | mars, uranus, jupiter | titan, rhea, pandora, ganymede |
+| **Editor / note app** | pandora, mercury, mars, titan | neptune, saturn, callisto | hyperion, uranus, rhea |
+| **Game** | hyperion, saturn, mercury, mars, neptune | pan, uranus, jupiter | titan, iapetus |
+| **Embedded / RTOS** | saturn, mars, hyperion, uranus | pan, jupiter, neptune | mercury, titan, iapetus, rhea |
+| **Compiler / interpreter** | eris, neptune, jupiter, phoebe | saturn, mars | hyperion, uranus, mercury |
+| **Database / storage engine** | mars, thebe, atlas, earth | neptune, phoebe, venus | hyperion, uranus, mercury |
+| **Audio / video library** | phoebe, neptune, hyperion, saturn | mars, europa | callisto, io, venus |
+| **Graphics / rendering** | ganymede, mercury, neptune | titan, mars, saturn | pandora, callisto, io |
 
-A multiplayer voxel RPG written in Rust with an ECS architecture and client/server split.
+---
 
-| Veloren crate / module | Problem Pattern | Rationale |
-|------------------------|----------------|-----------|
-| `server/` | **hyperion** (network listener) + **mars** (persist) | Game server: world simulation, player persistence, NPC AI, physics |
-| `client/` (voxygen/) | **mercury** (display) + **hyperion** (network listener) | Client: 3D rendering (vulkan), input handling, UI, audio |
-| `common/` | **neptune** (transform) | Shared types: components, protocol messages, math, world model |
-| `common/src/comp/` | **neptune** (transform) | ECS components: position, velocity, health, inventory, stats |
-| `common/src/sys/` | **saturn** (route) | ECS systems: physics, combat, AI, animation, interactions |
-| `common/src/terrain/` | **mars** (persist) | Voxel terrain: generation, modification, lighting, LOD |
-| `common/src/trade/` | **neptune** (transform) | Trading: item economy, buy/sell, market simulation |
-| `common/src/agent/` | **saturn** (route) | Agent AI: behaviour trees, pathfinding, combat tactics |
-| `assets/` | **europa** (configuration assembly) | Game data: ability definitions, item stats, NPC behaviour, loot tables — in `.ron` files |
+| Planet | Pattern | Pressure Class | File | Frame Concern |
+|--------|---------|---------------|------|---------------|
+| mercury | display | Data variation | [patterns/mercury-display.md](patterns/mercury-display.md) | Temporal coupling between source and display |
+| venus | filter | Object variation | [patterns/venus-filter.md](patterns/venus-filter.md) | Predicate ownership |
+| earth | sort | Behavior variation | [patterns/earth-sort.md](patterns/earth-sort.md) | Comparator consistency |
+| mars | persist | Object variation | [patterns/mars-persist.md](patterns/mars-persist.md) | Durability guarantee boundary |
+| jupiter | validate | Rules variation | [patterns/jupiter-validate.md](patterns/jupiter-validate.md) | Rule set completeness |
+| saturn | route | Behavior variation | [patterns/saturn-route.md](patterns/saturn-route.md) | Route table consistency |
+| uranus | authenticate | Object variation | [patterns/uranus-authenticate.md](patterns/uranus-authenticate.md) | Trust delegation |
+| neptune | transform | Behavior variation | [patterns/neptune-transform.md](patterns/neptune-transform.md) | Semantic equivalence across heterogeneous representations |
+| callisto | filesystem walk | Data variation | [patterns/callisto-filesystem-walk.md](patterns/callisto-filesystem-walk.md) | Gap between filesystem order and consumer order |
+| io | command execution | Object variation | [patterns/io-exec.md](patterns/io-exec.md) | Subprocess lifecycle vs. consumer expectations |
+| ganymede | output formatting | Data variation | [patterns/ganymede-output-format.md](patterns/ganymede-output-format.md) | Terminal capability detection |
+| europa | configuration assembly | Data variation | [patterns/europa-config-assembly.md](patterns/europa-config-assembly.md) | Merge ordering transparency |
+| titan | syntax highlighting | Behavior variation | [patterns/titan-syntax-highlight.md](patterns/titan-syntax-highlight.md) | Grammar coverage vs. source variety |
+| rhea | syntax detection | Behavior variation | [patterns/rhea-syntax-detection.md](patterns/rhea-syntax-detection.md) | Information deficit at decision time |
+| iapetus | code counting | Behavior variation | [patterns/iapetus-code-counting.md](patterns/iapetus-code-counting.md) | Grammar coverage vs. real-world source variety |
+| hyperion | network listener | Object variation | [patterns/hyperion-network-listener.md](patterns/hyperion-network-listener.md) | Connection establishment vs. request processing gap |
+| pan | resource scheduling | Behavior variation | [patterns/pan-resource-scheduling.md](patterns/pan-resource-scheduling.md) | Priority assignment vs. actual timeliness |
+| atlas | memory allocation | Object variation | [patterns/atlas-memory-allocation.md](patterns/atlas-memory-allocation.md) | Request size granularity vs. page granularity |
+| dione | power management | Behavior variation | [patterns/dione-power-management.md](patterns/dione-power-management.md) | Energy consumption vs. energy availability |
+| leda | feedback control | Behavior variation | [patterns/leda-feedback-control.md](patterns/leda-feedback-control.md) | Measurement noise vs. control stability |
+| pandora | simple workpieces | Behavior variation | [patterns/pandora-simple-workpieces.md](patterns/pandora-simple-workpieces.md) | Edit operations vs. document state consistency |
+| eris | pipeline | Behavior variation | [patterns/eris-pipeline.md](patterns/eris-pipeline.md) | Stage coupling across consecutive transforms |
+| phoebe | resource lifecycle | Object variation | [patterns/phoebe-resource-lifecycle.md](patterns/phoebe-resource-lifecycle.md) | Leak prevention across all exit paths |
+| thebe | background compaction | Behavior variation | [patterns/thebe-background-compaction.md](patterns/thebe-background-compaction.md) | Consistency during concurrent storage reorganisation |
+
+### ==== Common Clusters ====
+
+These patterns co-occur so frequently that seeing one should make you
+look for the others:
+
+| Primary pattern | Often accompanied by |
+|----------------|---------------------|
+| saturn (route) | hyperion (listener), jupiter (validate) |
+| pandora (workpiece) | mercury (display), mars (persist), neptune (transform) |
+| callisto (walk) | venus (filter), ganymede (output format) |
+| hyperion (listener) | neptune (transform), saturn (route) |
+| titan (highlight) | rhea (detection), iapetus (counting) |
+| eris (pipeline) | neptune (transform) repeated N times |
+| phoebe (lifecycle) | mars (persist), hyperion (listener), atlas (memory) |
+| thebe (compaction) | mars (persist), pan (scheduling), earth (sort) |
 
 ## Low-Level / Systems Projects
 
@@ -424,7 +443,7 @@ A lightweight text editor written in Lua with a C core, featuring a line-based d
 
 ## Unused Planet Names
 
-`adrastea`, `amalthea`, `ananke`, `ariel`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `janus`, `juliet`, `larissa`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
+`adrastea`, `amalthea`, `ananke`, `ariel`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `janus`, `juliet`, `larissa`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pasiphae`, `phobos`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
 
 ## Control / Robotics Projects
 
@@ -948,3 +967,113 @@ A multiplayer voxel RPG written in Rust with an ECS architecture and client/serv
 | `common/src/trade/` | **neptune** (transform) | Trading: item economy, buy/sell, market simulation |
 | `common/src/agent/` | **saturn** (route) | Agent AI: behaviour trees, pathfinding, combat tactics |
 | `assets/` | **europa** (configuration assembly) | Game data: ability definitions, item stats, NPC behaviour, loot tables — in `.ron` files |
+
+## Compilers / Interpreters
+
+### chibicc (rui314/chibicc)
+
+A small C11 compiler with tokenizer, preprocessor, recursive descent parser, type checker, and x86-64 code generator.
+
+| chibicc module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `tokenize.c` | **neptune** (transform) | Characters → tokens — initial representation conversion |
+| `preprocess.c` | **neptune** (transform) | Tokens → expanded tokens — macro expansion, directive handling |
+| `parse.c` | **eris** (pipeline) + **neptune** (transform) | Tokens → AST — recursive descent parser threaded through shared context |
+| `type.c` | **jupiter** (validate) | Type checking: type compatibility, constraint enforcement |
+| `codegen.c` | **eris** (pipeline) + **neptune** (transform) | AST → x86-64 assembly — final pipeline stage |
+| `main.c` | **eris** (pipeline) | Pipeline controller: orchestrates tokenize → preprocess → parse → codegen |
+| `chibicc.h` | **neptune** (transform) | Shared context: Type, Node, Token data structures threaded through all stages |
+
+### picol (antirez/picol)
+
+A Tcl interpreter in ~700 lines of C, with hand-written parser, Pratt-style expression evaluator, call frames, and C-implemented command dispatch.
+
+| picol module | Problem Pattern | Rationale |
+|--------------|----------------|-----------|
+| `picol.c` — tokeniser | **neptune** (transform) | Characters → tokens — parsing Tcl syntax |
+| `picol.c` — eval loop | **saturn** (route) | Command dispatch: routes parsed commands to C function pointers |
+| `picol.c` — call frames | **mars** (persist) | Variable storage: linked list of variable name/value pairs per scope |
+| `picol.c` — expr | **neptune** (transform) | Expression string → evaluated result — Pratt parser |
+| `picol.c` — procedure defs | **phoebe** (resource lifecycle) | Command structure lifecycle: alloc args/body, register, cleanup on error |
+
+## Audio / Video
+
+### miniaudio (mackron/miniaudio)
+
+A single-file audio playback and capture library in C, supporting multiple backends (WASAPI, ALSA, Core Audio), decoding, resampling, and a node graph for audio processing.
+
+| miniaudio module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `miniaudio.h` — device API | **phoebe** (resource lifecycle) | Device lifecycle: `ma_device_init()` → use → `ma_device_uninit()`, partial init cleanup |
+| `miniaudio.h` — engine API | **phoebe** (resource lifecycle) | Engine lifecycle: `ma_engine_init()` → play sounds → `ma_engine_uninit()` |
+| `miniaudio.h` — backends | **hyperion** (network listener) | Platform audio backends: WASAPI, ALSA, Core Audio — each is a listener for audio I/O |
+| `miniaudio.h` — data conversion | **neptune** (transform) | Sample format conversion, channel mapping, resampling |
+| `miniaudio.h` — node graph | **saturn** (route) | Audio routing: connect processing nodes, route audio through filter/effect chain |
+| `miniaudio.h` — decoding | **neptune** (transform) | Encoded audio → PCM frames (WAV, FLAC, MP3) |
+| `miniaudio.h` — resource manager | **mars** (persist) | Caches decoded audio data in memory, manages sound lifecycle |
+
+### NessMuxer (micilini/NessMuxer)
+
+A video encoding and muxing library: raw NV12 frames → H.264 or N.148 codec → MKV container.
+
+| NessMuxer module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `src/ness_muxer.c` | **phoebe** (resource lifecycle) | Library lifecycle: `Open()` → `WriteFrame()` → `Close()` with encoder cleanup |
+| `src/encoder/` | **neptune** (transform) | Raw NV12 frames → compressed bitstream (H.264 or N.148) |
+| `src/codec/n148/` | **neptune** (transform) | N.148 codec-specific encode/decode with CABAC/CAVLC entropy coding |
+| `src/decoder/n148/` | **neptune** (transform) | Compressed bitstream → reconstructed frames (inverse transform) |
+| `src/mkv_muxer.c` | **mars** (persist) + **neptune** (transform) | Frame stream → MKV container format with SeekHead, Cues, Duration |
+| `src/encoder/mf_encoder_backend.c` | **hyperion** (network listener) | Media Foundation encoder backend — platform-specific encoding service |
+| `src/encoder/x264_encoder.c` | **hyperion** (network listener) | libx264 encoder backend — wraps external encoder as service |
+
+## Databases / Storage Engines
+
+### DaemonDB (ShubhamNegi4/DaemonDB)
+
+A relational database engine in Go with SQL parsing, bytecode execution, B+Tree indexing, WAL-based durability, and transactions.
+
+| DaemonDB module | Problem Pattern | Rationale |
+|-----------------|----------------|-----------|
+| `query_parser/lexer/` | **neptune** (transform) | SQL text → token stream |
+| `query_parser/parser/` | **neptune** (transform) | Token stream → AST |
+| `query_parser/code-generator/` | **neptune** (transform) | AST → bytecode (VDBE instructions) |
+| `query_executor/vm.go` | **saturn** (route) | Bytecode dispatch: opcodes → storage engine operations |
+| `storage_engine/disk_manager/` | **mars** (persist) | File I/O: page read/write, global page ID allocation |
+| `storage_engine/bufferpool/` | **atlas** (memory allocation) | Page cache: LRU-K and W-TinyLFU eviction policies, pin/unpin |
+| `storage_engine/wal_manager/` | **mars** (persist) + **phoebe** (resource lifecycle) | Write-ahead log: durability via fsync, segment lifecycle |
+| `storage_engine/access/heapfile_manager/` | **mars** (persist) | Row storage: slotted pages, row insert/update/delete |
+| `storage_engine/access/indexfile_manager/bplustree/` | **mars** (persist) + **saturn** (route) | B+Tree index: key → RowPointer mapping, page structure routing |
+| `storage_engine/transaction_manager/` | **mars** (persist) + **jupiter** (validate) | Transaction lifecycle: begin/commit/rollback with undo log |
+| `storage_engine/catalog/` | **europa** (configuration assembly) | Schema metadata: table definitions, column types, file ID mappings |
+| `storage_engine/recover_wal.go` | **mars** (persist) | Crash recovery: WAL replay on startup |
+
+### tiny-lsm-go (Vanilla-Beauty/tiny-lsm-go)
+
+An LSM-tree key-value store in Go with MemTable, SST files, WAL, compaction, bloom filters, block cache, and MVCC transactions.
+
+| tiny-lsm-go module | Problem Pattern | Rationale |
+|--------------------|----------------|-----------|
+| `pkg/memtable/` | **mars** (persist) | In-memory write buffer backed by skip list — flushed to SST on size threshold |
+| `pkg/sst/` | **mars** (persist) | On-disk sorted string tables: block-based format with index and bloom filter |
+| `pkg/wal/` | **mars** (persist) | Write-ahead log: durability before memtable write |
+| `pkg/skiplist/` | **earth** (sort) | Ordered in-memory structure for memtable: O(log n) insert/seek |
+| `pkg/lsm/level_manager.go` | **thebe** (background compaction) | Level-based compaction scheduling: pick, merge, swap SST files across levels |
+| `pkg/lsm/txn_manager.go` | **mars** (persist) | MVCC transaction management: snapshot isolation, read views |
+| `pkg/iterator/` | **callisto** (filesystem walk) | Iterator chain: merge iterators over multiple SSTs for range queries |
+| `pkg/cache/` | **atlas** (memory allocation) | LRU-K block cache: caches frequently accessed SST data blocks |
+| `pkg/utils/bloom.go` | **venus** (filter) | Bloom filter: fast key existence check, reduces disk I/O for missing keys |
+| `pkg/config/` | **europa** (configuration assembly) | TOML configuration: memtable size, block size, SST level ratio, cache parameters |
+| `pkg/lsm/compact_test.go` | **thebe** (background compaction) | Compaction correctness tests: concurrent foreground reads during merge |
+
+### lite3 (fastserial/lite3)
+
+A zero-copy binary serialization format: data is stored as a B-tree in a single contiguous buffer, wire format is the memory format.
+
+| lite3 module | Problem Pattern | Rationale |
+|--------------|----------------|-----------|
+| `src/lite3.c` | **neptune** (transform) | Data → B-tree encoded buffer (serialisation is tree construction, not byte encoding) |
+| `src/json_dec.c` | **neptune** (transform) | JSON → lite3 buffer (schema-less format conversion) |
+| `src/json_enc.c` | **neptune** (transform) | lite3 buffer → JSON (inverse transformation) |
+| `include/lite3.h` | **phoebe** (resource lifecycle) | Buffer lifecycle: caller provides buffer, library operates on it — no malloc |
+| `src/ctx_api.c` | **phoebe** (resource lifecycle) | Context API lifecycle: `init` → set/get values → `destroy` — internal buffer management |
+| `include/lite3_context_api.h` | **europa** (configuration assembly) | Context configuration: buffer size, initial capacity, error handling flags |

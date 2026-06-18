@@ -1,5 +1,7 @@
 # uranus: Authenticate
 
+> **Pressure class:** Object variation — the authentication provider changes while the verification contract stays the same.
+
 ## Problem
 
 An actor (user, service, process) must prove its identity before being allowed to perform an action, and the system must verify that proof.
@@ -55,6 +57,25 @@ Arises at every security boundary — API endpoints, inter-service calls, file a
 - **mars/persist**: Data access may require authentication.
 - **jupiter/validate**: Credentials must be validated before verification.
 - **mercury/display**: Display may show different content based on authenticated identity.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that distinguishes between users, restricts actions by identity, or communicates with authenticated services.
+
+#### Start with (minimal form)
+A single hard-coded API key checked with a string comparison. A simple username/password pair in a config file. No token generation, no session management.
+
+#### Split into its own module when (observable triggers)
+- More than one user needs distinct identities.
+- Credentials must be stored securely (hashed, not plaintext).
+- Sessions or tokens need to survive beyond a single request (stateful sessions, JWTs).
+- Multiple authentication methods need to coexist (password + OAuth + API key).
+
+#### Common over-engineering traps
+- Integrating OAuth2/OIDC on day 1 when a shared secret suffices.
+- Building a full role/permission system before you have more than one user type.
+- Implementing token refresh before measuring that sessions expire too frequently.
 
 ## Frame Concern
 

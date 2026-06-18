@@ -1,5 +1,7 @@
 # callisto: Filesystem Walk
 
+> **Pressure class:** Data variation — same traversal algorithm, different exclusion rules and root paths.
+
 ## Problem
 
 A directory tree must be traversed recursively, visiting every entry (file, directory, symlink) while respecting exclusion rules, following (or not following) symlinks, and controlling depth.
@@ -54,6 +56,25 @@ Arises whenever a system needs to enumerate filesystem contents — search tools
 - **io/exec**: Walked entries may be passed to an external command.
 - **mars/persist**: Walk results may be stored.
 - **earth/sort**: Results may need sorting before display or processing.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that enumerates filesystem contents — search tools, backup software, file managers, build systems, linters.
+
+#### Start with (minimal form)
+`os.walk()` (Python), `walkdir::WalkDir` (Rust), `find` command piped to your tool. Process entries as they arrive — don't buffer the full tree.
+
+#### Split into its own module when (observable triggers)
+- You need custom exclusion rules (gitignore, hidden file filtering, size limits).
+- You need parallel traversal (multiple directories simultaneously).
+- You need to handle symlink cycles, permission errors, or deep trees gracefully.
+- The traversal logic needs independent testing from the consumer logic.
+
+#### Common over-engineering traps
+- Building a multi-threaded walker before measuring that single-threaded walk is too slow.
+- Implementing inode sorting before confirming that the consumer needs deterministic order.
+- Supporting every filesystem event (inotify, FSEvents) when a one-shot scan suffices.
 
 ## Frame Concern
 

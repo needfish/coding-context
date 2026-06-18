@@ -1,5 +1,7 @@
 # pan: Resource Scheduling
 
+> **Pressure class:** Behavior variation — the scheduling policy algorithm changes per workload requirement.
+
 ## Problem
 
 Multiple consumers compete for a shared resource (CPU, network bandwidth, memory bandwidth, I/O channel), and the system must allocate access according to a policy (priority, fairness, deadline) while avoiding starvation, priority inversion, and overload.
@@ -60,6 +62,25 @@ Arises in any system with concurrent contention for a scarce resource: RTOS task
 - **jupiter/validate**: Schedulers often include watchdog timers and deadline monitors as validation of correct scheduling.
 - **uranus/authenticate**: Real-time systems must authenticate task origins before scheduling critical work.
 - **hyperion/network-listener**: Network interrupt handling must be scheduled alongside application tasks.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any system with concurrent contention for a shared resource: RTOS task schedulers, I/O schedulers, network packet schedulers, request rate limiters.
+
+#### Start with (minimal form)
+First-come, first-served (FIFO queue). A single-threaded event loop. No priorities, no preemption, no deadlines. Python: `asyncio.Queue`. Rust: `std::collections::VecDeque`.
+
+#### Split into its own module when (observable triggers)
+- Some work items are more urgent than others (priorities emerge).
+- A high-priority item can arrive while a low-priority item is being processed (preemption needed).
+- Items have deadlines, and missing them causes real consequences.
+- The scheduling policy needs to be configurable (FIFO vs priority vs round-robin vs EDF).
+
+#### Common over-engineering traps
+- Implementing priority queues before confirming that FIFO causes missed deadlines.
+- Building a preemptive scheduler when cooperative yielding handles all cases.
+- Adding deadline-monitoring infrastructure before a single deadline has been missed.
 
 ## Frame Concern
 

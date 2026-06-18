@@ -38,6 +38,25 @@ The tensions that shape any solution to this problem. Trade-offs inherent in the
 
 Other problem patterns that commonly appear alongside this one. Natural decomposition paths: what subproblems emerge when you analyse this one further.
 
+### ==== Practical Use ====
+
+#### When this pattern matters
+
+#### Start with (minimal form)
+
+The simplest implementation that avoids the pattern's characteristic failure modes.
+
+#### Split into its own module when (observable triggers)
+
+- <symptom that signals the first axis is pushing>
+- <symptom that signals a second axis is pushing>
+- <symptom that signals a full pattern instantiation is warranted>
+
+#### Common over-engineering traps
+
+- <design mistake people make when they apply this pattern too early>
+- <common wrong implementation that looks correct>
+
 ## Frame Concern
 
 The central difficulty — Jackson's term. The one thing that makes this problem type non-trivial, regardless of how you implement it.

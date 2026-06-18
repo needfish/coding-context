@@ -1,5 +1,7 @@
 # dione: Power Management
 
+> **Pressure class:** Behavior variation — the power policy algorithm changes per energy/performance trade-off.
+
 ## Problem
 
 A system must minimise energy consumption while maintaining sufficient responsiveness to external events, requiring dynamic tradeoffs between performance and power at multiple levels: CPU frequency, sleep states, peripheral gating, and communication duty cycling.
@@ -63,6 +65,25 @@ Arises in battery-powered IoT devices, mobile phones, laptops, and energy-harves
 - **hyperion/network-listener**: Network interfaces driver must coordinate wakeup timing with remote senders (e.g., TSCH slot scheduling, wake-on-LAN).
 - **mars/persist**: Power loss forces data to be committed to non-volatile storage before the energy reserve is exhausted.
 - **europa/config-assembly**: Power management parameters (sleep thresholds, voltage tables, duty-cycle ratios) must be configured correctly for the hardware platform.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any battery-powered or energy-harvesting device — IoT sensors, wearables, mobile phones, laptops, wireless nodes.
+
+#### Start with (minimal form)
+Run at full speed, never sleep. In embedded: `WFI` (wait for interrupt) in the idle loop. No DVFS, no tickless idle, no peripheral gating.
+
+#### Split into its own module when (observable triggers)
+- Battery life is measured and found insufficient (quantified gap between actual and required).
+- The device spends most of its time idle — sleeping reduces average power measurably.
+- Different operating modes have different performance requirements (active sensing vs. periodic reporting).
+- The energy source is intermittent (harvesting) and consumption must track availability.
+
+#### Common over-engineering traps
+- Implementing DVFS before measuring that CPU active power dominates the power budget.
+- Building a tickless scheduler before confirming that periodic timer wakeups drain the battery.
+- Adding power-aware routing before measuring that the radio dominates the energy budget.
 
 ## Frame Concern
 

@@ -1,5 +1,7 @@
 # iapetus: Code Counting / Statistics Aggregation
 
+> **Pressure class:** Behavior variation — the line classifier algorithm changes per language grammar.
+
 ## Problem
 
 Text content must be classified into categories (code, comments, blanks) line by line, and counts must be aggregated across files and grouped by language, directory, or other criteria.
@@ -55,6 +57,25 @@ Arises in code analysis tools, project health dashboards, billing systems that c
 - **ganymede/output-format**: The aggregated report must be formatted for display or serialised for export.
 - **earth/sort**: Report rows are typically sorted by count or name.
 - **mercury/display**: The report is displayed to the user.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that reports statistics about code — line counters, project health dashboards, billing systems, complexity analysers.
+
+#### Start with (minimal form)
+Count lines with `wc -l` or a script that reads all lines and counts blanks vs. non-blanks. No language-aware classification. Python: `len(lines)`, `sum(1 for l in lines if l.strip())`.
+
+#### Split into its own module when (observable triggers)
+- You need per-language counting (code vs comments vs blanks per language).
+- The line classifier must handle nested comments, string literals, and heredocs.
+- You need incremental counting (only re-process changed files).
+- The report format needs aggregation (group by language, directory, contributor).
+
+#### Common over-engineering traps
+- Implementing a full state-machine parser before confirming that regex-based counting misses critical cases.
+- Supporting embedded languages (SQL in Python) before measuring how often they appear in your corpus.
+- Building incremental file watching before confirming that full scans are too expensive.
 
 ## Frame Concern
 

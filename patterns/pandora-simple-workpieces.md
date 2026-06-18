@@ -1,5 +1,7 @@
 # pandora: Simple Workpieces
 
+> **Pressure class:** Behavior variation — the edit operation changes per user action, but the document state consistency contract stays the same.
+
 ## Problem
 
 A user interacts with a structured document (text, spreadsheet, diagram, source code) through a sequence of editing operations. The system must maintain the document's internal consistency, support undo and redo across operations, keep multiple views synchronised, and preserve the editing state across sessions.
@@ -65,6 +67,25 @@ Arises in any application that creates and modifies documents: text editors, IDE
 - **saturn/route**: The command system routes user input through key bindings to specific editing commands.
 - **titan/syntax-highlighting**: The highlighter is an incremental computation over the document — it must re-highlight only the changed region.
 - **atlas/memory-allocation**: The document model must manage memory efficiently for large files (line count, total bytes).
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any application that creates and modifies documents — text editors, IDEs, spreadsheet editors, image editors, CAD tools, note-taking apps.
+
+#### Start with (minimal form)
+Store the document as a single string or list of strings. On each edit, replace the entire content. No undo, no multi-view sync, no incremental highlighting. Python: `doc = ""`, `doc = doc[:pos] + char + doc[pos:]`.
+
+#### Split into its own module when (observable triggers)
+- Users need to undo mistakes (undo/redo stack emerges).
+- The document is large enough that full-string replacement on every keystroke is slow (incremental data structure needed).
+- Multiple views or split panes show the same document (change notification across views).
+- The document must track whether it differs from the saved copy (dirty flag with history awareness).
+
+#### Common over-engineering traps
+- Building a rope data structure before measuring that string replacement is too slow for your file sizes.
+- Implementing a branching undo tree before confirming that linear undo/redo suffices.
+- Adding multi-cursor support before single-cursor editing is stable.
 
 ## Frame Concern
 

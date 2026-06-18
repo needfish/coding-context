@@ -1,5 +1,7 @@
 # jupiter: Validate
 
+> **Pressure class:** Rules variation — rules combine, grow, and change independently.
+
 ## Problem
 
 Input data must be checked against a set of rules before it is accepted for processing, ensuring that downstream operations receive data that meets their expectations.
@@ -51,6 +53,25 @@ Arises at every boundary where external data enters the system — user input, A
 - **saturn/route**: Incoming requests are validated before routing.
 - **mercury/display**: User input through a display requires validation before action.
 - **venus/filter**: A filter predicate may need validation.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that accepts external input — API requests, file imports, user forms, configuration files, network messages.
+
+#### Start with (minimal form)
+Inline `if` checks at the point of use. Python: `if not isinstance(value, int): raise ValueError(...)`. Rust: `if value > MAX { return Err(...) }`. No schema library, no validator trait.
+
+#### Split into its own module when (observable triggers)
+- The same validation rules are needed in multiple places (duplication emerges).
+- The rule set grows beyond what fits on one screen (10+ rules).
+- Rules need to be composed (AND/OR across fields) or conditional (field A requires field B).
+- Validation needs to produce structured error reports (field-level, code-level).
+
+#### Common over-engineering traps
+- Adopting a schema validation library (JSON Schema, Zod, Pydantic) before you have 5+ fields to validate.
+- Building a declarative rule engine before imperative `if` checks are proven to be the bottleneck.
+- Validating data that comes from a trusted internal source (defensive programming without the threat model).
 
 ## Frame Concern
 

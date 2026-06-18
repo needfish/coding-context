@@ -120,3 +120,31 @@ repository. It prevents redundant analysis across sessions.
 | 38 | **grbl** | grbl/grbl | CNC motion control: look-ahead trajectory planning, acceleration profiles, stepper pulse generation, spindle PWM |
 | 39 | **ArduPilot** | ArduPilot/ardupilot | Autopilot: cascaded PID attitude/position control, EKF sensor fusion, failsafe state machines, mode hierarchy |
 | 40 | **Lite XL** | lite-xl/lite-xl | Lightweight Lua editor: line-based document model, undo stack, command/compositor/view architecture, plugin system |
+
+---
+
+## Compilers / Interpreters
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 42 | **chibicc** | rui314/chibicc | Small C11 compiler: tokenizer, preprocessor, recursive descent parser, type checker, x86-64 codegen |
+| 43 | **picol** | antirez/picol | Tcl interpreter in ~700 LOC: hand-written parser, Pratt-style expr evaluator, call frames, command dispatch |
+
+---
+
+## Audio / Video
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 44 | **miniaudio** | mackron/miniaudio | Single-file audio library: device playback/capture, decoding, resampling, node graph, resource engine |
+| 45 | **NessMuxer** | micilini/NessMuxer | Video encoding/muxing library: NV12→H.264/N.148 encode, MKV muxing, encoder abstraction backends |
+
+---
+
+## Databases / Storage Engines
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 46 | **DaemonDB** | ShubhamNegi4/DaemonDB | Relational DB engine in Go: SQL parser, bytecode VM, B+Tree indexing, WAL, buffer pool, transactions |
+| 47 | **tiny-lsm-go** | Vanilla-Beauty/tiny-lsm-go | LSM-tree KV store: MemTable, SST files, WAL, compaction, block cache, MVCC transactions, bloom filter |
+| 48 | **lite3** | fastserial/lite3 | Zero-copy binary serialization: B-tree encoded wire format, JSON-compatible, schemaless |

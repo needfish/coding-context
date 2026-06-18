@@ -1,5 +1,7 @@
 # leda: Feedback Control
 
+> **Pressure class:** Behavior variation — the control algorithm changes per plant dynamics.
+
 ## Problem
 
 A system must maintain a physical or logical variable at a desired setpoint by measuring the current value, comparing it to the target, and adjusting an actuator input to minimise the error over time — all while coping with measurement noise, external disturbances, actuator limits, and changing dynamics.
@@ -60,6 +62,25 @@ Arises in any system that regulates a dynamic process: temperature control (3D p
 - **neptune/transform**: The actuator mixer transforms logical control signals (roll/pitch/yaw/thrust) into physical actuator outputs (motor PWMs).
 - **mars/persist**: State estimators (EKF, complementary filter) maintain a persistent estimate of system state across sensor dropout.
 - **dione/power-management**: Power-aware controllers reduce actuator output to conserve energy, trading control accuracy for power savings.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any system that regulates a dynamic process — temperature control, motor speed/position control, chemical process control, rate/throttle control.
+
+#### Start with (minimal form)
+On/off (bang-bang) control with hysteresis: turn the actuator on when the value drops below a threshold, off when it rises above another. A simple `if` statement in the control loop.
+
+#### Split into its own module when (observable triggers)
+- On/off control causes visible oscillation (limit cycling) — the process has inertia.
+- You need to eliminate steady-state error (proportional-only leaves a gap — integral term needed).
+- The process dynamics change with operating point (gain scheduling needed).
+- Sensor noise or dropouts cause the controller to make bad corrections (filtering/estimation needed).
+
+#### Common over-engineering traps
+- Implementing a full PID controller when on/off with hysteresis meets the spec.
+- Building a state estimator (Kalman filter) before measuring that raw sensor noise causes instability.
+- Auto-tuning controller gains before manual tuning reveals the process is too complex to tune by hand.
 
 ## Frame Concern
 

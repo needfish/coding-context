@@ -1,5 +1,7 @@
 # venus: Filter
 
+> **Pressure class:** Object variation — the predicate shape stays the same, the target collection changes.
+
 ## Problem
 
 A collection must be reduced to a subset based on a predicate, discarding elements that do not match.
@@ -48,6 +50,25 @@ Arises whenever a set of items is larger than what the user needs or the next op
 - **neptune/transform**: Each element in the result may need transformation.
 - **jupiter/validate**: The predicate itself may need validation before use.
 - **mars/persist**: The source collection may come from storage.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that selects a subset from a larger collection — search, browse, list, query, report.
+
+#### Start with (minimal form)
+A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rust: `items.iter().filter(|x| predicate(x))`. A single function that takes the collection and returns the subset.
+
+#### Split into its own module when (observable triggers)
+- The predicate becomes user-configurable (dynamic, not hard-coded).
+- Multiple filter criteria compose (AND/OR/NOT combinations).
+- The source collection is large enough that lazy/streaming filtering matters.
+- The filtering logic needs independent testing from the rest of the pipeline.
+
+#### Common over-engineering traps
+- Building a predicate parser/interpreter before measuring that the fixed predicates are the bottleneck.
+- Abstracting the filter into a generic pipeline stage before you have a second pipeline stage.
+- Implementing parallel filtering before profiling shows single-threaded is too slow.
 
 ## Frame Concern
 

@@ -1,5 +1,7 @@
 # mercury: Display
 
+> **Pressure class:** Data variation — same rendering pipeline, different values to display.
+
 ## Problem
 
 Data from a source must be presented to a user in a readable form, potentially involving transformation, formatting, and timely updates.
@@ -52,6 +54,25 @@ Occurs whenever a system has internal data that a human needs to see. The data m
 - **saturn/route**: Display events may need routing to handlers.
 - **earth/sort**: Ordered display requires a sorting subproblem.
 - **venus/filter**: Subset display requires a filtering subproblem.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that shows data to a human — CLI tools with output, dashboards, editors, games, monitoring UIs.
+
+#### Start with (minimal form)
+Print raw values to stdout with `println!` / `print()` / `console.log()`. Format as a table with simple string padding. Refresh by re-rendering the entire output on each update.
+
+#### Split into its own module when (observable triggers)
+- Multiple output targets (terminal, file, JSON, HTML) need different renderers.
+- The source data updates faster than the display refresh cycle — you need throttling or diffing.
+- The user can interact with the display (scroll, click, filter) — events must route back to data.
+- The display needs to survive process restart (session state, window layout).
+
+#### Common over-engineering traps
+- Building a widget/compositor framework before you have more than one view type.
+- Separating display logic from data fetching before you have a second data source.
+- Implementing virtual scrolling before you measure that rendering all items is a bottleneck.
 
 ## Frame Concern
 

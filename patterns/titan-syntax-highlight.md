@@ -1,5 +1,7 @@
 # titan: Syntax Highlighting
 
+> **Pressure class:** Behavior variation — the grammar-driven classification algorithm changes per language.
+
 ## Problem
 
 Source code or structured text must be classified by language and annotated with semantic styles (keywords, strings, comments, etc.) to improve human readability.
@@ -54,6 +56,25 @@ Arises in any tool that displays source code — text editors, pagers, diff view
 - **ganymede/output-format**: Styled tokens must be formatted for the output medium (terminal ANSI, HTML, SVG).
 - **neptune/transform**: Source text is transformed into a styled representation.
 - **venus/filter**: Highlighting may be filtered by line range or visible region.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that displays source code — text editors, pagers (bat), diff viewers, code review tools, documentation generators.
+
+#### Start with (minimal form)
+Use an existing highlighting library (syntect, Pygments, highlight.js, Prism). Feed entire file, get styled output. No incremental update, no custom grammar.
+
+#### Split into its own module when (observable triggers)
+- The integrated library doesn't support a language you need — you need custom grammar rules.
+- Re-highlighting the entire file on every keystroke is too slow — you need incremental re-highlighting.
+- You need to support embedded languages (JS in HTML, SQL in Python) that the library doesn't handle.
+- The output target changes (terminal vs HTML vs SVG) and needs different renderers.
+
+#### Common over-engineering traps
+- Writing a grammar engine from scratch when an existing library covers your languages.
+- Building an incremental highlighter before measuring that full-file re-highlight is too slow.
+- Supporting every colour theme format when one format (`.tmTheme`, `.json`) suffices.
 
 ## Frame Concern
 

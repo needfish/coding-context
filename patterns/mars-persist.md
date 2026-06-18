@@ -1,5 +1,7 @@
 # mars: Persist
 
+> **Pressure class:** Object variation — the storage backend changes while the access contract stays the same.
+
 ## Problem
 
 Data must be stored and retrieved across system lifetimes, surviving process termination, restart, and failure.
@@ -50,6 +52,25 @@ Arises whenever state must outlive the execution context that produces or consum
 - **neptune/transform**: Data may need serialisation/deserialisation.
 - **saturn/route**: Queries may need routing to the correct storage backend.
 - **uranus/authenticate**: Access to storage may require authentication.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project where state must survive process termination — configuration, user data, game saves, caches, logs.
+
+#### Start with (minimal form)
+A single JSON/TOML/YAML file read on startup and written on shutdown. Python: `json.load` / `json.dump`. Rust: `serde_json::from_reader` / `serde_json::to_writer`. No database, no repository abstraction.
+
+#### Split into its own module when (observable triggers)
+- You need incremental saves (not flush-all-on-exit) — users lose work if the process crashes between saves.
+- Two or more concurrent readers/writers access the same data file.
+- You need transactional semantics (partial writes must roll back on failure).
+- The storage format needs versioned migration (v1 → v2 schema changes).
+
+#### Common over-engineering traps
+- Adding a database (SQLite, PostgreSQL) when a JSON file suffices.
+- Building a repository abstraction layer on day 1 before you know what queries you need.
+- Implementing atomic write (write-to-temp + rename) before confirming partial writes are a real problem.
 
 ## Frame Concern
 

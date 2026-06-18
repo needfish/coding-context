@@ -1,5 +1,7 @@
 # ganymede: Output Formatting
 
+> **Pressure class:** Data variation — same rendering pipeline, different styles per terminal capability.
+
 ## Problem
 
 Structured data must be rendered as human-readable text, applying contextual styling (colors, icons, indentation) based on data attributes, terminal capabilities, and user preferences.
@@ -53,6 +55,25 @@ Arises wherever a command-line tool displays results to a terminal — search re
 - **venus/filter**: Only filtered entries need formatting.
 - **earth/sort**: Sorted entries are formatted in order.
 - **callisto/walk**: File system entries are the most common input to formatting.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any CLI tool that prints results to a terminal — especially if it supports colour, columns, or custom format templates.
+
+#### Start with (minimal form)
+Print raw values with `println!()`. If colour is needed, use ANSI escape codes directly. Single format, no template strings, no auto-detection.
+
+#### Split into its own module when (observable triggers)
+- You need multiple output formats (plain, JSON, CSV, custom template).
+- Terminal capability detection matters (colour support, width, Unicode range).
+- The output includes styled elements (colours, icons, alignment) that need testing.
+- Users ask for custom format templates with field placeholders.
+
+#### Common over-engineering traps
+- Building a template engine before confirming users need customisable output.
+- Implementing colour detection before measuring that colours-without-detection causes problems.
+- Separating format definition from format application before you have a second format.
 
 ## Frame Concern
 

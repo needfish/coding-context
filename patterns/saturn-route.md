@@ -1,5 +1,7 @@
 # saturn: Route
 
+> **Pressure class:** Behavior variation — the dispatch algorithm changes per message attribute.
+
 ## Problem
 
 An incoming message must be delivered to the correct handler based on attributes of the message, decoupling the sender from knowledge of which handler processes it.
@@ -51,6 +53,25 @@ Arises whenever a system receives messages (requests, events, commands) from mul
 - **uranus/authenticate**: Messages may need authentication before routing.
 - **mercury/display**: UI navigation is a routing problem.
 - **mars/persist**: Persisted messages may be routed on retrieval.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project where an incoming token (request, event, command, signal) must be dispatched based on some property to different handlers.
+
+#### Start with (minimal form)
+A single `if/elif/else` chain or a hash map from key to handler function. Python: `{'create': create_handler, 'delete': delete_handler}`. Rust: `match command { Command::Create => ... }`.
+
+#### Split into its own module when (observable triggers)
+- The dispatch table grows beyond what fits on one screen (20+ routes).
+- Different handlers share setup/teardown logic (middleware emerges).
+- Routes need to be registered from separate files (plugin system).
+- Routing logic needs independent testing from handler logic.
+
+#### Common over-engineering traps
+- Introducing a full middleware stack when you have 3 routes and 1 shared concern.
+- Building a trie-based router when a simple hash map handles your 10 endpoints.
+- Abstracting route groups before you have a second group.
 
 ## Frame Concern
 

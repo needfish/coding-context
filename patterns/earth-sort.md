@@ -1,5 +1,7 @@
 # earth: Sort
 
+> **Pressure class:** Behavior variation — the comparator algorithm changes per sort key.
+
 ## Problem
 
 A collection must be ordered by a key derived from each element, establishing a total order among items.
@@ -48,6 +50,25 @@ Arises whenever items have a natural or user-defined ordering and the consumer r
 - **mercury/display**: Ordered results are typically displayed.
 - **neptune/transform**: Sort keys may require transformation before comparison.
 - **mars/persist**: Sorted results may be persisted.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project where items must be presented, processed, or stored in a defined order.
+
+#### Start with (minimal form)
+Call the language's built-in sort: Python `sorted(items, key=...)`, Rust `items.sort_by_key(...)`, JavaScript `items.sort(...)`. Use a simple key-extraction function.
+
+#### Split into its own module when (observable triggers)
+- Multiple sort keys are needed (primary, secondary, tertiary).
+- The sort key is expensive to compute — you need to cache it.
+- The sort direction or key is user-configurable at runtime.
+- The collection is larger than available memory (external sort).
+
+#### Common over-engineering traps
+- Writing a custom sort algorithm before the built-in sort is proven too slow.
+- Implementing a stable sort when element identity doesn't matter.
+- Pre-sorting data that the consumer will re-sort anyway.
 
 ## Frame Concern
 

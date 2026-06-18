@@ -1,5 +1,7 @@
 # europa: Configuration Assembly
 
+> **Pressure class:** Data variation — same merge algorithm, different values per source.
+
 ## Problem
 
 Configuration must be assembled from multiple sources — CLI arguments, environment variables, config files, platform defaults — with precedence rules, validation, and sensible fallbacks.
@@ -57,6 +59,25 @@ Arises in virtually every non-trivial tool. Configuration sources are ordered by
 - **neptune/transform**: Raw config values may need type coercion or transformation.
 - **saturn/route**: Config may affect routing decisions.
 - **mercury/display**: Config affects display formatting.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any non-trivial tool — virtually every project that has configurable behaviour beyond a single constant.
+
+#### Start with (minimal form)
+Hard-coded constants at the top of `main.rs` / `main.py`. A single optional CLI flag parsed with `std::env::args()` / `sys.argv`. No config file, no env var support.
+
+#### Split into its own module when (observable triggers)
+- More than 5 configuration parameters exist — hard-coding becomes unwieldy.
+- Users need to persist configuration across runs (config file emerges).
+- Multiple config sources exist (CLI + env + file + defaults) and precedence matters.
+- Configuration needs validation (invalid combinations must be caught at startup).
+
+#### Common over-engineering traps
+- Adding a config file parser before you have 3+ configurable parameters.
+- Building a layered merge system (CLI overrides env overrides file) before confirming conflicts are common.
+- Supporting every config file format (JSON + TOML + YAML) when one format covers all users.
 
 ## Frame Concern
 

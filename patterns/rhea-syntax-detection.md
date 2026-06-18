@@ -1,5 +1,7 @@
 # rhea: Syntax Detection
 
+> **Pressure class:** Behavior variation — the detection rule mapping changes per file type heuristic.
+
 ## Problem
 
 A file path, extension, shebang line, or content signature must be mapped to a language identifier so that the correct processing rules (grammar, formatter, linter) can be applied.
@@ -51,6 +53,25 @@ Arises whenever a tool needs to decide how to process a file based on its conten
 - **jupiter/validate**: The detected language may need validation against allowed languages.
 - **neptune/transform**: Transformation may depend on the detected language.
 - **europa/config-assembly**: Language overrides are part of the configuration.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that needs to decide how to process a file based on its content type — syntax highlighting, linting, formatting, diff generation.
+
+#### Start with (minimal form)
+A hash map from file extension to language name. Python: `{'py': 'python', 'rs': 'rust', 'js': 'javascript'}`. No shebang parsing, no content sniffing.
+
+#### Split into its own module when (observable triggers)
+- Extension-based mapping is insufficient — you need shebang detection, content sniffing, or magic bytes.
+- Over 50+ language mappings exist — the table becomes unwieldy to maintain in a single file.
+- Users need custom overrides for project-specific conventions.
+- Detection needs to work from partial information (stdin with no filename).
+
+#### Common over-engineering traps
+- Implementing content sniffing before confirming that extension-based detection misses too many files.
+- Building a cascading detection pipeline (extension → shebang → content → model) when a single fallback suffices.
+- Supporting every language known to exist when your users only use 10.
 
 ## Frame Concern
 

@@ -1,5 +1,7 @@
 # hyperion: Network Listener
 
+> **Pressure class:** Object variation — the connection lifecycle remains the same, the transport protocol changes.
+
 ## Problem
 
 A service must bind to a network address, accept incoming connections, and manage connection lifecycles — handling multiple simultaneous connections, TLS negotiation, connection draining, and graceful shutdown.
@@ -61,6 +63,25 @@ Arises in any networked service — HTTP servers, databases, proxies, message br
 - **europa/config-assembly**: Listener configuration (address, TLS, timeouts) comes from the configuration assembly.
 - **callisto/filesystem-walk**: Unix socket listeners bind to filesystem paths.
 - **jupiter/validate**: TLS certificate validation is a validation subproblem.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any networked service — HTTP servers, databases, proxies, message brokers, custom protocol servers.
+
+#### Start with (minimal form)
+Use the standard library's HTTP/server module. Python: `http.server` or a framework (Flask, Express). Rust: `std::net::TcpListener` + manual accept loop. Single-threaded, no TLS, no graceful shutdown.
+
+#### Split into its own module when (observable triggers)
+- You need to handle multiple simultaneous connections (concurrency matters).
+- You need TLS termination (certificate management, handshake error handling).
+- You need graceful shutdown (drain in-flight connections before exit).
+- You need to bind to multiple addresses (IPv4 + IPv6, multiple ports, Unix socket + TCP).
+
+#### Common over-engineering traps
+- Implementing a custom event loop when a framework (tokio, async-std, asyncio) handles it.
+- Building connection pooling before measuring that connection establishment cost is a bottleneck.
+- Supporting HTTP/2 multiplexing when HTTP/1.1 keep-alive handles your request rate.
 
 ## Frame Concern
 

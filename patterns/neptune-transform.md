@@ -1,5 +1,7 @@
 # neptune: Transform
 
+> **Pressure class:** Behavior variation — the mapping algorithm changes per source/target pair.
+
 ## Problem
 
 Data in one representation must be converted to another representation, changing its structure, encoding, or level of abstraction without changing its essential content.
@@ -50,6 +52,25 @@ Arises whenever two parts of the system use different representations for semant
 - **jupiter/validate**: Validation often precedes transformation.
 - **venus/filter**: Filter may produce a subset that then needs transformation.
 - **earth/sort**: Sort keys may need transformation before comparison.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that converts data between representations — serialisation, parsing, DTO mapping, format conversion, migration.
+
+#### Start with (minimal form)
+A single function that takes source format and returns target format. Write it inline at the call site. Python: `{'id': str(obj.id), 'name': obj.name}`. Rust: `MyDto { field: source.field.into() }`.
+
+#### Split into its own module when (observable triggers)
+- The same conversion is needed in multiple places (duplication emerges).
+- Multiple source or target formats exist (JSON ↔ XML ↔ Protobuf).
+- The conversion logic becomes complex enough to need its own tests.
+- Round-trip correctness matters (serialise → deserialise → original).
+
+#### Common over-engineering traps
+- Building a generic mapper/reflection framework before you have 3+ conversion functions.
+- Using a schema-driven code generator (OpenAPI → types) before the API contract stabilises.
+- Implementing bidirectional mapping when only one direction is ever used.
 
 ## Frame Concern
 

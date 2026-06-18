@@ -1,5 +1,7 @@
 # io: Command Execution
 
+> **Pressure class:** Object variation — the external command interface changes while the execute-per-item contract stays the same.
+
 ## Problem
 
 A collection of items must be processed by an external command, with each item substituted into the command template, potentially running in parallel or as a batch.
@@ -53,6 +55,25 @@ Arises whenever a tool finds results and the user wants to act on them — unzip
 - **jupiter/validate**: The command template must be validated before execution.
 - **mercury/display**: Execution progress and results are typically displayed.
 - **callisto/walk**: Walk results are often the items passed to execution.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that runs external commands on found items — batch processing, build tools, file conversion, automated analysis.
+
+#### Start with (minimal form)
+`subprocess.run()` (Python), `std::process::Command` (Rust), `child_process.execSync()` (Node). Run sequentially, collect output, print results. No parallelism, no placeholder substitution.
+
+#### Split into its own module when (observable triggers)
+- The command template needs placeholder substitution (`{}`, `{.}`, `{/}`).
+- Items must be processed in parallel (thread pool, not just sequential loop).
+- Batch execution (passing all items as args) risks `ARG_MAX` overflow.
+- You need to handle subprocess failure modes (timeout, output buffer deadlock, exit code aggregation).
+
+#### Common over-engineering traps
+- Building a thread pool before measuring that sequential execution is too slow.
+- Abstracting the executor into a generic pipeline before you have a second pipeline stage.
+- Supporting shell features (pipes, redirects) before direct exec proves insufficient.
 
 ## Frame Concern
 

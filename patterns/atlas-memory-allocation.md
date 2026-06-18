@@ -1,5 +1,7 @@
 # atlas: Memory Allocation
 
+> **Pressure class:** Object variation — the allocation strategy changes while the allocate/free contract stays the same.
+
 ## Problem
 
 A finite pool of memory blocks must be carved up for variable-sized allocation requests and recycled when freed, while minimising fragmentation, bounding overhead, and supporting concurrent access patterns.
@@ -66,6 +68,25 @@ Arises in any system that manages dynamic memory: general-purpose allocators (ma
 - **jupiter/validate**: Bounds checking, canary values, and address sanitizers validate allocator correctness.
 - **neptune/transform**: Allocators transform raw page-granular memory from the OS into byte-granular chunks for the application.
 - **hyperion/network-listener**: Network packet buffers are allocated and freed per-packet, making allocator throughput a primary factor in network performance.
+
+### ==== Practical Use ====
+
+#### When this pattern matters
+Any project that manages dynamic memory — most non-trivial software outside embedded systems with no heap.
+
+#### Start with (minimal form)
+Use the language's built-in allocator. Rust: `Box`, `Vec`, `HashMap`. Python: automatic allocation. C: `malloc`/`free`. No custom allocator, no memory pool.
+
+#### Split into its own module when (observable triggers)
+- Allocation latency is causing measurable performance problems (benchmarks show allocator as bottleneck).
+- Many small, short-lived allocations cause fragmentation in the default allocator.
+- Real-time constraints require bounded allocation time (O(1) pool allocator).
+- You need to track allocation statistics or detect leaks programmatically.
+
+#### Common over-engineering traps
+- Writing a custom slab allocator before measuring that the default allocator causes fragmentation.
+- Building per-thread arenas before confirming that lock contention on the global allocator is measurable.
+- Implementing memory pooling for a type that is allocated infrequently.
 
 ## Frame Concern
 
