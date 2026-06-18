@@ -10,7 +10,43 @@
 | saturn | route | [patterns/saturn-route.md](patterns/saturn-route.md) | Route table consistency |
 | uranus | authenticate | [patterns/uranus-authenticate.md](patterns/uranus-authenticate.md) | Trust delegation |
 | neptune | transform | [patterns/neptune-transform.md](patterns/neptune-transform.md) | Semantic equivalence across heterogeneous representations |
+| callisto | filesystem walk | [patterns/callisto-filesystem-walk.md](patterns/callisto-filesystem-walk.md) | Gap between filesystem order and consumer order |
+| io | command execution | [patterns/io-exec.md](patterns/io-exec.md) | Subprocess lifecycle vs. consumer expectations |
+| ganymede | output formatting | [patterns/ganymede-output-format.md](patterns/ganymede-output-format.md) | Terminal capability detection |
+| europa | configuration assembly | [patterns/europa-config-assembly.md](patterns/europa-config-assembly.md) | Merge ordering transparency |
 
 ## Unused Planet Names
 
-`pluto`, `ceres`, `eris`, `makemake`, `haumea`, `titania`, `oberon`, `miranda`, `ariel`, `umbriel`, `callisto`, `ganymede`, `europa`, `io`, `titan`, `rhea`, `iapetus`, `dione`, `tethys`, `enceladus`, `mimas`, `phobos`, `deimos`, `proteus`, `triton`, `nereld`, `charon`, `styx`, `nyx`, `kerberos`, `hydra`
+`adrastea`, `amalthea`, `ananke`, `ariel`, `atlas`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `dione`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `iapetus`, `janus`, `juliet`, `larissa`, `leda`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pan`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rhea`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titan`, `titania`, `trinculo`, `triton`, `umbriel`
+
+---
+
+## Real-System Mappings
+
+### fd (sharkdp/fd)
+
+The canonical `fd` file search tool, decomposed by its module structure (`src/` directory).
+
+| fd module | Problem Pattern | Rationale |
+|-----------|----------------|-----------|
+| `src/cli.rs` | **europa** (configuration assembly) | CLI argument parsing → `Opts` struct → merged into `Config` with env vars and platform defaults |
+| `src/config.rs` | **europa** (configuration assembly) | `construct_config()` merges opts, env vars, file types, exclusion rules into a single validated `Config` |
+| `src/walk.rs` | **callisto** (filesystem walk) | Parallel directory traversal via `ignore::WalkParallel`, respecting depth, follow-links, one-file-system |
+| `src/filesystem.rs` | **callisto** (filesystem walk) | Helper: default path separator, directory existence checks |
+| `src/filter/mod.rs` | **venus** (filter) | Pattern matching on file names via regex/glob |
+| `src/filter/owner.rs` | **venus** (filter) | Owner-based filtering (unix uid/gid) |
+| `src/filter/size.rs` | **venus** (filter) | Size-based filtering |
+| `src/filter/time.rs` | **venus** (filter) | Time-based filtering (changed before/after) |
+| `src/regex_helper.rs` | **venus** (filter) | Regex construction, smart-case detection, leading-dot detection |
+| `src/filetypes.rs` | **venus** (filter) | File type classification (file, dir, symlink, executable, etc.) |
+| `src/output.rs` | **ganymede** (output formatting) | Result output with optional colour, paging via `less` if output is long |
+| `src/fmt/mod.rs` | **ganymede** / **mercury** (output formatting / display) | Format template parsing: `{}`, `{.}`, `{/}`, `{//}`, `{/.}` path placeholders |
+| `src/fmt/input.rs` | **ganymede** (output formatting) | Per-entry formatted string construction from template |
+| `src/hyperlink.rs` | **ganymede** (output formatting) | Hyperlink (OSC 8) generation for terminal output |
+| `src/exec/mod.rs` | **io** (command execution) | `CommandSet`: defining the command template with placeholder tokens |
+| `src/exec/command.rs` | **io** (command execution) | Per-item command instantiation: substituting `{}`, `{.}`, etc. |
+| `src/exec/job.rs` | **io** (command execution) | Parallel job execution: thread pool, batch mode, output collection |
+| `src/dir_entry.rs` | **neptune** (transform) | `DirEntry` wrapper type: filesystem entry → displayable value |
+| `src/error.rs` | **jupiter** (validate) | Error type definitions and formatted error output |
+| `src/exit_codes.rs` | **jupiter** (validate) | Exit code enumeration and aggregation |
+| `src/main.rs` | (orchestration) | Top-level pipeline: parse → walk → filter → format → execute |
