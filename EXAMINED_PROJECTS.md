@@ -205,3 +205,37 @@ repository. It prevents redundant analysis across sessions.
 |---|---------|-----------|-------|
 | 55 | **crawley** | s0rg/crawley | Unix-way web crawler in Go (~1.5K LOC): parallel fetch, HTML/JS/CSS parsing, link extraction, retry |
 | 56 | **thinproxy** | renaudallard/thinproxy | Single-file HTTP/HTTPS proxy in C: async I/O, CONNECT tunneling, seccomp sandboxing |
+
+---
+
+## Diff / Merge
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 57 | **mergers** | joske/mergers | Visual diff/merge tool in Rust+GTK4: two/three-way file diff, directory comparison, git integration |
+
+---
+
+## Emulators / VMs
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 58 | **chip8** | danielgatis/chip8 | CHIP-8 VM in ~350 LOC Rust: fetch-decode-execute, key input, display output |
+| 59 | **tinykvm** | varnish/tinykvm | KVM-based micro-VM sandbox in C++: native-performance sandboxing, memory isolation |
+
+---
+
+## Terminal Emulators
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 60 | **zt** | midasdf/zt | Minimal terminal emulator in Zig: framebuffer/X11/Wayland/macOS rendering, PTY management |
+
+---
+
+## Backup / Sync
+
+| # | Project | Repository | Notes |
+|---|---------|-----------|-------|
+| 61 | **nano-backup** | AlxHnr/nano-backup | Minimal backup tool in C: incremental backup, compression, snapshot rotation |
+| 62 | **yarsync** | ynikitenko/yarsync | Rsync-like file sync tool: git-interface, local/remote sync, conflict detection |
