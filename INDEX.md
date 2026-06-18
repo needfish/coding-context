@@ -22,6 +22,7 @@
 | atlas | memory allocation | [patterns/atlas-memory-allocation.md](patterns/atlas-memory-allocation.md) | Request size granularity vs. page granularity |
 | dione | power management | [patterns/dione-power-management.md](patterns/dione-power-management.md) | Energy consumption vs. energy availability |
 | leda | feedback control | [patterns/leda-feedback-control.md](patterns/leda-feedback-control.md) | Measurement noise vs. control stability |
+| pandora | simple workpieces | [patterns/pandora-simple-workpieces.md](patterns/pandora-simple-workpieces.md) | Edit operations vs. document state consistency |
 
 ### Veloren (veloren/veloren)
 
@@ -394,6 +395,32 @@ A modal code editor in Rust with tree-sitter, LSP, multiple selections, and a tr
 | `helix-loader/src/` | **callisto** (filesystem walk) + **europa** (configuration assembly) | Runtime loading: language config, theme files, tree-sitter queries, text objects |
 | `helix-vcs/src/` | **venus** (filter) | VCS integration: git status, blame info, diff gutter — file-level status filtering |
 | `helix-dap/src/` | **hyperion** (network listener) + **mars** (persist) | Debug Adapter Protocol: breakpoint management, thread state, variable inspection |
+
+### Lite XL (lite-xl/lite-xl)
+
+A lightweight text editor written in Lua with a C core, featuring a line-based document model, undo stack, and view/compositor architecture.
+
+| Lite XL module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `data/core/doc/init.lua` | **mars** (persist) | Document model: lines stored as string table, undo/redo stack with change IDs, dirty flag tracking |
+| `data/core/doc/highlighter.lua` | **titan** (syntax highlighting) | Incremental syntax highlighter: re-highlights only changed lines via token cache invalidation |
+| `data/core/docview.lua` | **mercury** (display) | Document view: maps document lines to screen position, handles scroll, selection rendering, line wrapping |
+| `data/core/command.lua` | **saturn** (route) | Command system: publish-subscribe command registry, predicate-based enable/disable, command chaining |
+| `data/core/commandview.lua` | **mercury** (display) | Command palette: fuzzy filter over registered commands, active parameter completion |
+| `data/core/rootview.lua` | **saturn** (route) | Root view compositor: split management, tab ordering, view focus routing (doc view, log view, command view) |
+| `data/core/view.lua` | **mercury** (display) | View base class: position, size, scroll offset, surface allocation |
+| `data/core/keymap.lua` | **europa** (configuration assembly) | Key binding: chord matching, mode-specific maps, macOS modifier translation |
+| `data/core/config.lua` | **europa** (configuration assembly) | Configuration: user config merge, plugin config namespacing, editor defaults |
+| `data/core/init.lua` | (orchestration) | Bootstrap: core initialisation, plugin loading, project detection |
+| `data/core/plugins/` | **europa** (configuration assembly) | Plugin system: automatic `require` from plugin directory, plugin-level configuration files |
+| `data/core/project.lua` | **callisto** (filesystem walk) | Project: directory tree scanning, file listing with gitignore filtering |
+| `data/core/storage.lua` | **mars** (persist) | Persistent storage: project-local config, session state across restarts |
+| `data/core/syntax.lua` | **rhea** (syntax detection) | Syntax detection: filename/extension to syntax definition matching |
+| `data/core/tokenizer.lua` | **titan** (syntax highlighting) | Tokeniser: pattern-based token matching for syntax highlighting |
+| `data/core/process.lua` | **io** (command execution) | Process: async subprocess spawning with stdout capture via Lua coroutine |
+| `data/core/dirwatch.lua` | **callisto** (filesystem walk) | Directory watching: inotify/FSEvents/kqueue detection for file-changed events |
+| `src/` | **hyperion** (network listener) + **mercury** (display) | C core: SDL2 window, renderer, font rasterisation (Freetype), Lua VM, platform file I/O, clipboard |
+| `data/core/style.lua` | **mercury** (display) | Style system: colour definitions, font loading, DPI-aware scaling |
 
 ## Unused Planet Names
 
