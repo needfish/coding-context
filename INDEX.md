@@ -155,6 +155,208 @@ Flexible I/O tester: a low-level benchmarking tool that simulates user-specified
 | `cgroup.c` | **jupiter** (validate) | Cgroup support: places fio jobs into cgroup v1/v2 for CPU/mem/blkio isolation |
 | `gfio.c` | **mercury** (display) | GTK3 UI: graphical frontend for fio job configuration and live result display |
 
+## Embedded / RTOS Projects
+
+### FreeRTOS-Kernel (FreeRTOS/FreeRTOS-Kernel)
+
+The classic real-time operating system kernel for microcontrollers: tasks, queues, timers, and software timers.
+
+| FreeRTOS module | Problem Pattern | Rationale |
+|-----------------|----------------|-----------|
+| `tasks.c` | **saturn** (route) | Task scheduler: priority-based preemption, round-robin within priority, idle task, tickless idle |
+| `queue.c` | **mars** (persist) | Queue: inter-task message passing, mutex, semaphore — blocking get with timeout |
+| `timers.c` | **mars** (persist) | Software timers: daemon task, timer callback queue, auto-reload/one-shot |
+| `event_groups.c` | **venus** (filter) | Event groups: bitmask-based event waiting, AND/OR wake conditions |
+| `stream_buffer.c` | **mars** (persist) | Stream buffer: byte-oriented data transfer with send/receive semantics |
+| `list.c` | **mars** (persist) | Linked list: intrusive doubly-linked list for ready/blocked/suspended task tracking |
+| `croutine.c` | **saturn** (route) | Co-routines: simplified cooperative scheduling for extremely memory-constrained systems |
+| `portable/` | **neptune** (transform) | Port layer: per-architecture context switch, interrupt entry/exit, stack frame — 40+ ports |
+| `portable/MemMang/` | **mars** (persist) | Memory allocation: 5 heap implementations (static, simple, coalescing, multi-pool, custom) |
+| `include/FreeRTOS.h` | **europa** (configuration assembly) | Configuration: `FreeRTOSConfig.h` — scheduler, heap size, tick rate, stack overflow detection |
+| `include/portable.h` | **neptune** (transform) | Portable API: `portENTER_CRITICAL`, `portYIELD`, `portNOP` — architecture-independent macros |
+| `include/mpu_wrappers.h` | **uranus** (authenticate) | MPU wrappers: privileged/unprivileged mode separation, syscall dispatch |
+
+### RIOT (RIOT-OS/RIOT)
+
+An open-source IoT operating system with modular architecture, supporting 200+ boards and multiple network stacks.
+
+| RIOT module | Problem Pattern | Rationale |
+|-------------|----------------|-----------|
+| `core/` | **saturn** (route) | Kernel: preemptive tickless scheduler, message passing, priority queues, thread management |
+| `sys/` | **neptune** (transform) | System services: shell, auto-init, logging, flash layout, benchmark |
+| `sys/net/` | **saturn** (route) + **hyperion** (network listener) | Network stack: GNRC IPv6/6LoWPAN, UDP/TCP, RPL, CoAP, LoRaWAN, BLE |
+| `sys/net/gnrc/` | **saturn** (route) | GNRC: modular network stack — netif, transport, application layers with pthread-like API |
+| `sys/auto_init/` | **europa** (configuration assembly) | Auto-initialisation: board-specific peripheral init based on module whitelist |
+| `sys/phydat/` | **neptune** (transform) | Physical data representation: sensor unit conversion (temperature, humidity, pressure) |
+| `boards/` | **europa** (configuration assembly) | Board definitions: pin mux, clock config, peripheral allocation per physical board |
+| `boards/common/` | **europa** (configuration assembly) | Common board logic: shared peripheral mappings across board families |
+| `cpu/` | **neptune** (transform) | CPU support: Cortex-M, ESP32, RISC-V, AVR, MSP430 — register maps, interrupt vectors |
+| `drivers/` | **neptune** (transform) | Device drivers: sensors (BME280, MPU9X50), actuators, displays, radios — unified API |
+| `sys/shell/` | **mercury** (display) | Shell: interactive command interpreter for debugging and configuration |
+| `sys/test_utils/` | **jupiter** (validate) | Test utilities: network integration tests, hardware test suites |
+| `pkg/` | **europa** (configuration assembly) | Package manager: external library integration (OpenThread, lwIP, MicroPython) |
+| `dist/` | **europa** (configuration assembly) | Build tools: `riotdocker`, test runner, flasher scripts, CI configuration templates |
+| `kconfig/` | **europa** (configuration assembly) | Kconfig: dependency resolution, feature toggles, module configuration |
+
+### littlefs (littlefs-project/littlefs)
+
+A fail-safe filesystem for microcontrollers, designed for power-loss resilience with bounded RAM/ROM.
+
+| littlefs module | Problem Pattern | Rationale |
+|-----------------|----------------|-----------|
+| `lfs.c` | **mars** (persist) | Core filesystem: mount, format, file ops, dir ops — copy-on-write with metadata logging |
+| `lfs.h` | **neptune** (transform) | API and config: `lfs_config` struct — block device callbacks, cache sizes, read/prog/erase sizes |
+| `lfs_util.c` | **neptune** (transform) | Utilities: CRC computation, byte swapping, arithmetic for block addressing |
+| `bd/lfs_emubd.c` | **jupiter** (validate) | Emulated block device: file-backed block storage for testing on PC |
+| `bd/lfs_rambd.c` | **jupiter** (validate) | RAM block device: in-memory block storage for fast testing |
+| `bd/lfs_filebd.c` | **jupiter** (validate) | File block device: real file-backed storage for testing |
+| `lfs.c` — metadata pairs | **mars** (persist) | Metadata pair: atomic directory/file update via log-structured append + compact |
+| `lfs.c` — CTZ skip-lists | **saturn** (route) | CTZ skip-list: COW data structure for file blocks — reverse-traversal offset chain |
+| `lfs.c` — block allocator | **saturn** (route) | Block allocator: lookahead bitmap, dynamic wear levelling (max erase cycles per block) |
+| `lfs.c` — directory ops | **mars** (persist) | Directory: file listing, move, remove — requires parent/child pair update |
+| `DESIGN.md` | **mercury** (display) | Design documentation: explains metadata pairs, CTZ skip-lists, wear levelling |
+| `SPEC.md` | **jupiter** (validate) | On-disk specification: byte-level format, magic numbers, versioning |
+| `tests/` | **jupiter** (validate) | Test suite: power-loss simulation, bad block injection, boundary conditions |
+
+### mbedtls (Mbed-TLS/mbedtls)
+
+A C library implementing TLS/DTLS, X.509 certificate manipulation, and PSA Cryptography for embedded systems.
+
+| mbedtls module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `library/ssl_tls.c` | **hyperion** (network listener) | TLS/DTLS protocol: handshake state machine, record protocol, alert messages |
+| `library/ssl_tls13_client.c` | **hyperion** (network listener) | TLS 1.3 client: early data, PSK, HRR, certificate verification |
+| `library/ssl_tls13_server.c` | **hyperion** (network listener) | TLS 1.3 server: session tickets, key sharing, certificate request |
+| `library/ssl_ciphersuites.c` | **saturn** (route) | Ciphersuite negotiation: routes negotiated ciphersuite to correct MAC/encrypt/decript |
+| `library/ssl_msg.c` | **neptune** (transform) | Record layer: fragment/reassemble, encrypt/decrypt, handshake message marshalling |
+| `library/x509_crt.c` | **jupiter** (validate) | X.509 certificate: DER/PEM parsing, chain validation, CRL checking |
+| `library/x509_csr.c` | **neptune** (transform) | Certificate signing request: CSR generation, subject/extension construction |
+| `include/mbedtls/ssl.h` | **neptune** (transform) | SSL API: connection setup, handshake callbacks, session resumption, SNI |
+| `tf-psa-crypto/` | **mars** (persist) | PSA Crypto: cryptographic key storage, algorithm implementations (AES, ECC, RSA, SHA) |
+| `include/mbedtls/mbedtls_config.h` | **europa** (configuration assembly) | Configuration: compile-time feature toggles (~300 defines), algorithm selection |
+| `library/debug.c` | **mercury** (display) | Debug logging: protocol dump, error string, threshold levels |
+| `library/net_sockets.c` | **hyperion** (network listener) | Network abstraction: TCP socket connect/accept/recv/send with timeout + non-blocking |
+| `library/timing.c` | **mars** (persist) | Timing: delay, timer, alert delay for DTLS handshake protection |
+| `library/ssl_cache.c` | **mars** (persist) | Session cache: server-side session ID lookup, ticket decryption, TTL management |
+| `library/ssl_cookie.c` | **uranus** (authenticate) | DTLS cookie: stateless hello verify mechanism for DoS protection |
+| `library/ssl_ticket.c` | **uranus** (authenticate) | Session ticket: encryption key rotation, ticket generation/validation |
+| `programs/` | **jupiter** (validate) | Example programs: SSL client/server, cert generation, key management |
+
+### Contiki-NG (contiki-ng/contiki-ng)
+
+An operating system for next-generation IoT devices, focused on dependable low-power communication and standard protocols.
+
+| Contiki-NG module | Problem Pattern | Rationale |
+|-------------------|----------------|-----------|
+| `os/` | **saturn** (route) | Core OS: protothreads, event-driven kernel, clock/timer, process management |
+| `os/net/` | **saturn** (route) + **hyperion** (network listener) | Networking: IPv6/6LoWPAN, RPL routing, TSCH MAC, CoAP, MQTT |
+| `os/net/mac/` | **saturn** (route) | MAC layer: CSMA, TSCH (6TiSCH), ContikiMAC — duty cycling for energy efficiency |
+| `os/net/routing/` | **saturn** (route) | Routing: RPL (storing/non-storing), mesh-under, route discovery |
+| `os/services/` | **mercury** (display) | Services: shell, web server, CoAP resource directory, OTA updates |
+| `arch/cpu/` | **neptune** (transform) | CPU support: ARM Cortex-M, CC2538, nRF52, ESP32 — register maps, clock config |
+| `arch/platform/` | **europa** (configuration assembly) | Platform: board-specific pin mux, sensor wiring, radio configuration |
+| `os/net/app-layer/` | **neptune** (transform) | Application protocols: CoAP, MQTT-SN, HTTP, SNMP — protocol implementation |
+| `os/storage/` | **mars** (persist) | Storage: CFS (Coffee File System), EEPROM, ANTOF — flash-backed persistent storage |
+| `os/sys/` | **mercury** (display) | System: logging (`log-conf`), debug UART, button-sensor framework |
+| `regression-tests/` | **jupiter** (validate) | Regression tests: network stack tests, radio duty cycling verification |
+
+## Graphics / Rendering Projects
+
+### SDL (libsdl-org/SDL)
+
+Simple DirectMedia Layer — cross-platform library for video, audio, input, and GPU rendering.
+
+| SDL module | Problem Pattern | Rationale |
+|------------|----------------|-----------|
+| `src/video/` | **mercury** (display) | Video subsystem: window management, display modes, fullscreen, vsync — platform abstraction |
+| `src/render/` | **ganymede** (output formatting) | 2D renderer: software, OpenGL, Vulkan, Direct3D, Metal — texture blitting with batching |
+| `src/gpu/` | **ganymede** (output formatting) | GPU API: cross-platform direct GPU access, shader management, command buffer |
+| `src/audio/` | **mercury** (display) | Audio playback: device enumeration, sample conversion, streaming, capture |
+| `src/events/` | **hyperion** (network listener) | Event system: keyboard, mouse, joystick, touch, window events — unified polling, filter, push |
+| `src/joystick/` | **hyperion** (network listener) | Joystick/gamepad: device detection, axis mapping, haptic feedback, SDL GameControllerDB |
+| `src/sensor/` | **hyperion** (network listener) | Sensors: accelerometer, gyroscope — mobile/embedded sensor fusion |
+| `src/timer/` | **mars** (persist) | Timer: high-resolution delay, periodic and one-shot timers |
+| `src/filesystem/` | **callisto** (filesystem walk) | Filesystem: base path, preferences path, directory enumeration |
+| `src/thread/` | **io** (command execution) | Threading: platform abstraction for threads, mutex, semaphore, condition variable |
+| `src/atomic/` | **mars** (persist) | Atomic ops: platform-specific atomic increments, CAS, memory barriers |
+| `src/power/` | **jupiter** (validate) | Power: battery state, charge level, AC status |
+| `src/camera/` | **hyperion** (network listener) | Camera: device enumeration, frame capture, format conversion |
+| `src/dialog/` | **mercury** (display) | File dialogs: native open/save file dialog across platforms |
+| `src/haptic/` | **hyperion** (network listener) | Haptic: force feedback, rumble, periodic effects |
+| `src/hidapi/` | **hyperion** (network listener) | HID: raw Human Interface Device access, custom device communication |
+| `src/hints/` | **europa** (configuration assembly) | Hints: runtime configuration key-value store (`SDL_HINT_*`) |
+| `src/io/` | **neptune** (transform) | I/O abstraction: stream, RWops — unified read/write over files, memory, network |
+| `src/loadso/` | **io** (command execution) | Shared library loading: `dlopen`/`LoadLibrary` abstraction |
+| `src/libm/` | **neptune** (transform) | Math library: portable sin/cos/sqrt for cross-platform consistency |
+| `src/main/` | **saturn** (route) | Main entry: platform-specific `main` trampolines (WinMain, SDL_main) |
+
+### HarfBuzz (harfbuzz/harfbuzz)
+
+A text shaping engine and font platform supporting OpenType and Apple Advanced Typography.
+
+| HarfBuzz module | Problem Pattern | Rationale |
+|-----------------|----------------|-----------|
+| `src/hb-shape.cc` | **neptune** (transform) | Shaping: Unicode text → positioned glyph sequence — the core transformation |
+| `src/hb-ot-layout.cc` | **saturn** (route) | OpenType Layout: GSUB (glyph substitution) and GPOS (glyph positioning) lookup routing |
+| `src/hb-ot-shape.cc` | **saturn** (route) | Shaper selection: routing text per script (Arabic, Indic, Thai, etc.) to appropriate shaper |
+| `src/hb-ot-shape-complex-*.cc` | **saturn** (route) | Complex script shapers: Indic, Khmer, Myanmar, Tibetan — language-specific shaping logic |
+| `src/hb-aat-layout.cc` | **saturn** (route) | AAT layout: Apple Advanced Typography — morx (glyph metamorphosis), kerx (kerning) |
+| `src/hb-font.cc` | **mars** (persist) | Font objects: face, font, glyph metrics — cached from underlying font engine |
+| `src/hb-ft.cc` | **neptune** (transform) | FreeType integration: bridges HarfBuzz API to FreeType font backend |
+| `src/hb-subset.cc` | **mars** (persist) | Font subsetting: removes unwanted glyphs/tables from OpenType fonts |
+| `src/hb-draw.cc` | **mercury** (display) | Draw API: glyph outline extraction via callback mechanism |
+| `src/hb-paint.cc` | **mercury** (display) | Paint API: COLRv1 colour font rendering with gradient, transform, composite |
+| `src/hb-raster.cc` | **ganymede** (output formatting) | Rasterisation: glyph → bitmap with hinting, anti-aliasing |
+| `src/hb-vector.cc` | **ganymede** (output formatting) | Vector output: glyph → SVG path data |
+| `src/hb-gpu.cc` | **ganymede** (output formatting) | GPU text: Slug algorithm → GLSL/WGSL/HLSL shaders for direct GPU glyph rendering |
+| `src/OT/Layout/` | **neptune** (transform) | OpenType table parsing: binary SVC → typed C++ objects for each layout table |
+| `src/OT/Color/` | **mercury** (display) | COLR/CPAL/CBDT/sbix: colour font table parsing and palette extraction |
+| `src/graph/` | **saturn** (route) | Subset repacker: optimises OpenType table layout for subsetting constraints |
+
+### stb (nothings/stb)
+
+A collection of single-file public-domain libraries for C/C++, covering image I/O, font rasterisation, compression, and more.
+
+| stb library | Problem Pattern | Rationale |
+|-------------|----------------|-----------|
+| `stb_image.h` | **neptune** (transform) | Image decoder: PNG, JPEG, BMP, GIF, PSD, TGA, HDR — format detection + decoding |
+| `stb_image_write.h` | **ganymede** (output formatting) | Image encoder: PNG, TGA, BMP, JPEG — pixel buffer → encoded file |
+| `stb_image_resize2.h` | **neptune** (transform) | Image resize: nearest-neighbour, bilinear, bicubic, box, lanczos, mitchell |
+| `stb_truetype.h` | **mercury** (display) | TrueType rasteriser: glyph → bitmap with subpixel, hinting, kerning |
+| `stb_vorbis.c` | **neptune** (transform) | Ogg Vorbis: stream → PCM — emulated fixed-point for integer platforms |
+| `stb_rect_pack.h` | **saturn** (route) | Rectangle packing: bin-packing for texture atlas / sprite sheet |
+| `stb_voxel_render.h` | **mercury** (display) | Voxel rendering: chunked meshing, ambient occlusion, mesh generation |
+| `stb_dxt.h` | **neptune** (transform) | DXT/S3TC compression: BC1–BC3 real-time encoding |
+| `stb_textedit.h` | **mercury** (display) | Text edit: core input handling, cursor movement, selection, clipboard |
+| `stb_perlin.h` | **neptune** (transform) | Simplex noise: Perlin noise with configurable seeds and octaves |
+| `stb_ds.h` | **mars** (persist) | Data structures: dynamic array, hash map, ordered set — typesafe macros |
+| `stb_sprintf.h` | **ganymede** (output formatting) | Fast sprintf: Chebychev-based float formatting, buffer overflow safety |
+| `stb_hexwave.h` | **mercury** (display) | Audio synthesis: waveform generation, envelope, effects |
+| `stb_easy_font.h` | **mercury** (display) | Bitmap font: simple fixed-width font for frame rate / debug overlay |
+| `stb_tilemap_editor.h` | **mercury** (display) | Tilemap editor: full embedded editor with undo, layers, animated tiles |
+
+### Freetype (freetype/freetype)
+
+A font rendering engine that supports TrueType, OpenType, Type1, and many other font formats with hinting and anti-aliasing.
+
+| Freetype module | Problem Pattern | Rationale |
+|-----------------|----------------|-----------|
+| `src/base/` | **mercury** (display) | Base layer: glyph slot management, rasterisation dispatch, transformation, FT API core |
+| `src/truetype/` | **neptune** (transform) | TrueType: glyph outline decoding, hinting bytecode interpreter, instruction sets |
+| `src/sfnt/` | **neptune** (transform) | SFNT: table parsing (cmap, head, hhea, hmtx, maxp, name, os2) |
+| `src/cff/` | **neptune** (transform) | CFF: PostScript Type 2 charstring interpreter, hint replacement |
+| `src/type1/`, `src/type42/` | **neptune** (transform) | Type1/42: Adobe font format parsing and rendering |
+| `src/raster/` | **ganymede** (output formatting) | Anti-aliased rasteriser: `ftraster.c` — scanline conversion with coverage |
+| `src/smooth/` | **ganymede** (output formatting) | Smooth renderer: 256-level anti-aliasing, subpixel rendering (ClearType-compatible) |
+| `src/autofit/` | **saturn** (route) | Autofitter: script-specific hinting, stem width detection, glyph-to-bluezone assignment |
+| `src/cache/` | **mars** (persist) | Glyph cache: LRU cache for rendered glyphs, image caching, manager |
+| `src/gxvalid/` | **jupiter** (validate) | TrueType GX validation: AAT tables sanity check |
+| `src/otvalid/` | **jupiter** (validate) | OpenType validation: GDEF/GPOS/GSUB table conformance checking |
+| `src/pfr/` | **neptune** (transform) | PFR: Printer Font Binary format — embedded font support |
+| `src/winfonts/` | **neptune** (transform) | Windows FON/FNT: legacy bitmap font format handling |
+| `include/freetype/config/` | **europa** (configuration assembly) | Build configuration: `FT_CONFIG_OPTION_*` — feature enabling, module inclusion |
+| `src/bzip2/`, `src/gzip/`, `src/lzw/` | **neptune** (transform) | Stream compression: transparent decompression of font data streams |
+
 ## Unused Planet Names
 
 `adrastea`, `amalthea`, `ananke`, `ariel`, `atlas`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `dione`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `janus`, `juliet`, `larissa`, `leda`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pan`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
