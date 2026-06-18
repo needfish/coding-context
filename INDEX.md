@@ -16,6 +16,7 @@
 | europa | configuration assembly | [patterns/europa-config-assembly.md](patterns/europa-config-assembly.md) | Merge ordering transparency |
 | titan | syntax highlighting | [patterns/titan-syntax-highlight.md](patterns/titan-syntax-highlight.md) | Grammar coverage vs. source variety |
 | rhea | syntax detection | [patterns/rhea-syntax-detection.md](patterns/rhea-syntax-detection.md) | Information deficit at decision time |
+| iapetus | code counting | [patterns/iapetus-code-counting.md](patterns/iapetus-code-counting.md) | Grammar coverage vs. real-world source variety |
 
 ## Unused Planet Names
 
@@ -80,3 +81,59 @@ A `cat(1)` clone with syntax highlighting and Git integration.
 | `src/line_range.rs` | **venus** (filter) | Line range filtering (show only lines N–M) |
 | `src/style.rs` | **europa** (configuration assembly) | Style component selection (numbers, grid, header, snip) as bitmask from CLI |
 | `src/error.rs` | **jupiter** (validate) | Error type definitions and formatted error messages |
+
+### tokei (XAMPPRocky/tokei)
+
+A code line counter supporting 150+ languages with per-file and per-language statistics.
+
+| tokei module | Problem Pattern | Rationale |
+|--------------|----------------|-----------|
+| `src/cli.rs` | **europa** (configuration assembly) | CLI argument parsing: columns, sort order, output format, exclusion patterns |
+| `src/config.rs` | **europa** (configuration assembly) | `Config` merged from CLI args, config file (`tokei.toml`/`.tokeirc`), and platform defaults |
+| `src/input.rs` | **callisto** (filesystem walk) | Directory traversal respecting `.gitignore`, `.ignore`, and `.tokeignore` files |
+| `src/language/languages.rs` | **rhea** (syntax detection) | Extension → language mapping from `languages.json` definition file |
+| `src/language/syntax.rs` | **iapetus** (code counting) | Per-language state machine: classifies lines as code, comments, blanks, doc comments |
+| `src/language/embedding.rs` | **iapetus** (code counting) | Embedded language support (e.g., Markdown containing Rust code blocks) |
+| `src/language/language_type.rs` | **iapetus** / **neptune** (code counting / transform) | Language enum from JSON definitions, compiled via build script |
+| `src/stats.rs` | **iapetus** (code counting) | Per-file `Stats` struct: line counts by category, aggregated into language totals |
+| `src/sort.rs` | **earth** (sort) | Output sorting by files, lines, code, comments, or blanks column |
+| `src/consts.rs` | **neptune** (transform) | Language name normalisation constants |
+| `src/utils/fs.rs` | **callisto** (filesystem walk) | Filesystem helpers (canonicalise path, check if directory) |
+| `src/utils/ext.rs` | **rhea** (syntax detection) | Extension extraction with edge case handling |
+| `src/lib.rs` | (orchestration) | Public API: `Languages::get_statistics()` — walk → detect → count → aggregate → sort → format |
+
+### pet (knqyf263/pet)
+
+A CLI snippet manager with save, tag, search, sync, and execute features.
+
+| pet module | Problem Pattern | Rationale |
+|------------|----------------|-----------|
+| `main.go`, `cmd/root.go` | **europa** (configuration assembly) | CLI argument parsing, config file loading (`~/.config/pet/config.toml`) |
+| `config/config.go` | **europa** (configuration assembly) | Config struct: editor, selector, sync settings, tag filtering |
+| `cmd/new.go` | **mars** (persist) | Create snippet: validates input, appends to snippet TOML file |
+| `cmd/edit.go` | **mars** (persist) | Read snippet file into editor, write back on save |
+| `cmd/list.go` | **mars** (persist) + **mercury** (display) | Read all snippets from file and display them |
+| `cmd/search.go` | **venus** (filter) + **mercury** (display) | Interactive fuzzy search via fzf/peco, filter by tag, display results |
+| `cmd/exec.go` | **io** (command execution) | Select snippet, substitute parameters, execute shell command |
+| `cmd/clip.go` | **mercury** (display) | Copy snippet to clipboard (OS-specific) |
+| `cmd/sync.go` | **mars** (persist) | Sync snippets to remote (Gist, GitLab) — push/pull with conflict resolution |
+| `sync/gist.go`, `sync/gitlab.go`, `sync/ghe.go` | **mars** (persist) + **uranus** (authenticate) | Remote storage backends with token-based authentication |
+| `dialog/view.go` | **mercury** (display) | Interactive TUI dialog for snippet selection and parameter entry |
+| `snippet/snippet.go` | **neptune** (transform) | Snippet data model with variable/parameter expansion (`<param>`, `<param=default>`) |
+| `path/path.go` | **neptune** (transform) | Platform-specific path resolution and expansion |
+
+### dust (bootandy/dust)
+
+A more intuitive `du` replacement showing disk usage as a tree with proportional bars.
+
+| dust module | Problem Pattern | Rationale |
+|-------------|----------------|-----------|
+| `src/cli.rs` | **europa** (configuration assembly) | CLI argument parsing: display depth, sort order, size format, filter options |
+| `src/config.rs` | **europa** (configuration assembly) | Config from CLI args + optional config file (`~/.config/dust/config.toml` or `~/.dust.toml`) |
+| `src/dir_walker.rs` | **callisto** (filesystem walk) | Parallel filesystem traversal with symlink handling, device boundary control |
+| `src/node.rs` | **neptune** (transform) | Tree node data model: path, size, children, aggregated totals |
+| `src/filter.rs`, `src/filter_type.rs` | **venus** (filter) | Size-based (`-z`) and regex-based (`-e`, `-v`) filtering, file vs. directory filter (`-D`, `-F`) |
+| `src/display.rs`, `src/display_node.rs` | **ganymede** / **mercury** (output / display) | Tree display with proportional ASCII bars, coloured by depth, percentage labels |
+| `src/progress.rs` | **mercury** (display) | Spinner / progress indicator during filesystem walk |
+| `src/platform.rs` | **neptune** (transform) | Platform-specific path and metadata handling (Unix vs. Windows) |
+| `src/utils.rs` | (helpers) | Sorting, terminal width detection |
