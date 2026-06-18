@@ -17,10 +17,11 @@
 | titan | syntax highlighting | [patterns/titan-syntax-highlight.md](patterns/titan-syntax-highlight.md) | Grammar coverage vs. source variety |
 | rhea | syntax detection | [patterns/rhea-syntax-detection.md](patterns/rhea-syntax-detection.md) | Information deficit at decision time |
 | iapetus | code counting | [patterns/iapetus-code-counting.md](patterns/iapetus-code-counting.md) | Grammar coverage vs. real-world source variety |
+| hyperion | network listener | [patterns/hyperion-network-listener.md](patterns/hyperion-network-listener.md) | Connection establishment vs. request processing gap |
 
 ## Unused Planet Names
 
-`adrastea`, `amalthea`, `ananke`, `ariel`, `atlas`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `dione`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `iapetus`, `janus`, `juliet`, `larissa`, `leda`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pan`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
+`adrastea`, `amalthea`, `ananke`, `ariel`, `atlas`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `charon`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `dione`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `hyperion`, `janus`, `juliet`, `larissa`, `leda`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pan`, `pandora`, `pasiphae`, `phobos`, `phoebe`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `thebe`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
 
 ---
 
@@ -137,3 +138,362 @@ A more intuitive `du` replacement showing disk usage as a tree with proportional
 | `src/progress.rs` | **mercury** (display) | Spinner / progress indicator during filesystem walk |
 | `src/platform.rs` | **neptune** (transform) | Platform-specific path and metadata handling (Unix vs. Windows) |
 | `src/utils.rs` | (helpers) | Sorting, terminal width detection |
+
+### tide (http-rs/tide)
+
+An async web framework for Rust, built around routing, middleware, and type-safe request extraction.
+
+| tide module | Problem Pattern | Rationale |
+|-------------|----------------|-----------|
+| `src/server.rs` | **hyperion** (network listener) + **saturn** (route) | `Server` struct: binds to address(es), holds router, manages graceful shutdown |
+| `src/router.rs` | **saturn** (route) | `Router` with per-HTTP-method state machines via `routefinder`, fallback to `all_method_router`, HEAD→GET fallback, 405 detection |
+| `src/route.rs` | **saturn** (route) | `Route` struct wrapping endpoint with middleware chain, method filtering |
+| `src/endpoint.rs` | **saturn** (route) | `Endpoint` trait + `DynEndpoint` type erasure — the unit of request handling |
+| `src/middleware.rs` | **saturn** (route) | `Middleware` trait, `Next` chain runner — wraps endpoint with pre/post processing |
+| `src/request.rs` | **neptune** (transform) + **jupiter** (validate) | `Request<State>` with typed extraction via `serde::Deserialize`, query/body/param parsing |
+| `src/response.rs` | **mercury** (display) | `Response` with status, headers, body — serialisable to HTTP wire format |
+| `src/listener/` | **hyperion** (network listener) | `Listener` trait, `TcpListener`, `TlsListener` — address binding, accept loop, TLS handshake |
+| `src/cookies/` | **neptune** (transform) | Cookie parsing and serialisation (Set-Cookie, Cookie headers) |
+| `src/sessions/` | **mars** (persist) | Session state management across requests |
+| `src/security/cors.rs` | **uranus** (authenticate) | CORS header enforcement as middleware |
+| `src/fs/` | **callisto** (filesystem walk) + **mercury** (display) | Static file serving: path resolution, MIME type detection, file streaming |
+| `src/sse/` | **hyperion** (network listener) + **mercury** (display) | Server-sent events: keep-alive connection, event serialisation |
+| `src/log/` | **mercury** (display) | Request logging middleware
+
+## GUI Projects (non-web)
+
+### ratatui (ratatui-org/ratatui)
+
+A Rust library for building terminal user interfaces (TUIs) — the dominant Rust TUI framework.
+
+| ratatui module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `ratatui/src/lib.rs` | (framework core) | Public API: `Terminal`, `Frame`, backend initialisation |
+| `ratatui/src/init.rs` | **europa** (configuration assembly) | Terminal backend setup, panic hook installation, raw mode entry |
+| `ratatui/src/widgets.rs` | **mercury** (display) | Widget trait definitions and built-in widget implementations |
+| `src/widgets/` (examples) | **mercury** (display) | Widget examples — block, chart, gauge, list, paragraph, table, tabs, calendar |
+| `src/widgets/stateful_widget_ref.rs` | **mars** (persist) | Stateful widget references preserving scroll position, selection across render cycles |
+| `src/widgets/widget_ref.rs` | **mercury** (display) | Widget reference abstraction for composable rendering |
+| `src/layout.rs` | **saturn** (route) | Layout constraints and splitting: `Constraint`, `Layout::split()` — routes screen area to child widgets |
+| `src/text.rs` | **titan** (syntax highlighting) | `Text`, `Span`, `Line` types with style application and grapheme-aware rendering |
+| `src/style.rs` | **mercury** (display) | `Style` — colour, modifier, underline definitions for terminal output |
+| `src/symbols.rs` | **ganymede** (output formatting) | Unicode/ASCII symbol sets for drawing borders, bars, dots |
+| `src/backend.rs` | **hyperion** (network listener) | `Backend` trait abstraction over crossterm/termion/termwiz — raw terminal I/O |
+| `src/terminal.rs` | **hyperion** / **mercury** (network / display) | `Terminal` — viewport management, full-screen mode, auto-resize |
+| `src/buffer.rs` | **mercury** (display) | Double-buffer cell grid — the framebuffer that drives terminal output |
+| `src/frame.rs` | **mercury** (display) | `Frame` — per-frame rendering context with area and buffer |
+
+### bottom (ClementTsang/bottom)
+
+A cross-platform graphical process/system monitor for the terminal (TUI).
+
+| bottom module | Problem Pattern | Rationale |
+|---------------|----------------|-----------|
+| `src/bin/main.rs` | (orchestration) | Entry point: initialise backend, run event loop |
+| `src/app.rs` | **europa** (configuration assembly) | `App` struct: central state, manages layout, tabs, widget visibility |
+| `src/app/states.rs` | **mars** (persist) | `AppState`: persisted state machine for tab selection, expanded widget, filter text |
+| `src/app/layout_manager.rs` | **saturn** (route) | Layout configuration: splits screen into widget regions per user config |
+| `src/app/filter.rs` | **venus** (filter) | Process filtering: search by name/PID, regex, logical OR |
+| `src/app/data/store.rs` | **mars** (persist) | Data store: time-series buffers for CPU/mem/disk/network metrics |
+| `src/app/data/time_series.rs` | **mars** (persist) | Rolling time-series buffer for graph widgets |
+| `src/app/data/process.rs` | **neptune** (transform) | Process data model: PID, CPU%, mem%, state — from OS raw data to structured display |
+| `src/components/` | **mercury** (display) | Reusable UI components: tabs, layout containers |
+| `src/widgets/` | **mercury** / **ganymede** (display / output) | Widget implementations: CPU graph, memory, disk, network, process table, temperature, battery |
+| `src/widgets/process_table/` | **venus** (filter) + **mercury** (display) | Process table with sort, filter, tree mode, kill signal support |
+| `src/components/time_series/` | **mars** (persist) + **mercury** (display) | Time-series data collection and graph rendering |
+| `src/options.rs` | **europa** (configuration assembly) | Config file parsing (`~/.config/bottom/bottom.toml`) with schema validation |
+| `src/constants.rs` | **europa** (configuration assembly) | Default constants: refresh rate, default layout, colour palette |
+| `src/event.rs` | **hyperion** (network listener) | Input event handling: keyboard, mouse, resize |
+| `src/canvas/` | **ganymede** (output formatting) | Canvas rendering: braille dots, bar characters for graph drawing |
+| `src/collection.rs` | **mars** (persist) | Data collection subsystem: OS-specific metric polling |
+
+### egui (emilk/egui)
+
+An immediate-mode GUI library for Rust, running on web, native, and in-game.
+
+| egui crate / module | Problem Pattern | Rationale |
+|---------------------|----------------|-----------|
+| `crates/egui/src/lib.rs` | (framework core) | Immediate mode GUI loop: `Context`, `Ui`, widget trait |
+| `crates/egui/src/context.rs` | **saturn** (route) | `Context`: frames input, output, and widget tree — the central routing hub |
+| `crates/egui/src/ui.rs` | **mercury** (display) | `Ui`: layout panels, allocate space, place widgets |
+| `crates/egui/src/layout.rs` | **saturn** (route) | Layout algorithms: horizontal, vertical, columns, wrapping — screen area routing |
+| `crates/egui/src/containers/` | **mercury** (display) | Container widgets: window, panel, scroll area, collapsing header, resize, menu, popup, tooltip |
+| `crates/egui/src/widgets/` | **mercury** (display) | Built-in widgets: button, slider, text edit, combo box, checkbox, radio, spinner, colour picker |
+| `crates/egui/src/painter.rs` | **ganymede** (output formatting) | Painter: tessellates shapes into GPU-friendly vertex buffers |
+| `crates/egui/src/style.rs` | **mercury** (display) | `Style`: colours, margins, spacing, widget sizes — visual appearance definition |
+| `crates/egui/src/data/input/` | **hyperion** (network listener) | Input state: keyboard, mouse, touch, IME, raw input from platform |
+| `crates/egui/src/memory/` | **mars** (persist) | Widget memory: persisted state across frames (collapsed state, scroll pos, text) |
+| `crates/egui/src/animation_manager.rs` | **mercury** (display) | Animation: smooth transitions for colour, position, size changes |
+| `crates/egui/src/placer.rs` | **saturn** (route) | Widget placement with position/size hints |
+| `crates/eframe/` | **hyperion** (network listener) + **europa** (config) | Framework: native (winit + glow/wgpu) and web (WASM) backends, window creation, event loop |
+| `crates/ecolor/` | **mercury** (display) | Colour types: Color32, Rgba, Hsva — colour space conversions |
+| `crates/epaint/` | **ganymede** (output formatting) | 2D graphics rendering: shapes, text, tessellation, anti-aliasing |
+| `crates/egui-winit/` | **hyperion** (network listener) | Winit integration: window events → egui input translation |
+| `crates/egui-wgpu/`, `crates/egui_glow/` | **ganymede** (output formatting) | GPU rendering backends: wgpu and OpenGL |
+| `crates/egui_extras/` | **mercury** (display) | Extra widgets: table, date picker, image loading, syntax highlighting |
+| `crates/egui_plot/` | **mercury** (display) | Plotting widgets: line chart, scatter plot, bar chart, histogram |
+
+### rnote (flxzt/rnote)
+
+A vector-based drawing app for handwritten notes and document annotation, built with Rust and GTK4.
+
+| rnote crate / module | Problem Pattern | Rationale |
+|----------------------|----------------|-----------|
+| `crates/rnote-ui/` | **mercury** (display) | GTK4 UI layer: main window, toolbars, settings dialogs, canvas widget |
+| `crates/rnote-engine/` | **neptune** (transform) + **mars** (persist) | Document engine: stroke rendering, selection, page layout, file format handling |
+| `crates/rnote-engine/src/engine/export.rs` | **neptune** (transform) | Document export: SVG, PDF, PNG, JPEG — format conversion |
+| `crates/rnote-engine/src/engine/import.rs` | **neptune** (transform) | Document import: PDF, bitmap, SVG — external format → internal representation |
+| `crates/rnote-engine/src/document/` | **mars** (persist) | Document model: pages, strokes, images, backgrounds, serialisation |
+| `crates/rnote-engine/src/document/format.rs` | **mars** (persist) | `.rnote` file format: gzipped JSON schema with versioning |
+| `crates/rnote-engine/src/engine/config.rs` | **europa** (configuration assembly) | Engine configuration: pen styles, audio feedback, tool mappings |
+| `crates/rnote-engine/src/camera.rs` | **mercury** (display) | Camera: viewport positioning, zoom, pan across infinite canvas |
+| `crates/rnote-engine/src/audioplayer.rs` | **mercury** (display) | Pen audio feedback: play brush/marker/typewriter sounds on stroke |
+| `crates/rnote-compose/` | **neptune** (transform) | Vector composition: shapes (rectangle, ellipse, line, arrow, polygon, bezier), pen paths, constraints |
+| `crates/rnote-compose/src/shapes/` | **neptune** (transform) | Shape definitions: geometric primitives with transform, style, hit-test |
+| `crates/rnote-compose/src/builders/` | **neptune** (transform) | Shape builders: drag-to-create interaction for each shape type |
+| `crates/rnote-compose/src/style/` | **mercury** (display) | Stroke styles: smooth, rough, textured — visual rendering of ink strokes |
+| `crates/rnote-cli/` | **io** (command execution) | CLI tool: export, thumbnail, validators — batch operations on .rnote files |
+
+### MonitorControl (MonitorControl/MonitorControl)
+
+A macOS app for controlling external display brightness, volume, and contrast via DDC, native protocols, and software dimming.
+
+| MonitorControl module | Problem Pattern | Rationale |
+|----------------------|----------------|-----------|
+| `MonitorControl/main.swift` | (orchestration) | App entry point: initialise menu, display manager, keyboard tap |
+| `MonitorControl/Support/AppDelegate.swift` | **europa** (configuration assembly) | App lifecycle, preferences loading, menu bar setup |
+| `MonitorControl/Support/DisplayManager.swift` | **neptune** (transform) | Display detection, enumeration, protocol selection (DDC/Apple/software) |
+| `MonitorControl/Support/Arm64DDC.swift` | **neptune** (transform) | ARM-specific DDC communication via IOKit |
+| `MonitorControl/Support/IntelDDC.swift` | **neptune** (transform) | Intel-specific DDC communication via IOKit |
+| `MonitorControl/Support/OSDUtils.swift` | **mercury** (display) | Native macOS OSD overlay for brightness/volume changes |
+| `MonitorControl/Support/MenuHandler.swift` | **mercury** (display) | Menu bar: per-display sliders, combined slider, quick actions |
+| `MonitorControl/Support/SliderHandler.swift` | **mercury** (display) | Slider UI: brightness, volume, contrast controls with smooth transitions |
+| `MonitorControl/Support/MediaKeyTapManager.swift` | **hyperion** (network listener) | Keyboard media key interception: brightness keys, volume keys |
+| `MonitorControl/Support/KeyboardShortcutsManager.swift` | **europa** (configuration assembly) | Custom keyboard shortcut registration and handling |
+| `MonitorControl/Support/UpdaterDelegate.swift` | **mars** (persist) | Auto-update via Sparkle: version checking, update download |
+| `MonitorControl/Model/Display.swift` | **mars** (persist) | Display model: brightness/volume/contrast state, min/max ranges, protocol |
+| `MonitorControl/Model/AppleDisplay.swift` | **mars** (persist) + **neptune** (transform) | Apple/Built-in display: native protocol control |
+| `MonitorControl/Model/OtherDisplay.swift` | **mars** (persist) + **neptune** (transform) | Non-Apple display: DDC or software-only control |
+| `MonitorControl/View Controllers/Preferences/` | **europa** (configuration assembly) | Preferences UI: display config, keyboard shortcuts, advanced settings |
+| `MonitorControl/View Controllers/Onboarding/` | **europa** (configuration assembly) | First-launch onboarding: accessibility permission prompts |
+| `MonitorControl/Enums/` | **jupiter** (validate) | Command and pref key enums: validated set of allowed values |
+| `MonitorControlHelper/` | **io** (command execution) | Helper process: runs with accessibility permission for media key capture |
+
+## Web Projects
+
+### React (facebook/react)
+
+A declarative JavaScript library for building user interfaces.
+
+| React package | Problem Pattern | Rationale |
+|---------------|----------------|-----------|
+| `packages/react/` | (framework core) | Public API: `createElement`, `Component`, hooks (`useState`, `useEffect`, etc.) |
+| `packages/react-reconciler/` | **neptune** (transform) | Fiber reconciler: transforms JSX tree → fiber tree → DOM updates |
+| `packages/react-dom/` | **mercury** (display) | DOM renderer: mounts components, handles DOM events, portal support |
+| `packages/react-dom-bindings/` | **neptune** (transform) | DOM property/event bindings: HTML attributes → React props, event delegation |
+| `packages/react-server/` | **neptune** (transform) | Server rendering: streams HTML, handles Suspense on server |
+| `packages/react-server-dom-webpack/` | **neptune** (transform) | Server Components: RSC payload serialisation, code splitting |
+| `packages/scheduler/` | **saturn** (route) | Task scheduler: priority-based work queue, time slicing, idle callbacks |
+| `packages/react-cache/` | **mars** (persist) | Data caching: memoised resource fetching with invalidation |
+| `packages/react-refresh/` | **mercury** (display) | Fast Refresh: hot module replacement preserving component state |
+| `packages/react-devtools/` | **mercury** (display) | DevTools: component tree inspector, profiler, state editor |
+| `packages/shared/` | **jupiter** (validate) | Shared utilities: prop types validation, object pooling, bit manipulation |
+| `packages/jest-react/` | **jupiter** (validate) | Testing utilities: `act()`, test renderer for assertions |
+
+### Vue (vuejs/core)
+
+A progressive JavaScript framework for building UIs, with compiled templates and fine-grained reactivity.
+
+| Vue package | Problem Pattern | Rationale |
+|-------------|----------------|-----------|
+| `packages/vue/` | (orchestration) | Public API: exported from all sub-packages |
+| `packages/compiler-core/` | **neptune** (transform) | Template compiler: tokeniser → AST → transform → codegen (render function) |
+| `packages/compiler-dom/` | **neptune** (transform) | DOM-specific compiler: HTML-specific transforms, v-model, v-show, v-on |
+| `packages/compiler-sfc/` | **neptune** (transform) | Single File Component compiler: parses `.vue` files, extracts script/template/style |
+| `packages/compiler-ssr/` | **neptune** (transform) | SSR compiler: generates server-rendered HTML strings |
+| `packages/runtime-core/` | **saturn** (route) | Runtime: component lifecycle, VNode diffing, slot resolution, provide/inject |
+| `packages/runtime-dom/` | **mercury** (display) | DOM runtime: mounts VNodes, patches DOM, handles events |
+| `packages/reactivity/` | **mars** (persist) | Reactivity system: `ref`, `reactive`, `computed`, `watch` — dependency tracking |
+| `packages/server-renderer/` | **neptune** (transform) | Server-side rendering: renders Vue apps to HTML streams |
+| `packages/shared/` | **jupiter** (validate) | Shared utilities: type helpers, DOM attribute maps, escape handling |
+| `packages/runtime-test/` | **jupiter** (validate) | Test runtime: lightweight DOM mock for testing |
+| `packages/vue-compat/` | **neptune** (transform) | Vue 2 compatibility layer: maps old API to new internals |
+
+### Svelte (sveltejs/svelte)
+
+A compiler-based web framework that shifts work from runtime to compile time.
+
+| Svelte package / module | Problem Pattern | Rationale |
+|------------------------|----------------|-----------|
+| `packages/svelte/src/compiler/` | **neptune** (transform) | Svelte compiler: parses `.svelte` files, generates vanilla JS DOM update code |
+| `packages/svelte/src/runtime/` | **mercury** (display) | Runtime helpers: component mounting, lifecycle, event handling |
+| `packages/svelte/src/compiler/parse/` | **neptune** (transform) | Parser: tokenises `.svelte` HTML → AST with script/style sections |
+| `packages/svelte/src/compiler/transform/` | **neptune** (transform) | Transforms: optimises AST, inlines constants, hoists statics |
+| `packages/svelte/src/compiler/codegen/` | **neptune** (transform) | Codegen: generates JavaScript from AST with minimal runtime overhead |
+| `packages/svelte/src/reactivity/` | **mars** (persist) | Runes reactivity: `$state`, `$derived`, `$effect` — compile-time reactive primitives |
+| `packages/svelte/src/store/` | **mars** (persist) | Store API: `writable`, `readable`, `derived` — runtime reactive state containers |
+| `packages/svelte/src/ssr/` | **neptune** (transform) | SSR codegen: generates HTML string rendering for server-side output |
+| `packages/svelte/src/events/` | **hyperion** (network listener) | Event handling: delegated event system with cleanup |
+| `packages/svelte/src/animate/`, `src/transition/`, `src/easing/` | **mercury** (display) | Animation, transition, easing utilities for declarative UI motion |
+| `packages/svelte/src/motion/` | **mercury** (display) | Spring/tween motion stores for smooth value interpolation |
+| `documentation/` | **mercury** (display) | Documentation site rendered from markdown |
+
+### Express (expressjs/express)
+
+A minimal web framework for Node.js providing routing, middleware, and HTTP utilities.
+
+| Express module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `lib/express.js` | (orchestration) | Factory: `createApplication()` — creates the app, mixes in proto methods |
+| `lib/application.js` | **saturn** (route) | `app` object: route registration (`.get()`, `.post()`), middleware pipeline (`use`), settings |
+| `lib/request.js` | **neptune** (transform) | `req` object: extends Node's `IncomingMessage` with param parsing, content negotiation, protocol detection |
+| `lib/response.js` | **mercury** (display) | `res` object: extends `ServerResponse` with `.send()`, `.json()`, `.render()`, `.redirect()`, `.format()` |
+| `lib/router/` | **saturn** (route) | `Router`: layer stack, route matching with params, error handling middleware |
+| `lib/view.js` | **neptune** (transform) | View engine: template rendering abstraction, caching compiled templates |
+| `lib/utils.js` | **jupiter** (validate) | Utilities: ETag generation, content-type parsing, proxy address detection |
+| `middleware/` (ecosystem) | **venus** (filter) + **neptune** (transform) | Middleware: body parsing, cookie parsing, compression, sessions (external packages) |
+
+### htmx (bigskysoftware/htmx)
+
+A library that extends HTML with AJAX, CSS transitions, WebSockets, and Server Sent Events via attributes.
+
+| htmx module | Problem Pattern | Rationale |
+|-------------|----------------|-----------|
+| `src/htmx.js` | (framework core) | Core: bootstrapping, attribute scanning, event handling, AJAX dispatch |
+| `src/htmx.js` — attribute processing | **saturn** (route) | Routes `hx-*` attributes to AJAX actions: `hx-get`, `hx-post`, `hx-put`, `hx-delete`, `hx-patch` |
+| `src/htmx.js` — swap strategies | **mercury** (display) | Swap modes: `innerHTML`, `outerHTML`, `beforebegin`, `afterbegin`, `beforeend`, `afterend`, `none` |
+| `src/htmx.js` — triggers | **hyperion** (network listener) | Trigger system: `hx-trigger` — click, submit, load, reveal, intersect, throttle/debounce, polling |
+| `src/htmx.js` — history | **mars** (persist) | History management: push/replace URL, cache, restore, back/forward navigation |
+| `src/htmx.js` — extensions | **neptune** (transform) | Extension system: hooks for custom behaviour, lifecycle callbacks |
+| `src/htmx.js` — indicators | **mercury** (display) | Request indicators: `hx-indicator`, CSS class toggling during AJAX |
+| `src/htmx.js` — validation | **jupiter** (validate) | Form validation: `hx-validate` — HTML5 constraint API integration |
+| `src/htmx.js` — WebSocket & SSE | **hyperion** (network listener) | WebSocket and Server-Sent Events: persistent connection management, content swapping |
+| `src/htmx.js` — HTTP methods | **neptune** (transform) | AJAX request construction: method, headers, params, body from HTML attributes |
+| `dist/` | **ganymede** (output formatting) | Distribution: minified, ESM, TypeScript definitions |
+
+## Game Projects
+
+### Mindustry (Anuken/Mindustry)
+
+An open-source automation tower defense RTS game written in Java, with a custom ECS architecture.
+
+| Mindustry module | Problem Pattern | Rationale |
+|------------------|----------------|-----------|
+| `core/src/mindustry/` | (orchestration) | Root: `ClientLauncher`, `Vars`, `Mindustry` — app entry and global state |
+| `core/src/mindustry/entities/` | **neptune** (transform) | ECS: entity components (`Unit`, `Building`, `Bullet`, `Player`), systems, component IO |
+| `core/src/mindustry/entities/comp/` | **neptune** (transform) | Component definitions: health, position, team, shield — annotated with `@EntityDef` |
+| `core/src/mindustry/world/` | **mars** (persist) | World state: tiles, blocks, chunks, world generation, save/load |
+| `core/src/mindustry/world/blocks/` | **neptune** (transform) | Block definitions: conveyors, turrets, drills, factories — over 300 block types |
+| `core/src/mindustry/type/` | **jupiter** (validate) | Type definitions: item types, liquid types, unit types, weather types, status effects |
+| `core/src/mindustry/content/` | **europa** (configuration assembly) | Content registry: loads and registers all game content (items, blocks, units, etc.) |
+| `core/src/mindustry/ai/` | **saturn** (route) | AI: pathfinding, unit AI, building AI, state machine behaviour trees |
+| `core/src/mindustry/logic/` | **neptune** (transform) | Logic system: processor blocks, in-game scripting language execution |
+| `core/src/mindustry/net/` | **hyperion** (network listener) + **uranus** (authenticate) | Networking: server/client, packet serialisation, remote method calls (`@Remote`), matchmaking |
+| `core/src/mindustry/ui/` | **mercury** (display) | UI: menus, HUD, dialogs, minimap, fragment-based UI system |
+| `core/src/mindustry/graphics/` | **ganymede** (output formatting) | Rendering: sprite batching, shaders, lighting, minimap, weather effects |
+| `core/src/mindustry/audio/` | **mercury** (display) | Audio: sound effects, music tracks, ambient sounds |
+| `core/src/mindustry/input/` | **hyperion** (network listener) | Input: touch, keyboard, mouse, controller — platform-abstracted input handling |
+| `core/src/mindustry/maps/` | **mars** (persist) | Maps: map generation, loading, conversion, custom map files |
+| `core/src/mindustry/game/` | **saturn** (route) | Game modes: survival, sandbox, PvP, campaign — mode-specific rules and win conditions |
+| `core/src/mindustry/editor/` | **neptune** (transform) | Map editor: tile painting, undo/redo, import/export |
+| `core/src/mindustry/io/` | **mars** (persist) | IO: save/load, settings persistence, export formats |
+| `core/src/mindustry/mod/` | **europa** (configuration assembly) | Modding: mod loading, content overrides, script injection |
+| `annotations/` | **neptune** (transform) | Annotation processor: generates entity classes, remote call packets, asset management code |
+| `desktop/`, `server/`, `android/` | **europa** (configuration assembly) | Platform launchers: desktop (LWJGL), server (headless), Android |
+
+### doukutsu-rs (doukutsu-rs/doukutsu-rs)
+
+A reimplementation of the Cave Story (Doukutsu Monogatari) engine in Rust with modern enhancements.
+
+| doukutsu-rs module | Problem Pattern | Rationale |
+|--------------------|----------------|-----------|
+| `src/main.rs` | (orchestration) | Entry point: game loop, scene management, platform init |
+| `src/game/` | **saturn** (route) | Game state machine: map → gameplay, pause menu, inventory, dialogue — state transitions |
+| `src/scene/` | **saturn** (route) | Scene management: title screen, credits, stage select, cutscene — composable scene stack |
+| `src/menu/` | **mercury** (display) | Menus: title, settings, save/load, inventory — UI rendering in immediate mode |
+| `src/components/` | **neptune** (transform) | ECS components: map system, tilemap, HUD, boss bar, fade, flash, text boxes, inventory |
+| `src/components/map_system.rs` | **saturn** (route) + **callisto** (filesystem walk) | Map system: tile collision, entity placement, background layers — routes game objects by position |
+| `src/components/tilemap.rs` | **mercury** (display) | Tilemap rendering: parallax layers, animated tiles, water shader |
+| `src/components/hud.rs` | **mercury** (display) | HUD: health, weapon, timer, inventory display — overlay rendering |
+| `src/components/text_boxes.rs` | **mercury** (display) | Dialogue system: text boxes, portrait display, typewriter effect, choices |
+| `src/entity.rs` | **neptune** (transform) | Entity: NPCs, enemies, player, projectiles — entity data model with type hierarchy |
+| `src/graphics/` | **ganymede** (output formatting) | Rendering: surface blitting, spritesheet, palette effects, screen shake, fade transitions |
+| `src/sound/` | **mercury** (display) | Audio: music playback, sound effects, organya tracker, position-based panning |
+| `src/input/` | **hyperion** (network listener) | Input: keyboard, gamepad, key binding — abstracted input state |
+| `src/framework/` | **hyperion** (network listener) | Platform abstraction: window creation, OpenGL context, frame timing, vsync |
+| `src/data/` | **mars** (persist) + **callisto** (filesystem walk) | Data loading: extracts files from game archives, resource caching |
+| `src/editor/` | **neptune** (transform) | Map editor: tile editing, entity placement, script trigger editing |
+| `src/discord/` | **mercury** (display) | Discord Rich Presence: game state → presence update |
+| `drsandroid/` | **europa** (configuration assembly) | Android port: Java/Kotlin glue code, APK packaging |
+| `drshorizon/` | **europa** (configuration assembly) | Nintendo Switch port: homebrew build, ROMFS mount |
+
+### OpenTTD (OpenTTD/OpenTTD)
+
+A transport simulation game based on Transport Tycoon Deluxe, written in C++.
+
+| OpenTTD module | Problem Pattern | Rationale |
+|----------------|----------------|-----------|
+| `src/openttd.cpp` | (orchestration) | Entry point: game loop, main state machine, driver initialisation |
+| `src/economy/` | **mars** (persist) | Economy simulation: cargo payment, industry production, inflation, loan interest |
+| `src/economy/func.h` | **mars** (persist) | Economic calculation: cargo profit, running costs, vehicle purchase price |
+| `src/road_cmd.cpp`, `src/rail_cmd.cpp`, `src/water_cmd.cpp` | **neptune** (transform) | Infrastructure commands: build/remove roads, rails, docks, airports — command pattern |
+| `src/vehicle/` | **neptune** (transform) | Vehicle system: train, road vehicle, ship, aircraft — shared base with per-type specialisation |
+| `src/vehicle_base.h` | **neptune** (transform) | Vehicle data model: position, cargo, speed, reliability, orders |
+| `src/station/` | **neptune** (transform) | Station system: coverage, rating, cargo waiting, catchment area |
+| `src/industry/` | **mars** (persist) | Industry system: production chains, raw material → processed goods, closure probability |
+| `src/town/` | **mars** (persist) | Town simulation: population growth, building construction, road layout |
+| `src/pathfinder/` | **saturn** (route) | Pathfinding: YAPF, NPF, Dijkstra — route vehicles through the network |
+| `src/network/` | **hyperion** (network listener) + **uranus** (authenticate) | Multiplayer: game server, admin port, UDP discovery, packet compression |
+| `src/genworld.h`, `src/genworld.cpp` | **neptune** (transform) | World generation: terrain, towns, industries, rivers — algorithmic landscape creation |
+| `src/gfx/`, `src/blitter/` | **ganymede** (output formatting) | Graphics: sprite management, blitting, palette animation, zoom, anti-aliasing |
+| `src/video/` | **hyperion** (network listener) | Video backends: SDL, OpenGL, Win32 GDI — window creation, input, frame loop |
+| `src/widget/` | **mercury** (display) | UI widgets: dropdown, edit box, list, matrix, scrollbar — in-game GUI toolkit |
+| `src/window/` | **mercury** (display) | Window management: z-order, resize, docking — window and dialog system |
+| `src/saveload/` | **mars** (persist) | Save/load: savegame format, backwards compatibility across 20+ years of versions |
+| `src/newgrf/` | **europa** (configuration assembly) | NewGRF: mod loading, sprite overrides, custom callbacks — content extension system |
+| `src/ai/`, `src/game/` | **saturn** (route) | AI/Game scripting: Squirrel VM integration, script API, goal-based AI |
+| `src/music/` | **mercury** (display) | Music backends: FluidSynth, DirectMusic, MIDI, custom stream music |
+| `src/sound/` | **mercury** (display) | Sound backends: FMOD, SDL_mixer, OpenAL — effect playback |
+| `src/terraform_cmd.cpp`, `src/landscape.cpp` | **neptune** (transform) | Terrain modification: raise/lower land, build canals, demolish — map editing commands |
+
+### Endless Sky (endless-sky/endless-sky)
+
+A sandbox-style space exploration game similar to Escape Velocity, with data-driven content and a C++ engine.
+
+| Endless Sky module | Problem Pattern | Rationale |
+|--------------------|----------------|-----------|
+| `source/` | (orchestration) | C++ game engine: main loop, game state, rendering pipeline |
+| `source/GameData.h` | **europa** (configuration assembly) | Data loading: parses all `data/` text files into in-memory objects |
+| `source/PlayerInfo.h` | **mars** (persist) | Player state: fleet, credits, reputation, mission progress, visited systems |
+| `source/Ship.h` | **neptune** (transform) | Ship: hardpoints, outfits, cargo, health, fighter/drone bays |
+| `source/Outfit.h` | **neptune** (transform) | Outfit: weapons, engines, shields, cargo expansions — equipment data model |
+| `source/System.h` | **saturn** (route) | Star system: planets, links to other systems, trade goods, fleets, hazards |
+| `source/Planet.h` | **mars** (persist) | Planet: services (shipyard, outfitter, spaceport), government, population |
+| `source/Mission.h` | **saturn** (route) | Mission: conditions, triggers, waypoints, cargo, dialogue, branches — story state machine |
+| `source/AI.h` | **saturn** (route) | AI: ship combat, movement, escort behaviour, formation flying, targeting |
+| `source/Fleet.h` | **mars** (persist) | Fleet: ship composition, spawn triggers, reinforcement patterns |
+| `source/Engine.h` | **neptune** (transform) | Combat engine: projectile motion, collision detection, damage calculation |
+| `source/DrawList.h` | **mercury** (display) | Rendering: sprite layering, animation, object culling |
+| `source/MapPanel.h` | **mercury** (display) | Map: star system display, route plotting, faction colouring |
+| `source/ShipInfoPanel.h` | **mercury** (display) | Ship info: cargo/manoeuvring display, outfit viewer, crew status |
+| `source/HailPanel.h` | **mercury** (display) | Hail dialogue: communication with other ships, hails, boarding |
+| `source/ConversationPanel.h` | **mercury** (display) | Dialogue: branching conversations with condition-based choices |
+| `source/Files.h` | **callisto** (filesystem walk) | File system: save game paths, data directory detection, plugin loading |
+| `source/Audio.h` | **mercury** (display) | Audio: music, sound effects, positional audio, OpenAL |
+| `data/` | **europa** (configuration assembly) | Game data: ships, outfits, planets, systems, missions, conversations, fleets — all data-driven in text |
+
+### Veloren (veloren/veloren)
+
+A multiplayer voxel RPG written in Rust with an ECS architecture and client/server split.
+
+| Veloren crate / module | Problem Pattern | Rationale |
+|------------------------|----------------|-----------|
+| `server/` | **hyperion** (network listener) + **mars** (persist) | Game server: world simulation, player persistence, NPC AI, physics |
+| `client/` (voxygen/) | **mercury** (display) + **hyperion** (network listener) | Client: 3D rendering (vulkan), input handling, UI, audio |
+| `common/` | **neptune** (transform) | Shared types: components, protocol messages, math, world model |
+| `common/src/comp/` | **neptune** (transform) | ECS components: position, velocity, health, inventory, stats |
+| `common/src/sys/` | **saturn** (route) | ECS systems: physics, combat, AI, animation, interactions |
+| `common/src/terrain/` | **mars** (persist) | Voxel terrain: generation, modification, lighting, LOD |
+| `common/src/trade/` | **neptune** (transform) | Trading: item economy, buy/sell, market simulation |
+| `common/src/agent/` | **saturn** (route) | Agent AI: behaviour trees, pathfinding, combat tactics |
+| `assets/` | **europa** (configuration assembly) | Game data: ability definitions, item stats, NPC behaviour, loot tables — in `.ron` files |
