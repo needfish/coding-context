@@ -1,6 +1,6 @@
 # pandora: Simple Workpieces
 
-> **Pressure class:** Behavior variation — the edit operation changes per user action, but the document state consistency contract stays the same.
+> **Pressure class:** Behavior variation  --  the edit operation changes per user action, but the document state consistency contract stays the same.
 
 ## Problem
 
@@ -12,7 +12,7 @@ Arises in any application that creates and modifies documents: text editors, IDE
 
 ## Domains Involved
 
-- **Document model** (lexical): the internal representation of the workpiece — typically a sequence of lines (text), a grid of cells (spreadsheet), or a graph of nodes (diagram editor).
+- **Document model** (lexical): the internal representation of the workpiece  --  typically a sequence of lines (text), a grid of cells (spreadsheet), or a graph of nodes (diagram editor).
 - **Document view** (causal): a projection of the document model onto the screen, with scroll offset, selection state, and visual annotations.
 - **Edit operation** (causal): a single atomic change to the document (insert character, delete line, paste, replace).
 - **Transaction** (lexical): a group of edit operations that are applied and undone together as a unit (e.g., a single "paste" may insert dozens of characters, but the entire paste is a single undo step).
@@ -23,24 +23,24 @@ Arises in any application that creates and modifies documents: text editors, IDE
 
 ## Shared Phenomena
 
-- User → Editor: edit commands (type, delete, paste, cut, indent)
-- Editor → Document model: atomic edit operations constrained to maintain structural invariants
-- Document model → Undo stack: composed transactions pushed on each command boundary
-- Undo stack → Document model: reversed operations applied on undo, original operations stored on redo
-- Document model → Views: change notifications (line inserted, lines deleted, selection changed)
-- Views → Screen: redrawn regions after change notification
-- Editor → File system: read on open, write on save
+- User  ->  Editor: edit commands (type, delete, paste, cut, indent)
+- Editor  ->  Document model: atomic edit operations constrained to maintain structural invariants
+- Document model  ->  Undo stack: composed transactions pushed on each command boundary
+- Undo stack  ->  Document model: reversed operations applied on undo, original operations stored on redo
+- Document model  ->  Views: change notifications (line inserted, lines deleted, selection changed)
+- Views  ->  Screen: redrawn regions after change notification
+- Editor  ->  File system: read on open, write on save
 
 ## Invariants
 
 - Every undo must restore the document to the exact state before the corresponding transaction was applied.
-- Undo must reverse the effects of a transaction without side effects — no other state changes may leak.
+- Undo must reverse the effects of a transaction without side effects  --  no other state changes may leak.
 - The undo stack must not grow unbounded; old transactions may be discarded under memory pressure, but only from the oldest end.
-- A new edit after an undo (but no redo) must discard the redo stack — the undone state becomes the new head.
+- A new edit after an undo (but no redo) must discard the redo stack  --  the undone state becomes the new head.
 - The dirty flag must be set on any edit that modifies the document and cleared on save.
-- The dirty flag must be computed correctly across undo/redo — undoing back to the saved state must clear the flag.
+- The dirty flag must be computed correctly across undo/redo  --  undoing back to the saved state must clear the flag.
 - All views of the same document must reflect the same document state at all times; a change in one view must invalidate all others.
-- The selection must remain valid after every edit — if the selection spans a region that was deleted, it must clamp to the available range.
+- The selection must remain valid after every edit  --  if the selection spans a region that was deleted, it must clamp to the available range.
 
 ## Known Failure Modes
 
@@ -61,17 +61,17 @@ Arises in any application that creates and modifies documents: text editors, IDE
 
 ## Related Subproblems
 
-- **mars/persist**: The save/load cycle bridges the in-memory workpiece to durable storage.
-- **neptune/transform**: The document model transforms user intent (key presses) into structural changes to the document.
+- **mars/persistence**: The save/load cycle bridges the in-memory workpiece to durable storage.
+- **neptune/transformation**: The document model transforms user intent (key presses) into structural changes to the document.
 - **mercury/display**: Views project the document model onto the screen, translating internal coordinates (line/column) to screen coordinates (pixel offset).
-- **saturn/route**: The command system routes user input through key bindings to specific editing commands.
-- **titan/syntax-highlighting**: The highlighter is an incremental computation over the document — it must re-highlight only the changed region.
+- **saturn/routing**: The command system routes user input through key bindings to specific editing commands.
+- **titan/syntax-highlighting**: The highlighter is an incremental computation over the document  --  it must re-highlight only the changed region.
 - **atlas/memory-allocation**: The document model must manage memory efficiently for large files (line count, total bytes).
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any application that creates and modifies documents — text editors, IDEs, spreadsheet editors, image editors, CAD tools, note-taking apps.
+Any application that creates and modifies documents  --  text editors, IDEs, spreadsheet editors, image editors, CAD tools, note-taking apps.
 
 #### Start with (minimal form)
 Store the document as a single string or list of strings. On each edit, replace the entire content. No undo, no multi-view sync, no incremental highlighting. Python: `doc = ""`, `doc = doc[:pos] + char + doc[pos:]`.
@@ -91,7 +91,7 @@ Store the document as a single string or list of strings. On each edit, replace 
 #### Real project examples
 - **Helix editor** (Rope + Transaction): Document model built on a rope data structure with CRDT-style transactions. Undo stack stores inverse operations per transaction group (keystroke coalescing).
 - **Lite XL** (TextDoc + View): Document model as array of lines, view as scroll offset + selection. Undo stack of full-snapshot deltas. Dirty flag computed from save-point checkpoint.
-- **NessMuxer** (VideoEditCommand): Frame-level edit history for video cutting — cut, trim, split operations with undo/redo per edit session.
+- **NessMuxer** (VideoEditCommand): Frame-level edit history for video cutting  --  cut, trim, split operations with undo/redo per edit session.
 
 #### Common over-engineering traps
 - Building a rope data structure before measuring that string replacement is too slow for your file sizes.
@@ -100,4 +100,4 @@ Store the document as a single string or list of strings. On each edit, replace 
 
 ## Frame Concern
 
-**The gap between edit operations and document state.** The user thinks in terms of edits (insert a word, delete a line, paste a block), but the document is a persistent structured state that must remain internally consistent across every edit boundary. An insert operation, for example, not only adds text but shifts all subsequent line and column positions, invalidates selection ranges, marks the document as dirty, updates syntax highlighting for the affected region, and pushes a reversable transaction onto the undo stack — all of which must happen atomically. The gap is that the user's conceptual edit ("I typed the letter 'a'") is a single action, but the system's response touches nearly every subsystem at once, and any subsystem that fails to update correctly leaves the document in an inconsistent state.
+**The gap between edit operations and document state.** The user thinks in terms of edits (insert a word, delete a line, paste a block), but the document is a persistent structured state that must remain internally consistent across every edit boundary. An insert operation, for example, not only adds text but shifts all subsequent line and column positions, invalidates selection ranges, marks the document as dirty, updates syntax highlighting for the affected region, and pushes a reversable transaction onto the undo stack  --  all of which must happen atomically. The gap is that the user's conceptual edit ("I typed the letter 'a'") is a single action, but the system's response touches nearly every subsystem at once, and any subsystem that fails to update correctly leaves the document in an inconsistent state.

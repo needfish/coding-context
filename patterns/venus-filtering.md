@@ -1,6 +1,6 @@
-# venus: Filter
+# venus: Filtering
 
-> **Pressure class:** Object variation — the predicate shape stays the same, the target collection changes.
+> **Pressure class:** Object variation  --  the predicate shape stays the same, the target collection changes.
 
 ## Problem
 
@@ -8,7 +8,7 @@ A collection must be reduced to a subset based on a predicate, discarding elemen
 
 ## Context
 
-Arises whenever a set of items is larger than what the user needs or the next operation can handle. Filtering is rarely a standalone problem — it typically feeds a display (mercury), a transformation (neptune), or a processing pipeline. The predicate may be fixed at design time or supplied dynamically by a user.
+Arises whenever a set of items is larger than what the user needs or the next operation can handle. Filtering is rarely a standalone problem  --  it typically feeds a display (mercury), a transformation (neptune), or a processing pipeline. The predicate may be fixed at design time or supplied dynamically by a user.
 
 ## Domains Involved
 
@@ -18,16 +18,16 @@ Arises whenever a set of items is larger than what the user needs or the next op
 
 ## Shared Phenomena
 
-- Source → Filter: items, item count
-- Predicate → Filter: matching function, parameters
-- Filter → Result: subset, count of discarded items
-- Result → Consumer: items (when enumerated)
+- Source  ->  Filter: items, item count
+- Predicate  ->  Filter: matching function, parameters
+- Filter  ->  Result: subset, count of discarded items
+- Result  ->  Consumer: items (when enumerated)
 
 ## Invariants
 
 - Every element in the result must satisfy the predicate.
 - Every element in the source that satisfies the predicate must appear in the result.
-- The filter must not modify or duplicate elements — it selects, it does not transform.
+- The filter must not modify or duplicate elements  --  it selects, it does not transform.
 
 ## Known Failure Modes
 
@@ -46,15 +46,15 @@ Arises whenever a set of items is larger than what the user needs or the next op
 ## Related Subproblems
 
 - **mercury/display**: Filtered results are commonly displayed.
-- **earth/sort**: Filtering and sorting often compose — filter first, then sort (or vice versa, depending on selectivity).
-- **neptune/transform**: Each element in the result may need transformation.
-- **jupiter/validate**: The predicate itself may need validation before use.
-- **mars/persist**: The source collection may come from storage.
+- **earth/sorting**: Filtering and sorting often compose  --  filter first, then sort (or vice versa, depending on selectivity).
+- **neptune/transformation**: Each element in the result may need transformation.
+- **jupiter/validation**: The predicate itself may need validation before use.
+- **mars/persistence**: The source collection may come from storage.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that selects a subset from a larger collection — search, browse, list, query, report.
+Any project that selects a subset from a larger collection  --  search, browse, list, query, report.
 
 #### Start with (minimal form)
 A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rust: `items.iter().filter(|x| predicate(x))`. A single function that takes the collection and returns the subset.
@@ -72,8 +72,8 @@ A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rus
 - Filter logic is interleaved with display logic, making each harder to change independently.
 
 #### Real project examples
-- **crawley** (`extractor` module): URL link extraction filters parsed HTML by element type (img, script, video) — a predicate per resource type.
-- **smoltcp** (socket dispatch): TCP socket matching filters incoming packets by port/protocol — a predicate per socket type.
+- **crawley** (`extractor` module): URL link extraction filters parsed HTML by element type (img, script, video)  --  a predicate per resource type.
+- **smoltcp** (socket dispatch): TCP socket matching filters incoming packets by port/protocol  --  a predicate per socket type.
 - **MiniJinja** (`filters.rs`): Template filter chain applies predicate tests (defined, string length, regex match) to values before rendering.
 
 #### Common over-engineering traps
@@ -83,4 +83,4 @@ A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rus
 
 ## Frame Concern
 
-**Predicate ownership.** The predicate and the filter execute in different contexts — the predicate may hold state, access external resources, or change over time. The filter must handle a predicate that is not trustworthy for the domain it inspects.
+**Predicate ownership.** The predicate and the filter execute in different contexts  --  the predicate may hold state, access external resources, or change over time. The filter must handle a predicate that is not trustworthy for the domain it inspects.

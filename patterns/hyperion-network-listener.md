@@ -1,14 +1,14 @@
 # hyperion: Network Listener
 
-> **Pressure class:** Object variation — the connection lifecycle remains the same, the transport protocol changes.
+> **Pressure class:** Object variation  --  the connection lifecycle remains the same, the transport protocol changes.
 
 ## Problem
 
-A service must bind to a network address, accept incoming connections, and manage connection lifecycles — handling multiple simultaneous connections, TLS negotiation, connection draining, and graceful shutdown.
+A service must bind to a network address, accept incoming connections, and manage connection lifecycles  --  handling multiple simultaneous connections, TLS negotiation, connection draining, and graceful shutdown.
 
 ## Context
 
-Arises in any networked service — HTTP servers, databases, proxies, message brokers, custom protocol servers. The listener is the entry point for all inbound traffic. It sits before any request processing: the raw connection is established before any routing, authentication, or business logic can happen.
+Arises in any networked service  --  HTTP servers, databases, proxies, message brokers, custom protocol servers. The listener is the entry point for all inbound traffic. It sits before any request processing: the raw connection is established before any routing, authentication, or business logic can happen.
 
 ## Domains Involved
 
@@ -21,14 +21,14 @@ Arises in any networked service — HTTP servers, databases, proxies, message br
 
 ## Shared Phenomena
 
-- Server → Listener: address, TLS config, handler function
-- Listener → Transport: `bind()`, `listen()` syscalls
-- Transport → Listener: new connection events, connection errors
-- Listener → TLS layer: raw connection, handshake request
-- TLS layer → Listener: encrypted connection (or handshake failure)
-- Listener → Handler: accepted connection, remote address, TLS state
-- Shutdown signal → Listener: drain notification
-- Listener → Connections: `graceful_shutdown()`, drain timeout
+- Server  ->  Listener: address, TLS config, handler function
+- Listener  ->  Transport: `bind()`, `listen()` syscalls
+- Transport  ->  Listener: new connection events, connection errors
+- Listener  ->  TLS layer: raw connection, handshake request
+- TLS layer  ->  Listener: encrypted connection (or handshake failure)
+- Listener  ->  Handler: accepted connection, remote address, TLS state
+- Shutdown signal  ->  Listener: drain notification
+- Listener  ->  Connections: `graceful_shutdown()`, drain timeout
 
 ## Invariants
 
@@ -36,7 +36,7 @@ Arises in any networked service — HTTP servers, databases, proxies, message br
 - Accepted connections must be handled even as new connections continue to arrive (concurrency).
 - TLS handshake errors must not prevent the listener from accepting new connections on the same address.
 - A graceful shutdown must allow in-flight connections to complete (up to a timeout) before closing the listener.
-- The listener must handle partial reads and writes on the connection transparently — the handler should never see half-received frames.
+- The listener must handle partial reads and writes on the connection transparently  --  the handler should never see half-received frames.
 
 ## Known Failure Modes
 
@@ -45,7 +45,7 @@ Arises in any networked service — HTTP servers, databases, proxies, message br
 - **TLS handshake failure**: A client presents an untrusted certificate or uses an unsupported protocol version, and the listener must reject without crashing.
 - **Resource exhaustion**: Each connection consumes a file descriptor; too many concurrent connections exhaust the OS file descriptor limit.
 - **Slow client attack**: A client opens a connection but sends data very slowly, tying up resources. The listener must implement read timeouts.
-- **Partial failure in concurrent listeners**: One listener fails (e.g., IPv6 address not available) but others succeed — the server must handle partial binding gracefully.
+- **Partial failure in concurrent listeners**: One listener fails (e.g., IPv6 address not available) but others succeed  --  the server must handle partial binding gracefully.
 - **Last-request race on shutdown**: A request arrives after the shutdown signal but before the listener closes, and it is either accepted and immediately terminated or silently dropped.
 
 ## Forces
@@ -57,17 +57,17 @@ Arises in any networked service — HTTP servers, databases, proxies, message br
 
 ## Related Subproblems
 
-- **uranus/authenticate**: TLS is a transport-level authentication mechanism.
-- **saturn/route**: Accepted connections produce requests that must be routed.
+- **uranus/authentication**: TLS is a transport-level authentication mechanism.
+- **saturn/routing**: Accepted connections produce requests that must be routed.
 - **mercury/display**: Connection status and errors are typically logged or displayed.
 - **europa/config-assembly**: Listener configuration (address, TLS, timeouts) comes from the configuration assembly.
 - **callisto/filesystem-walk**: Unix socket listeners bind to filesystem paths.
-- **jupiter/validate**: TLS certificate validation is a validation subproblem.
+- **jupiter/validation**: TLS certificate validation is a validation subproblem.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any networked service — HTTP servers, databases, proxies, message brokers, custom protocol servers.
+Any networked service  --  HTTP servers, databases, proxies, message brokers, custom protocol servers.
 
 #### Start with (minimal form)
 Use the standard library's HTTP/server module. Python: `http.server` or a framework (Flask, Express). Rust: `std::net::TcpListener` + manual accept loop. Single-threaded, no TLS, no graceful shutdown.
@@ -85,9 +85,9 @@ Use the standard library's HTTP/server module. Python: `http.server` or a framew
 - You need to handle multiple concurrent connections without blocking each other.
 
 #### Real project examples
-- **smoltcp** (socket dispatch): Embedded TCP/IP stack — manages socket state machines (LISTEN, SYN-RECEIVED, ESTABLISHED), dispatches incoming segments to correct socket.
+- **smoltcp** (socket dispatch): Embedded TCP/IP stack  --  manages socket state machines (LISTEN, SYN-RECEIVED, ESTABLISHED), dispatches incoming segments to correct socket.
 - **Flowstate** (netdriver server): gRPC listener accepts workflow engine connections over TCP with TLS termination.
-- **thinproxy** (`thinproxy.c`): Single-threaded async listener using epoll — accepts connections, manages read/write buffers per session.
+- **thinproxy** (`thinproxy.c`): Single-threaded async listener using epoll  --  accepts connections, manages read/write buffers per session.
 - **zt terminal emulator** (PTY listener): Reads from PTY master file descriptor, dispatches output to terminal renderer.
 
 #### Common over-engineering traps

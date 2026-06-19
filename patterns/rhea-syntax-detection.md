@@ -1,6 +1,6 @@
 # rhea: Syntax Detection
 
-> **Pressure class:** Behavior variation — the detection rule mapping changes per file type heuristic.
+> **Pressure class:** Behavior variation  --  the detection rule mapping changes per file type heuristic.
 
 ## Problem
 
@@ -8,7 +8,7 @@ A file path, extension, shebang line, or content signature must be mapped to a l
 
 ## Context
 
-Arises whenever a tool needs to decide how to process a file based on its content type — syntax highlighting (titan), linting, formatting, diff generation. The detection must work from partial information (the file path alone, or just the first line of content) and must handle ambiguous or unknown cases gracefully.
+Arises whenever a tool needs to decide how to process a file based on its content type  --  syntax highlighting (titan), linting, formatting, diff generation. The detection must work from partial information (the file path alone, or just the first line of content) and must handle ambiguous or unknown cases gracefully.
 
 ## Domains Involved
 
@@ -19,15 +19,15 @@ Arises whenever a tool needs to decide how to process a file based on its conten
 
 ## Shared Phenomena
 
-- File path → Detector: extension, basename, parent directory names
-- Content sample → Detector: shebang line (`#!/usr/bin/env python`), XML declaration (`<?xml`), magic bytes (`%PDF`)
-- Mapping rules → Detector: priority-ordered mapping table
-- Detector → Consumer: language identifier, confidence score (matched vs. inferred vs. guessed)
+- File path  ->  Detector: extension, basename, parent directory names
+- Content sample  ->  Detector: shebang line (`#!/usr/bin/env python`), XML declaration (`<?xml`), magic bytes (`%PDF`)
+- Mapping rules  ->  Detector: priority-ordered mapping table
+- Detector  ->  Consumer: language identifier, confidence score (matched vs. inferred vs. guessed)
 
 ## Invariants
 
 - The same file path must always map to the same language identifier, unless mapping rules change.
-- A language identifier must be returned for every input — "Unknown" is a valid result, not an error.
+- A language identifier must be returned for every input  --  "Unknown" is a valid result, not an error.
 - Explicit user overrides (e.g., `-l rust`) must take precedence over automatic detection.
 - Mapping by extension must not match files whose extension is ambiguous (e.g., `.h` could be C, C++, or Objective-C) without consulting additional signals.
 
@@ -50,21 +50,21 @@ Arises whenever a tool needs to decide how to process a file based on its conten
 ## Related Subproblems
 
 - **titan/syntax-highlight**: Syntax highlighting depends on syntax detection to select the grammar.
-- **jupiter/validate**: The detected language may need validation against allowed languages.
-- **neptune/transform**: Transformation may depend on the detected language.
+- **jupiter/validation**: The detected language may need validation against allowed languages.
+- **neptune/transformation**: Transformation may depend on the detected language.
 - **europa/config-assembly**: Language overrides are part of the configuration.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that needs to decide how to process a file based on its content type — syntax highlighting, linting, formatting, diff generation.
+Any project that needs to decide how to process a file based on its content type  --  syntax highlighting, linting, formatting, diff generation.
 
 #### Start with (minimal form)
 A hash map from file extension to language name. Python: `{'py': 'python', 'rs': 'rust', 'js': 'javascript'}`. No shebang parsing, no content sniffing.
 
 #### Split into its own module when (observable triggers)
-- Extension-based mapping is insufficient — you need shebang detection, content sniffing, or magic bytes.
-- Over 50+ language mappings exist — the table becomes unwieldy to maintain in a single file.
+- Extension-based mapping is insufficient  --  you need shebang detection, content sniffing, or magic bytes.
+- Over 50+ language mappings exist  --  the table becomes unwieldy to maintain in a single file.
 - Users need custom overrides for project-specific conventions.
 - Detection needs to work from partial information (stdin with no filename).
 
@@ -81,9 +81,9 @@ A hash map from file extension to language name. Python: `{'py': 'python', 'rs':
 
 #### Common over-engineering traps
 - Implementing content sniffing before confirming that extension-based detection misses too many files.
-- Building a cascading detection pipeline (extension → shebang → content → model) when a single fallback suffices.
+- Building a cascading detection pipeline (extension  ->  shebang  ->  content  ->  model) when a single fallback suffices.
 - Supporting every language known to exist when your users only use 10.
 
 ## Frame Concern
 
-**Information deficit at decision time.** The detector must commit to a language before it has all the information — the file path is available immediately, but the content (shebang, magic bytes) may require I/O. The concern is how to make the best possible decision with whatever information is currently available, and whether to revise the decision when more information arrives.
+**Information deficit at decision time.** The detector must commit to a language before it has all the information  --  the file path is available immediately, but the content (shebang, magic bytes) may require I/O. The concern is how to make the best possible decision with whatever information is currently available, and whether to revise the decision when more information arrives.

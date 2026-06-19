@@ -1,6 +1,6 @@
 # io: Command Execution
 
-> **Pressure class:** Object variation — the external command interface changes while the execute-per-item contract stays the same.
+> **Pressure class:** Object variation  --  the external command interface changes while the execute-per-item contract stays the same.
 
 ## Problem
 
@@ -8,7 +8,7 @@ A collection of items must be processed by an external command, with each item s
 
 ## Context
 
-Arises whenever a tool finds results and the user wants to act on them — unzipping archives, opening files in an editor, converting image formats, running analyses. The command execution subproblem sits after a search/collection subproblem (callisto/walk, venus/filter) and before result collection or display.
+Arises whenever a tool finds results and the user wants to act on them  --  unzipping archives, opening files in an editor, converting image formats, running analyses. The command execution subproblem sits after a search/collection subproblem (callisto/walk, venus/filtering) and before result collection or display.
 
 ## Domains Involved
 
@@ -19,17 +19,17 @@ Arises whenever a tool finds results and the user wants to act on them — unzip
 
 ## Shared Phenomena
 
-- Items → Executor: paths, values
-- Command template → Executor: template string, placeholder definitions
-- Executor → Process: command line (after substitution), working directory
-- Process → Executor: exit code, stdout, stderr
-- Executor → Results: aggregated exit codes, per-item status
+- Items  ->  Executor: paths, values
+- Command template  ->  Executor: template string, placeholder definitions
+- Executor  ->  Process: command line (after substitution), working directory
+- Process  ->  Executor: exit code, stdout, stderr
+- Executor  ->  Results: aggregated exit codes, per-item status
 
 ## Invariants
 
 - Each item must be substituted into the command template exactly as specified by the placeholder rules.
 - The command must be executed for every item, unless a prior invocation fails and the execution mode requires early abort.
-- Parallel executions must not interfere with each other — each process has isolated stdin/stdout/stderr.
+- Parallel executions must not interfere with each other  --  each process has isolated stdin/stdout/stderr.
 - The executor must not deadlock when the number of items exceeds the parallelism limit and subprocesses produce output that fills system buffers.
 
 ## Known Failure Modes
@@ -50,16 +50,16 @@ Arises whenever a tool finds results and the user wants to act on them — unzip
 
 ## Related Subproblems
 
-- **venus/filter**: Items are often filtered before execution.
-- **neptune/transform**: Item values may need transformation before substitution (extension removal, path relativisation).
-- **jupiter/validate**: The command template must be validated before execution.
+- **venus/filtering**: Items are often filtered before execution.
+- **neptune/transformation**: Item values may need transformation before substitution (extension removal, path relativisation).
+- **jupiter/validation**: The command template must be validated before execution.
 - **mercury/display**: Execution progress and results are typically displayed.
 - **callisto/walk**: Walk results are often the items passed to execution.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that runs external commands on found items — batch processing, build tools, file conversion, automated analysis.
+Any project that runs external commands on found items  --  batch processing, build tools, file conversion, automated analysis.
 
 #### Start with (minimal form)
 `subprocess.run()` (Python), `std::process::Command` (Rust), `child_process.execSync()` (Node). Run sequentially, collect output, print results. No parallelism, no placeholder substitution.
@@ -77,8 +77,8 @@ Any project that runs external commands on found items — batch processing, bui
 - You're building pipelines of commands where the output of one feeds the input of another.
 
 #### Real project examples
-- **Helix editor** (language server integration): Spawns LSP processes, communicates via stdin/stdout JSON-RPC — each LSP server is a long-running subprocess.
-- **yarsync** (rsync delegation): File synchronisation delegates to rsync for the actual transfer — yarsync manages the command-line invocation and output parsing.
+- **Helix editor** (language server integration): Spawns LSP processes, communicates via stdin/stdout JSON-RPC  --  each LSP server is a long-running subprocess.
+- **yarsync** (rsync delegation): File synchronisation delegates to rsync for the actual transfer  --  yarsync manages the command-line invocation and output parsing.
 - **pnpm** (package scripts): Executes lifecycle scripts (install, build, test) as subprocesses, collecting output and exit codes per script.
 
 #### Common over-engineering traps
@@ -88,4 +88,4 @@ Any project that runs external commands on found items — batch processing, bui
 
 ## Frame Concern
 
-**Subprocess lifecycle vs. consumer expectations.** The subprocess runs in a separate address space with its own I/O buffers, environment, and lifetime. The executor must coordinate when to spawn, when to read output, when to wait, and what to do when a subprocess fails — without knowing how long the subprocess will run or how much output it will produce.
+**Subprocess lifecycle vs. consumer expectations.** The subprocess runs in a separate address space with its own I/O buffers, environment, and lifetime. The executor must coordinate when to spawn, when to read output, when to wait, and what to do when a subprocess fails  --  without knowing how long the subprocess will run or how much output it will produce.

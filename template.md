@@ -1,4 +1,12 @@
+# ------------------------------------------------------------------------------
+#  template.md
+#  Pattern authoring template  --  use during the Model phase to document a
+#  new problem pattern.
+# ------------------------------------------------------------------------------
+
 # [PLANET NAME]: [Problem Name]
+
+> **Pressure class:** [Data / Behavior / Object / Rules] variation  --  brief description of what varies.
 
 ## Problem
 
@@ -6,15 +14,15 @@ One-sentence statement of the recurring problem.
 
 ## Context
 
-The setting in which this problem arises. What kind of system, what stage of decomposition, what surrounding structure.
+The setting in which this problem arises. What kind of system, what stage of decomposition, what surrounding structure. Use during the **Model** phase to decide whether this pattern describes your subproblem.
 
 ## Domains Involved
 
 The types of domains that participate in this problem, per Jackson's domain taxonomy:
 
-- **Causal** — behaves according to physical or logical laws (e.g., a database, a network socket)
-- **Lexical** — a representation of data (e.g., a file, a display buffer, a data structure)
-- **Biddable** — behaves unpredictably from the system's perspective (e.g., a human user, an external agent)
+- **Causal**  --  behaves according to physical or logical laws (e.g., a database, a network socket)
+- **Lexical**  --  a representation of data (e.g., a file, a display buffer, a data structure)
+- **Biddable**  --  behaves unpredictably from the system's perspective (e.g., a human user, an external agent)
 
 List each domain, its type, and its role in the problem.
 
@@ -32,7 +40,7 @@ Specific ways this problem type tends to go wrong. These are the characteristic 
 
 ## Forces
 
-The tensions that shape any solution to this problem. Trade-offs inherent in the problem structure — not implementation choices.
+The tensions that shape any solution to this problem. Trade-offs inherent in the problem structure  --  not implementation choices.
 
 ## Related Subproblems
 
@@ -53,9 +61,9 @@ The simplest implementation that avoids the pattern's characteristic failure mod
 - <symptom that signals a full pattern instantiation is warranted>
 
 #### Signs you're in this pattern
-- <code smell 1 — a question to ask about your code>
-- <code smell 2 — what to look for in function signatures>
-- <code smell 3 — a design tension that indicates this pattern>
+- <code smell 1  --  a question to ask about your code>
+- <code smell 2  --  what to look for in function signatures>
+- <code smell 3  --  a design tension that indicates this pattern>
 
 #### Real project examples
 - <project name>: <what they did, which file/dir>
@@ -68,4 +76,4 @@ The simplest implementation that avoids the pattern's characteristic failure mod
 
 ## Frame Concern
 
-The central difficulty — Jackson's term. The one thing that makes this problem type non-trivial, regardless of how you implement it.
+The central difficulty  --  Jackson's term. The one thing that makes this problem type non-trivial, regardless of how you implement it.

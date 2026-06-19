@@ -1,10 +1,10 @@
 # phoebe: Resource Lifecycle
 
-> **Pressure class:** Object variation — the resource type changes while the acquire/release contract stays the same.
+> **Pressure class:** Object variation  --  the resource type changes while the acquire/release contract stays the same.
 
 ## Problem
 
-A finite system resource (audio device, file handle, GPU context, network socket, memory arena) must be acquired before use, released after use, and guaranteed to be released on every exit path — including error paths, early returns, and exceptions.
+A finite system resource (audio device, file handle, GPU context, network socket, memory arena) must be acquired before use, released after use, and guaranteed to be released on every exit path  --  including error paths, early returns, and exceptions.
 
 ## Context
 
@@ -21,18 +21,18 @@ Arises whenever a system manages resources that are limited in number, have glob
 
 ## Shared Phenomena
 
-- Acquirer → Initialiser: configuration parameters
-- Initialiser → Resource: allocation, configuration, state transition
-- Initialiser → Acquirer: ready resource handle (or error)
-- Acquirer → Resource: usage operations (read, write, process)
-- Acquirer → Finaliser: release request
-- Finaliser → Resource: deallocation, state cleanup
-- Initialiser → Finaliser: partial initialisation state (for cleanup on error during init)
+- Acquirer  ->  Initialiser: configuration parameters
+- Initialiser  ->  Resource: allocation, configuration, state transition
+- Initialiser  ->  Acquirer: ready resource handle (or error)
+- Acquirer  ->  Resource: usage operations (read, write, process)
+- Acquirer  ->  Finaliser: release request
+- Finaliser  ->  Resource: deallocation, state cleanup
+- Initialiser  ->  Finaliser: partial initialisation state (for cleanup on error during init)
 
 ## Invariants
 
 - A resource must not be used before it is initialised or after it is finalised.
-- Initialisation must be atomic from the caller's perspective — either the resource is fully ready, or initialisation fails and no resource is leaked.
+- Initialisation must be atomic from the caller's perspective  --  either the resource is fully ready, or initialisation fails and no resource is leaked.
 - Finalisation must succeed even if some operations on the resource failed during its lifetime.
 - A resource must not be finalised while it is in use by a concurrent operation.
 - Calling init on an already-initialised resource must either fail gracefully or reinitialise it (defined policy).
@@ -57,16 +57,16 @@ Arises whenever a system manages resources that are limited in number, have glob
 
 ## Related Subproblems
 
-- **mars/persist**: File handles and storage resources follow the lifecycle pattern.
+- **mars/persistence**: File handles and storage resources follow the lifecycle pattern.
 - **hyperion/network-listener**: Network sockets must be opened, configured, and closed through a lifecycle.
 - **atlas/memory-allocation**: Memory arenas have explicit init/reset/destroy lifecycles.
 - **pan/resource-scheduling**: Resource acquisition may block waiting for a contended resource.
-- **jupiter/validate**: Initialisation parameters must be validated before resource creation.
+- **jupiter/validation**: Initialisation parameters must be validated before resource creation.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that manages external resources — audio devices, GPU contexts, file handles, network sockets, hardware peripherals, memory arenas.
+Any project that manages external resources  --  audio devices, GPU contexts, file handles, network sockets, hardware peripherals, memory arenas.
 
 #### Start with (minimal form)
 A single `init()` function that allocates resources in order, and a single `uninit()` function that frees them in reverse order. Use a boolean flag to track initialised state. No error recovery during init beyond returning an error code.
@@ -103,10 +103,10 @@ void my_uninit(MyResource *r) {
 - Error paths must ensure cleanup happens even when intermediate steps fail.
 
 #### Real project examples
-- **miniaudio** (device lifecycle): `ma_device_init` → `ma_device_start`/`ma_device_stop` → `ma_device_uninit` — every init must have a matching uninit, enforced by convention.
-- **NessMuxer** (muxer lifecycle): `MuxerOpen` → `MuxerWritePacket` (×N) → `MuxerClose` — write errors during the packet loop must still call close to flush and release resources.
-- **Flowstate** (driver lifecycle): Each storage driver (mem, Postgres, BadgerDB) has `Open` → `Commit`/`Rollback` → `Close` — drivers are state machines under a common interface.
-- **DaemonDB** (WAL segment lifecycle): WAL segment is opened, written to, finalised (sealed), and eventually deleted after checkpoint — four distinct states with cross-state invariants.
+- **miniaudio** (device lifecycle): `ma_device_init`  ->  `ma_device_start`/`ma_device_stop`  ->  `ma_device_uninit`  --  every init must have a matching uninit, enforced by convention.
+- **NessMuxer** (muxer lifecycle): `MuxerOpen`  ->  `MuxerWritePacket` (xN)  ->  `MuxerClose`  --  write errors during the packet loop must still call close to flush and release resources.
+- **Flowstate** (driver lifecycle): Each storage driver (mem, Postgres, BadgerDB) has `Open`  ->  `Commit`/`Rollback`  ->  `Close`  --  drivers are state machines under a common interface.
+- **DaemonDB** (WAL segment lifecycle): WAL segment is opened, written to, finalised (sealed), and eventually deleted after checkpoint  --  four distinct states with cross-state invariants.
 
 #### Common over-engineering traps
 - Adding reference counting before confirming concurrent access is a real problem.
@@ -116,4 +116,4 @@ void my_uninit(MyResource *r) {
 
 ## Frame Concern
 
-**Leak prevention across all exit paths.** A resource that is acquired must be released exactly once, regardless of how many early returns, error branches, or exception paths exist between acquire and release. The concern is not about acquiring the resource but about guaranteeing its release under every possible execution path — a control-flow problem, not a resource problem.
+**Leak prevention across all exit paths.** A resource that is acquired must be released exactly once, regardless of how many early returns, error branches, or exception paths exist between acquire and release. The concern is not about acquiring the resource but about guaranteeing its release under every possible execution path  --  a control-flow problem, not a resource problem.

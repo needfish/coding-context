@@ -1,6 +1,6 @@
-# neptune: Transform
+# neptune: Transformation
 
-> **Pressure class:** Behavior variation — the mapping algorithm changes per source/target pair.
+> **Pressure class:** Behavior variation  --  the mapping algorithm changes per source/target pair.
 
 ## Problem
 
@@ -8,7 +8,7 @@ Data in one representation must be converted to another representation, changing
 
 ## Context
 
-Arises whenever two parts of the system use different representations for semantically equivalent data. The boundary between internal and external formats (serialisation), between layers of abstraction (DTO mapping), between system versions (migration). Transform is a connecting subproblem — it sits between two other problem types that would otherwise be incompatible.
+Arises whenever two parts of the system use different representations for semantically equivalent data. The boundary between internal and external formats (serialisation), between layers of abstraction (DTO mapping), between system versions (migration). Transform is a connecting subproblem  --  it sits between two other problem types that would otherwise be incompatible.
 
 ## Domains Involved
 
@@ -18,9 +18,9 @@ Arises whenever two parts of the system use different representations for semant
 
 ## Shared Phenomena
 
-- Source → Transform: data, metadata (format, version)
-- Mapping → Transform: field correspondences, type coercions, default values
-- Transform → Target: converted data
+- Source  ->  Transform: data, metadata (format, version)
+- Mapping  ->  Transform: field correspondences, type coercions, default values
+- Transform  ->  Target: converted data
 
 ## Invariants
 
@@ -47,25 +47,25 @@ Arises whenever two parts of the system use different representations for semant
 
 ## Related Subproblems
 
-- **mars/persist**: Serialisation for storage is a transform.
+- **mars/persistence**: Serialisation for storage is a transform.
 - **mercury/display**: Data may need transformation before display.
-- **jupiter/validate**: Validation often precedes transformation.
-- **venus/filter**: Filter may produce a subset that then needs transformation.
-- **earth/sort**: Sort keys may need transformation before comparison.
+- **jupiter/validation**: Validation often precedes transformation.
+- **venus/filtering**: Filter may produce a subset that then needs transformation.
+- **earth/sorting**: Sort keys may need transformation before comparison.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that converts data between representations — serialisation, parsing, DTO mapping, format conversion, migration.
+Any project that converts data between representations  --  serialisation, parsing, DTO mapping, format conversion, migration.
 
 #### Start with (minimal form)
 A single function that takes source format and returns target format. Write it inline at the call site. Python: `{'id': str(obj.id), 'name': obj.name}`. Rust: `MyDto { field: source.field.into() }`.
 
 #### Split into its own module when (observable triggers)
 - The same conversion is needed in multiple places (duplication emerges).
-- Multiple source or target formats exist (JSON ↔ XML ↔ Protobuf).
+- Multiple source or target formats exist (JSON  <->  XML  <->  Protobuf).
 - The conversion logic becomes complex enough to need its own tests.
-- Round-trip correctness matters (serialise → deserialise → original).
+- Round-trip correctness matters (serialise  ->  deserialise  ->  original).
 
 #### Signs you're in this pattern
 - You have a function that takes one type and returns a different type with the same essential data.
@@ -74,17 +74,17 @@ A single function that takes source format and returns target format. Write it i
 - You're writing boilerplate copy-code from one object to another.
 
 #### Real project examples
-- **MiniJinja** (`src/parser.rs` → `src/compiler/` → `src/vm.rs`): Template text → AST → compiled instructions → rendered output — a chain of transforms across three representations.
-- **Monocypher** (`src/monocypher.c`): Every crypto primitive is a transform — plaintext → ciphertext, key → shared secret, message → signature.
-- **DaemonDB** (SQL parser → bytecode → execution): SQL text → AST → bytecode instructions → query result — the classic compiler pipeline as transforms.
-- **micrograd** (`engine.py`): Scalar values through forward/backward transforms — the forward pass computes output from inputs, the backward pass computes gradients from loss.
-- **NessMuxer** (packet demuxer): Raw MPEG-TS packets → parsed PES packets → elementary stream — three transform stages in a video pipeline.
+- **MiniJinja** (`src/parser.rs`  ->  `src/compiler/`  ->  `src/vm.rs`): Template text  ->  AST  ->  compiled instructions  ->  rendered output  --  a chain of transforms across three representations.
+- **Monocypher** (`src/monocypher.c`): Every crypto primitive is a transform  --  plaintext  ->  ciphertext, key  ->  shared secret, message  ->  signature.
+- **DaemonDB** (SQL parser  ->  bytecode  ->  execution): SQL text  ->  AST  ->  bytecode instructions  ->  query result  --  the classic compiler pipeline as transforms.
+- **micrograd** (`engine.py`): Scalar values through forward/backward transforms  --  the forward pass computes output from inputs, the backward pass computes gradients from loss.
+- **NessMuxer** (packet demuxer): Raw MPEG-TS packets  ->  parsed PES packets  ->  elementary stream  --  three transform stages in a video pipeline.
 
 #### Common over-engineering traps
 - Building a generic mapper/reflection framework before you have 3+ conversion functions.
-- Using a schema-driven code generator (OpenAPI → types) before the API contract stabilises.
+- Using a schema-driven code generator (OpenAPI  ->  types) before the API contract stabilises.
 - Implementing bidirectional mapping when only one direction is ever used.
 
 ## Frame Concern
 
-**Semantic equivalence across heterogeneous representations.** Two representations rarely align perfectly. The mapping must decide what to do when the source has more information than the target, less information, or different structure. The concern is not the mechanics of conversion but the handling of structural mismatch — every transform is a lossy compression of semantics into a different shape.
+**Semantic equivalence across heterogeneous representations.** Two representations rarely align perfectly. The mapping must decide what to do when the source has more information than the target, less information, or different structure. The concern is not the mechanics of conversion but the handling of structural mismatch  --  every transform is a lossy compression of semantics into a different shape.

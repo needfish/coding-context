@@ -1,10 +1,10 @@
 # thebe: Background Compaction
 
-> **Pressure class:** Behavior variation — the compaction policy algorithm changes per storage structure and access pattern.
+> **Pressure class:** Behavior variation  --  the compaction policy algorithm changes per storage structure and access pattern.
 
 ## Problem
 
-Storage that accumulates incremental changes (writes, inserts, log entries) must be periodically reorganised in the background to maintain read performance, reclaim space, and bound metadata growth — all while concurrent foreground reads and writes continue without blocking.
+Storage that accumulates incremental changes (writes, inserts, log entries) must be periodically reorganised in the background to maintain read performance, reclaim space, and bound metadata growth  --  all while concurrent foreground reads and writes continue without blocking.
 
 ## Context
 
@@ -20,20 +20,20 @@ Arises in any system with an append-only or log-structured write path: LSM-tree 
 
 ## Shared Phenomena
 
-- Compaction worker → Working set: reads existing structures (SST files, segments)
-- Compaction worker → Storage: writes new consolidated structures
-- Compaction worker → Level metadata: atomic swap (new structures go live, old structures are retired)
-- Foreground reader → Level metadata: lookup key → find which structure(s) to search
-- Foreground writer → Working set: append to active write buffer (MemTable, WAL segment)
-- Compaction worker → Foreground operations: resource contention (disk I/O bandwidth, CPU)
+- Compaction worker  ->  Working set: reads existing structures (SST files, segments)
+- Compaction worker  ->  Storage: writes new consolidated structures
+- Compaction worker  ->  Level metadata: atomic swap (new structures go live, old structures are retired)
+- Foreground reader  ->  Level metadata: lookup key  ->  find which structure(s) to search
+- Foreground writer  ->  Working set: append to active write buffer (MemTable, WAL segment)
+- Compaction worker  ->  Foreground operations: resource contention (disk I/O bandwidth, CPU)
 
 ## Invariants
 
 - Every key-value pair in the old structures must appear in the new structures unless it has been deleted or superseded by a newer write.
-- The atomic swap must be visible to foreground readers instantaneously — they must never see a partial compaction result.
-- Foreground reads must succeed during compaction — they may read from old or new structures depending on timing, but must always return a consistent value for any key.
+- The atomic swap must be visible to foreground readers instantaneously  --  they must never see a partial compaction result.
+- Foreground reads must succeed during compaction  --  they may read from old or new structures depending on timing, but must always return a consistent value for any key.
 - Compaction must not exceed the configured I/O bandwidth budget (it must throttle to avoid starving foreground operations).
-- Compaction must eventually terminate for a given set of input structures — no infinite loops or unbounded growth.
+- Compaction must eventually terminate for a given set of input structures  --  no infinite loops or unbounded growth.
 - Compaction must not be triggered so aggressively that it competes with foreground writes (write amplification bound).
 
 ## Known Failure Modes
@@ -56,16 +56,16 @@ Arises in any system with an append-only or log-structured write path: LSM-tree 
 ## Related Subproblems
 
 - **pan/resource-scheduling**: Compaction I/O must be scheduled alongside foreground operations with appropriate priority and throttling.
-- **mars/persist**: The storage structures being compacted are persistence concerns (SST files, WAL segments, log files).
+- **mars/persistence**: The storage structures being compacted are persistence concerns (SST files, WAL segments, log files).
 - **atlas/memory-allocation**: Compaction may allocate significant memory for merge buffers and intermediate results.
-- **venus/filter**: Bloom filters on compacted structures must be rebuilt after compaction.
-- **earth/sort**: Merging multiple sorted runs during compaction is a merge-sort operation.
+- **venus/filtering**: Bloom filters on compacted structures must be rebuilt after compaction.
+- **earth/sorting**: Merging multiple sorted runs during compaction is a merge-sort operation.
 - **phoebe/resource-lifecycle**: Compaction workers and the SST files they produce follow an acquire/process/release lifecycle.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any system with log-structured or append-only storage — LSM-tree databases, message queues, time-series databases, blob stores with versioning, incremental backup systems.
+Any system with log-structured or append-only storage  --  LSM-tree databases, message queues, time-series databases, blob stores with versioning, incremental backup systems.
 
 #### Start with (minimal form)
 No compaction at all. Reclaim space by rewriting the entire storage from scratch during maintenance windows. For trivial sizes, compact synchronously when active storage exceeds a threshold.
@@ -94,9 +94,9 @@ func (db *DB) compact() {
 - You need bounded read/write amplification and must compact to maintain it.
 
 #### Real project examples
-- **tiny-lsm-go** (`compaction.go`): Level-based compaction — multiple SST files at level N are merged into a single file at level N+1. Single-threaded compaction with size-tiered triggering.
-- **DaemonDB** (B-tree page compaction): Pages are compacted during checkpoint — merges underfull pages and reclaims free space. Triggered by free-page ratio crossing a threshold.
-- **lite3** (B-tree defrag): Serialisation format uses B-trees with opportunistic compaction on write — free space is reclaimed during insert/update paths.
+- **tiny-lsm-go** (`compaction.go`): Level-based compaction  --  multiple SST files at level N are merged into a single file at level N+1. Single-threaded compaction with size-tiered triggering.
+- **DaemonDB** (B-tree page compaction): Pages are compacted during checkpoint  --  merges underfull pages and reclaims free space. Triggered by free-page ratio crossing a threshold.
+- **lite3** (B-tree defrag): Serialisation format uses B-trees with opportunistic compaction on write  --  free space is reclaimed during insert/update paths.
 
 #### Common over-engineering traps
 - Implementing level-based compaction (multiple levels with fan-in ratios) before confirming that full-merge compaction is too slow.
@@ -106,4 +106,4 @@ func (db *DB) compact() {
 
 ## Frame Concern
 
-**Consistency during concurrent reorganisation.** Compaction reads the current state, produces a new state, and atomically swaps it in — but foreground reads and writes operate on the same data concurrently. The concern is how to make the compaction result visible to foreground operations at a consistent point without blocking either the compaction process or the foreground operations — a concurrent data structure problem disguised as a storage problem.
+**Consistency during concurrent reorganisation.** Compaction reads the current state, produces a new state, and atomically swaps it in  --  but foreground reads and writes operate on the same data concurrently. The concern is how to make the compaction result visible to foreground operations at a consistent point without blocking either the compaction process or the foreground operations  --  a concurrent data structure problem disguised as a storage problem.

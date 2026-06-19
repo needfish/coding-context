@@ -1,6 +1,6 @@
-# jupiter: Validate
+# jupiter: Validation
 
-> **Pressure class:** Rules variation — rules combine, grow, and change independently.
+> **Pressure class:** Rules variation  --  rules combine, grow, and change independently.
 
 ## Problem
 
@@ -8,7 +8,7 @@ Input data must be checked against a set of rules before it is accepted for proc
 
 ## Context
 
-Arises at every boundary where external data enters the system — user input, API requests, file imports, network messages, inter-service calls. Validation is a gate; it does not transform data, it either passes it through or rejects it with a reason. It is rarely a terminal subproblem — valid data feeds transform (neptune), persist (mars), or route (saturn).
+Arises at every boundary where external data enters the system  --  user input, API requests, file imports, network messages, inter-service calls. Validation is a gate; it does not transform data, it either passes it through or rejects it with a reason. It is rarely a terminal subproblem  --  valid data feeds transform (neptune), persist (mars), or route (saturn).
 
 ## Domains Involved
 
@@ -18,15 +18,15 @@ Arises at every boundary where external data enters the system — user input, A
 
 ## Shared Phenomena
 
-- Input → Validate: raw data, metadata (format hints, provenance)
-- Rule set → Validate: constraints, type definitions, allowed ranges, required fields
-- Validate → Result: accepted data (typed, coerced) or rejection (field-level errors, codes)
+- Input  ->  Validate: raw data, metadata (format hints, provenance)
+- Rule set  ->  Validate: constraints, type definitions, allowed ranges, required fields
+- Validate  ->  Result: accepted data (typed, coerced) or rejection (field-level errors, codes)
 
 ## Invariants
 
 - Accepted data must satisfy every rule in the rule set.
 - Rejected data must produce a report that identifies which rule failed and on which field.
-- Validation must be deterministic — the same input and rule set must produce the same result every time.
+- Validation must be deterministic  --  the same input and rule set must produce the same result every time.
 - Validation must not mutate the input or any system state (it is a pure check).
 
 ## Known Failure Modes
@@ -48,16 +48,16 @@ Arises at every boundary where external data enters the system — user input, A
 
 ## Related Subproblems
 
-- **neptune/transform**: Validation often precedes transformation — validate first, then transform the clean data.
-- **mars/persist**: Data is validated before writing.
-- **saturn/route**: Incoming requests are validated before routing.
+- **neptune/transformation**: Validation often precedes transformation  --  validate first, then transform the clean data.
+- **mars/persistence**: Data is validated before writing.
+- **saturn/routing**: Incoming requests are validated before routing.
 - **mercury/display**: User input through a display requires validation before action.
-- **venus/filter**: A filter predicate may need validation.
+- **venus/filtering**: A filter predicate may need validation.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that accepts external input — API requests, file imports, user forms, configuration files, network messages.
+Any project that accepts external input  --  API requests, file imports, user forms, configuration files, network messages.
 
 #### Start with (minimal form)
 Inline `if` checks at the point of use. Python: `if not isinstance(value, int): raise ValueError(...)`. Rust: `if value > MAX { return Err(...) }`. No schema library, no validator trait.
@@ -75,10 +75,10 @@ Inline `if` checks at the point of use. Python: `if not isinstance(value, int): 
 - Users submit data that causes crashes because boundary conditions were not checked.
 
 #### Real project examples
-- **chibicc** (semantic analysis): Type-checking validates expressions against declared types — mismatches produce source-located error messages.
-- **Flowstate** (input validation): Workflow step inputs are validated before execution — schema checks prevent downstream corruption.
-- **MiniJinja** (`environment.rs` → template compilation): Template syntax validation catches malformed Jinja2 syntax during compilation, not at render time.
-- **DaemonDB** (SQL parser): Syntax validation during parsing rejects invalid SQL before execution — early failure prevents wasted work.
+- **chibicc** (semantic analysis): Type-checking validates expressions against declared types  --  mismatches produce source-located error messages.
+- **Flowstate** (input validation): Workflow step inputs are validated before execution  --  schema checks prevent downstream corruption.
+- **MiniJinja** (`environment.rs`  ->  template compilation): Template syntax validation catches malformed Jinja2 syntax during compilation, not at render time.
+- **DaemonDB** (SQL parser): Syntax validation during parsing rejects invalid SQL before execution  --  early failure prevents wasted work.
 
 #### Common over-engineering traps
 - Adopting a schema validation library (JSON Schema, Zod, Pydantic) before you have 5+ fields to validate.
@@ -87,4 +87,4 @@ Inline `if` checks at the point of use. Python: `if not isinstance(value, int): 
 
 ## Frame Concern
 
-**Rule set completeness.** The validator can only enforce the rules it is given. It cannot detect that a missing rule would have caught a problem. The frame concern is not how to check rules but how to know enough rules have been written — what the rule set does not say is as important as what it says.
+**Rule set completeness.** The validator can only enforce the rules it is given. It cannot detect that a missing rule would have caught a problem. The frame concern is not how to check rules but how to know enough rules have been written  --  what the rule set does not say is as important as what it says.

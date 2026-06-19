@@ -1,6 +1,6 @@
 # ganymede: Output Formatting
 
-> **Pressure class:** Data variation — same rendering pipeline, different styles per terminal capability.
+> **Pressure class:** Data variation  --  same rendering pipeline, different styles per terminal capability.
 
 ## Problem
 
@@ -8,26 +8,26 @@ Structured data must be rendered as human-readable text, applying contextual sty
 
 ## Context
 
-Arises wherever a command-line tool displays results to a terminal — search results, file listings, status reports, diff output. The formatting is the final step before output; it consumes structured entries and produces formatted strings. It may or may not involve colour, depending on terminal support and configuration.
+Arises wherever a command-line tool displays results to a terminal  --  search results, file listings, status reports, diff output. The formatting is the final step before output; it consumes structured entries and produces formatted strings. It may or may not involve colour, depending on terminal support and configuration.
 
 ## Domains Involved
 
 - **Entries** (lexical): structured data items to be formatted. Each has typed fields (path, type, size, permissions, timestamps).
 - **Format template** (lexical): the specification of how each entry is rendered. May include field order, separators, conditional elements.
 - **Style rules** (lexical): the mapping from entry attributes to visual styles (colours, fonts, icons). Typically comes from environment variables (`LS_COLORS`) or configuration files.
-- **Output stream** (causal): the destination for formatted text — terminal, pipe, file. Determines whether styling is applied.
+- **Output stream** (causal): the destination for formatted text  --  terminal, pipe, file. Determines whether styling is applied.
 
 ## Shared Phenomena
 
-- Entries → Formatter: attribute values, metadata
-- Format template → Formatter: format string, field specifications
-- Style rules → Formatter: colour codes, icon characters, font effects
-- Output stream → Formatter: terminal width, colour support, encoding
-- Formatter → Output: formatted string
+- Entries  ->  Formatter: attribute values, metadata
+- Format template  ->  Formatter: format string, field specifications
+- Style rules  ->  Formatter: colour codes, icon characters, font effects
+- Output stream  ->  Formatter: terminal width, colour support, encoding
+- Formatter  ->  Output: formatted string
 
 ## Invariants
 
-- Formatting must not lose or alter data — it transforms representation, not content.
+- Formatting must not lose or alter data  --  it transforms representation, not content.
 - Styling (colours, icons) must be applied only when the output stream supports it.
 - Formatting must handle entries with missing fields gracefully (use default or placeholder).
 - The formatted output for the same entry and same format must be identical across invocations.
@@ -51,15 +51,15 @@ Arises wherever a command-line tool displays results to a terminal — search re
 ## Related Subproblems
 
 - **mercury/display**: Output formatting feeds display.
-- **neptune/transform**: Entries may need transformation before formatting.
-- **venus/filter**: Only filtered entries need formatting.
-- **earth/sort**: Sorted entries are formatted in order.
+- **neptune/transformation**: Entries may need transformation before formatting.
+- **venus/filtering**: Only filtered entries need formatting.
+- **earth/sorting**: Sorted entries are formatted in order.
 - **callisto/walk**: File system entries are the most common input to formatting.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any CLI tool that prints results to a terminal — especially if it supports colour, columns, or custom format templates.
+Any CLI tool that prints results to a terminal  --  especially if it supports colour, columns, or custom format templates.
 
 #### Start with (minimal form)
 Print raw values with `println!()`. If colour is needed, use ANSI escape codes directly. Single format, no template strings, no auto-detection.
@@ -79,7 +79,7 @@ Print raw values with `println!()`. If colour is needed, use ANSI escape codes d
 #### Real project examples
 - **crawley** (`output` module): Detects terminal width for table formatting, supports JSON/CSV/plain output via CLI flags.
 - **Helix editor** (status line renderer): Formats status information (filename, cursor position, mode) into a fixed-width line with colour-coded segments.
-- **Lite XL** (status view + command view): Two display areas with different formatting — status bar uses fixed layout, command view uses scrollable line history.
+- **Lite XL** (status view + command view): Two display areas with different formatting  --  status bar uses fixed layout, command view uses scrollable line history.
 
 #### Common over-engineering traps
 - Building a template engine before confirming users need customisable output.
@@ -88,4 +88,4 @@ Print raw values with `println!()`. If colour is needed, use ANSI escape codes d
 
 ## Frame Concern
 
-**Terminal capability detection.** The formatter must decide whether to apply styling before it knows if the output is going to a terminal, a pipe, or a file — and the terminal may support different colour depths, widths, and Unicode ranges. The concern is making the styling decision at the right time with incomplete information about the output path.
+**Terminal capability detection.** The formatter must decide whether to apply styling before it knows if the output is going to a terminal, a pipe, or a file  --  and the terminal may support different colour depths, widths, and Unicode ranges. The concern is making the styling decision at the right time with incomplete information about the output path.

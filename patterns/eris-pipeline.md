@@ -1,6 +1,6 @@
 # eris: Multi-Stage Pipeline
 
-> **Pressure class:** Behavior variation — the processing algorithm at each stage changes independently.
+> **Pressure class:** Behavior variation  --  the processing algorithm at each stage changes independently.
 
 ## Problem
 
@@ -8,32 +8,32 @@ A single input must be processed through a fixed sequence of transformation stag
 
 ## Context
 
-Arises whenever a complex transformation is decomposed into a linear sequence of simpler steps. The canonical example is the compiler pipeline: tokenize → preprocess → parse → type-check → codegen. Each stage operates on a different representation (characters → tokens → AST → typed AST → assembly), and early-stage errors should prevent later-stage work. The shared context (symbol table, configuration, source location mapping) must be available to all stages. Found in compilers, ETL pipelines, image processing chains, build systems, and multi-step validators.
+Arises whenever a complex transformation is decomposed into a linear sequence of simpler steps. The canonical example is the compiler pipeline: tokenize  ->  preprocess  ->  parse  ->  type-check  ->  codegen. Each stage operates on a different representation (characters  ->  tokens  ->  AST  ->  typed AST  ->  assembly), and early-stage errors should prevent later-stage work. The shared context (symbol table, configuration, source location mapping) must be available to all stages. Found in compilers, ETL pipelines, image processing chains, build systems, and multi-step validators.
 
 ## Domains Involved
 
 - **Input** (lexical): the initial representation at the start of the pipeline.
 - **Stages** (causal): a fixed sequence of processing functions. Each stage reads from the previous stage's output representation and writes to the next stage's input representation.
-- **Shared context** (lexical): information that every stage needs access to — configuration, symbol tables, source location mapping, error aggregator.
+- **Shared context** (lexical): information that every stage needs access to  --  configuration, symbol tables, source location mapping, error aggregator.
 - **Error sink** (lexical): accumulates errors from all stages, typically with source location information. Early errors may cause later stages to produce degraded output or skip processing entirely.
 
 ## Shared Phenomena
 
-- Input → Stage 1: initial representation
-- Stage N → Stage N+1: transformed representation (AST, tokens, etc.)
-- Shared context → All stages: config, symbol table, source locations
-- Stage N → Error sink: error/warning with location metadata
-- Error sink → Pipeline controller: error count, severity summary
-- Pipeline controller → Stages: abort signal (if error threshold exceeded)
+- Input  ->  Stage 1: initial representation
+- Stage N  ->  Stage N+1: transformed representation (AST, tokens, etc.)
+- Shared context  ->  All stages: config, symbol table, source locations
+- Stage N  ->  Error sink: error/warning with location metadata
+- Error sink  ->  Pipeline controller: error count, severity summary
+- Pipeline controller  ->  Stages: abort signal (if error threshold exceeded)
 
 ## Invariants
 
-- The stage order is fixed — output of stage N is input to stage N+1.
+- The stage order is fixed  --  output of stage N is input to stage N+1.
 - An error in stage N must not corrupt the shared context used by earlier stages (already processed) or later stages (not yet run).
 - The pipeline must make progress: if no errors occur, every stage must eventually process the input.
-- Errors must be accumulated, not truncated — the user should see all errors from all stages in a single report.
-- Each stage must handle gracefully the case where the previous stage produced degraded output (e.g., parsing succeeded with errors — codegen must still produce something reasonable).
-- The pipeline must be restartable — running the pipeline twice on the same input must produce the same result (deterministic stages).
+- Errors must be accumulated, not truncated  --  the user should see all errors from all stages in a single report.
+- Each stage must handle gracefully the case where the previous stage produced degraded output (e.g., parsing succeeded with errors  --  codegen must still produce something reasonable).
+- The pipeline must be restartable  --  running the pipeline twice on the same input must produce the same result (deterministic stages).
 
 ## Known Failure Modes
 
@@ -53,17 +53,17 @@ Arises whenever a complex transformation is decomposed into a linear sequence of
 
 ## Related Subproblems
 
-- **neptune/transform**: Each individual stage is a transform; the pipeline composes transforms.
-- **jupiter/validate**: Type-checking and semantic analysis are validation stages in a compiler pipeline.
-- **saturn/route**: The pipeline controller routes the input through stages in order.
-- **mars/persist**: Intermediate pipeline results may be cached to disk for incremental builds.
+- **neptune/transformation**: Each individual stage is a transform; the pipeline composes transforms.
+- **jupiter/validation**: Type-checking and semantic analysis are validation stages in a compiler pipeline.
+- **saturn/routing**: The pipeline controller routes the input through stages in order.
+- **mars/persistence**: Intermediate pipeline results may be cached to disk for incremental builds.
 - **phoebe/resource-lifecycle**: Each pipeline stage may own resources that must be initialised before and cleaned up after the stage runs.
-- **io/exec**: A build system's compilation pipeline delegates each stage to an external process.
+- **io/command-execution**: A build system's compilation pipeline delegates each stage to an external process.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that processes input through a fixed sequence of distinct representations — compilers, transpilers, ETL jobs, image processing chains, multi-phase validators, build systems.
+Any project that processes input through a fixed sequence of distinct representations  --  compilers, transpilers, ETL jobs, image processing chains, multi-phase validators, build systems.
 
 #### Start with (minimal form)
 A single function that calls sub-functions in order. No abstraction for the pipeline itself. Error handling: check return value after each call and abort. Shared context: a struct passed by pointer to each function.
@@ -87,15 +87,15 @@ int process(char *input) {
 
 #### Signs you're in this pattern
 - You have a sequence of function calls where each call transforms the output of the previous one.
-- Error handling repeats the same pattern between each stage (check result → abort or continue).
-- The intermediate data types between stages form a chain (type A → type B → type C).
+- Error handling repeats the same pattern between each stage (check result  ->  abort or continue).
+- The intermediate data types between stages form a chain (type A  ->  type B  ->  type C).
 - You can visualise processing as a linear flow diagram with boxes and arrows.
 
 #### Real project examples
-- **chibicc** (compiler pipeline): `tokenize → preprocess → parse → codegen` — each stage produces a different representation (tokens → AST → assembly), early-stage errors block later stages.
-- **MiniJinja** (template compilation): `parse → compile → VM execute` — template text → AST → bytecode → rendered output, with error propagation from parse to execute.
-- **DaemonDB** (query execution): `SQL parse → AST → bytecode → B-tree traversal` — each stage validates the previous stage's output format.
-- **lite3** (serialisation pipeline): `object → tagged-binary → B-tree leaf → page write` — four distinct representations, shared buffer context.
+- **chibicc** (compiler pipeline): `tokenize  ->  preprocess  ->  parse  ->  codegen`  --  each stage produces a different representation (tokens  ->  AST  ->  assembly), early-stage errors block later stages.
+- **MiniJinja** (template compilation): `parse  ->  compile  ->  VM execute`  --  template text  ->  AST  ->  bytecode  ->  rendered output, with error propagation from parse to execute.
+- **DaemonDB** (query execution): `SQL parse  ->  AST  ->  bytecode  ->  B-tree traversal`  --  each stage validates the previous stage's output format.
+- **lite3** (serialisation pipeline): `object  ->  tagged-binary  ->  B-tree leaf  ->  page write`  --  four distinct representations, shared buffer context.
 
 #### Common over-engineering traps
 - Building an abstract "pipeline framework" before you have a second distinct pipeline.

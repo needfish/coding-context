@@ -1,14 +1,27 @@
+# ------------------------------------------------------------------------------
+#  examined-projects.md
+#  Registry of open-source projects mapped to problem patterns.
+# ------------------------------------------------------------------------------
+
 # Examined Projects
 
 This file lists every open-source project analysed against the problem pattern
 repository. It prevents redundant analysis across sessions.
 
+## Use During the Workflow
+
+| Phase | How to use this file |
+|-------|---------------------|
+| **Model** | See how other projects decomposed the same problem type. The index.md mappings show which module instantiates which pattern. |
+| **Evaluate** | Compare your implementation against real projects. Does your `saturn` module resemble how Helix or tide routes messages? What edge cases did they handle that you missed? |
+| **Reflect** | Check if real projects also split a module at the same trigger point. If fd's walk module has exclusion support and yours does not, that trigger may be closer than you think. |
+
 ## Guidelines
 
 - Add new projects at the end of the relevant category.
-- Format: `name` → `org/repo` → brief description of architectural relevance.
+- Format: `name`  ->  `org/repo`  ->  brief description of architectural relevance.
 - When re-entering a session, check this file first. If a project is listed,
-  its mapping already exists in INDEX.md (or a prior session draft) and does
+  its mapping already exists in index.md (or a prior session draft) and does
   not need re-analysis unless the user specifically asks for re-examination.
 
 ---
@@ -83,7 +96,7 @@ repository. It prevents redundant analysis across sessions.
 | 22 | **tock** | tock/tock | Embedded OS (Rust): kernel/arch/board layering, MPU, syscall |
 | 23 | **jemalloc** | jemalloc/jemalloc | Memory allocator: arenas, tcache, size classes, extent management |
 | 24 | **picolibc** | keith-packard/picolibc | C library for embedded: newlib-derived, TLS errno, minimal stdio |
-| 25 | **libfuse** | libfuse/libfuse | Userspace filesystem: kernel→userspace bridge, high/low API |
+| 25 | **libfuse** | libfuse/libfuse | Userspace filesystem: kernel -> userspace bridge, high/low API |
 | 26 | **fio** | axboe/fio | I/O benchmarking: engine abstraction (io_uring, libaio, sync), job |
 
 ---
@@ -108,7 +121,7 @@ repository. It prevents redundant analysis across sessions.
 | 33 | **HarfBuzz** | harfbuzz/harfbuzz | Text shaping: OpenType/AAT, subsetting, rasterisation, GPU output |
 | 34 | **stb** | nothings/stb | Single-file libraries: image I/O, font raster, rect pack, voxel render |
 | 35 | **Freetype** | freetype/freetype | Font rendering engine: hinting, anti-alias, glyph caching, GX/AAT/OpenType |
-| 36 | **Cairo** | freedesktop/cairo | (not yet fetched — GitLab Anubis blocks, GitHub mirror requires auth)
+| 36 | **Cairo** | freedesktop/cairo | (not yet fetched  --  GitLab Anubis blocks, GitHub mirror requires auth)
 
 ---
 
@@ -137,7 +150,7 @@ repository. It prevents redundant analysis across sessions.
 | # | Project | Repository | Notes |
 |---|---------|-----------|-------|
 | 44 | **miniaudio** | mackron/miniaudio | Single-file audio library: device playback/capture, decoding, resampling, node graph, resource engine |
-| 45 | **NessMuxer** | micilini/NessMuxer | Video encoding/muxing library: NV12→H.264/N.148 encode, MKV muxing, encoder abstraction backends |
+| 45 | **NessMuxer** | micilini/NessMuxer | Video encoding/muxing library: NV12 -> H.264/N.148 encode, MKV muxing, encoder abstraction backends |
 
 ---
 

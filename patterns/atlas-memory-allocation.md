@@ -1,6 +1,6 @@
 # atlas: Memory Allocation
 
-> **Pressure class:** Object variation — the allocation strategy changes while the allocate/free contract stays the same.
+> **Pressure class:** Object variation  --  the allocation strategy changes while the allocate/free contract stays the same.
 
 ## Problem
 
@@ -23,19 +23,19 @@ Arises in any system that manages dynamic memory: general-purpose allocators (ma
 
 ## Shared Phenomena
 
-- Application → Allocator: allocation request with size
-- Allocator → Memory pool: split, coalesce, commit, decommit operations
-- Allocator → Free list: insert freed chunk, look up suitable chunk by size
-- Allocator → OS: `mmap`/`sbrk`/`VirtualAlloc` when pool is exhausted, `munmap`/`madvise` when surplus
-- Allocator → Application: pointer to allocated region (or null on failure)
-- Application → Allocator: free request with pointer
-- Arena → Allocator: load-balance allocations across arenas by thread ID or round-robin
+- Application  ->  Allocator: allocation request with size
+- Allocator  ->  Memory pool: split, coalesce, commit, decommit operations
+- Allocator  ->  Free list: insert freed chunk, look up suitable chunk by size
+- Allocator  ->  OS: `mmap`/`sbrk`/`VirtualAlloc` when pool is exhausted, `munmap`/`madvise` when surplus
+- Allocator  ->  Application: pointer to allocated region (or null on failure)
+- Application  ->  Allocator: free request with pointer
+- Arena  ->  Allocator: load-balance allocations across arenas by thread ID or round-robin
 
 ## Invariants
 
 - Every allocated chunk must be uniquely identifiable by its starting address (no overlapping allocations).
 - Freeing an invalid pointer or double-freeing must be detected or prevented (guard pages, quarantine, magic numbers).
-- The allocator must not leak memory between allocation contexts — freeing in one thread must correctly return to the pool available to other threads.
+- The allocator must not leak memory between allocation contexts  --  freeing in one thread must correctly return to the pool available to other threads.
 - Coalescing adjacent free chunks must never produce a chunk larger than the maximum allocatable size.
 - The allocator must maintain an upper bound on internal fragmentation (worst-case waste per allocation).
 - The total memory managed by the allocator must equal the sum of allocated + free + overhead (metadata).
@@ -64,15 +64,15 @@ Arises in any system that manages dynamic memory: general-purpose allocators (ma
 ## Related Subproblems
 
 - **pan/resource-scheduling**: Memory allocation requests compete for the same allocator locks as application threads, coupling allocation latency with scheduling.
-- **mars/persist**: Persistent memory allocators (for flash, NVRAM) must be power-fail safe and wear-level aware.
-- **jupiter/validate**: Bounds checking, canary values, and address sanitizers validate allocator correctness.
-- **neptune/transform**: Allocators transform raw page-granular memory from the OS into byte-granular chunks for the application.
+- **mars/persistence**: Persistent memory allocators (for flash, NVRAM) must be power-fail safe and wear-level aware.
+- **jupiter/validation**: Bounds checking, canary values, and address sanitizers validate allocator correctness.
+- **neptune/transformation**: Allocators transform raw page-granular memory from the OS into byte-granular chunks for the application.
 - **hyperion/network-listener**: Network packet buffers are allocated and freed per-packet, making allocator throughput a primary factor in network performance.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that manages dynamic memory — most non-trivial software outside embedded systems with no heap.
+Any project that manages dynamic memory  --  most non-trivial software outside embedded systems with no heap.
 
 #### Start with (minimal form)
 Use the language's built-in allocator. Rust: `Box`, `Vec`, `HashMap`. Python: automatic allocation. C: `malloc`/`free`. No custom allocator, no memory pool.
@@ -90,9 +90,9 @@ Use the language's built-in allocator. Rust: `Box`, `Vec`, `HashMap`. Python: au
 - You need deterministic allocation latency (real-time or embedded constraints).
 
 #### Real project examples
-- **chibicc** (arena allocator): Tokens and AST nodes are allocated from a linear arena during compilation — single free at end of each source file, no individual frees.
-- **DaemonDB** (buffer pool): Database pages are allocated from a fixed-size buffer pool with clock-sweep eviction — avoids per-page malloc/free overhead.
-- **tiny-lsm-go** (block cache): SST blocks are cached in a fixed-capacity LRU — allocation is pooled to avoid GC pressure.
+- **chibicc** (arena allocator): Tokens and AST nodes are allocated from a linear arena during compilation  --  single free at end of each source file, no individual frees.
+- **DaemonDB** (buffer pool): Database pages are allocated from a fixed-size buffer pool with clock-sweep eviction  --  avoids per-page malloc/free overhead.
+- **tiny-lsm-go** (block cache): SST blocks are cached in a fixed-capacity LRU  --  allocation is pooled to avoid GC pressure.
 - **miniaudio** (audio buffer pool): Audio frames are allocated from ring buffers to avoid allocation during real-time audio callbacks.
 
 #### Common over-engineering traps

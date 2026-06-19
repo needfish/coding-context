@@ -1,6 +1,6 @@
 # callisto: Filesystem Walk
 
-> **Pressure class:** Data variation — same traversal algorithm, different exclusion rules and root paths.
+> **Pressure class:** Data variation  --  same traversal algorithm, different exclusion rules and root paths.
 
 ## Problem
 
@@ -8,27 +8,27 @@ A directory tree must be traversed recursively, visiting every entry (file, dire
 
 ## Context
 
-Arises whenever a system needs to enumerate filesystem contents — search tools, backup software, file managers, build systems, linters. The walk is almost never the terminal subproblem — visited entries feed filter (venus), display (mercury), transform (neptune), or command execution (io).
+Arises whenever a system needs to enumerate filesystem contents  --  search tools, backup software, file managers, build systems, linters. The walk is almost never the terminal subproblem  --  visited entries feed filter (venus), display (mercury), transform (neptune), or command execution (io).
 
 ## Domains Involved
 
 - **Root path** (lexical): the starting directory path(s) for the traversal.
 - **Filesystem** (causal): the underlying OS filesystem that provides directory listings and entry metadata.
-- **Exclusion rules** (lexical): patterns that determine which entries to skip — `.gitignore`, `.fdignore`, hidden file rules, custom ignore patterns.
-- **Visitor** (causal or lexical): the consumer of walked entries. May be a callback (causal — called for each entry) or a channel (lexical — entries pushed to a buffer).
+- **Exclusion rules** (lexical): patterns that determine which entries to skip  --  `.gitignore`, `.fdignore`, hidden file rules, custom ignore patterns.
+- **Visitor** (causal or lexical): the consumer of walked entries. May be a callback (causal  --  called for each entry) or a channel (lexical  --  entries pushed to a buffer).
 
 ## Shared Phenomena
 
-- Walker → Filesystem: `readdir()`, `lstat()` calls
-- Filesystem → Walker: entry names, metadata (type, size, permissions, timestamps)
-- Exclusion rules → Walker: glob patterns, override rules, hidden/ignore flags
-- Walker → Visitor: `DirEntry` (path + metadata), traversal errors
+- Walker  ->  Filesystem: `readdir()`, `lstat()` calls
+- Filesystem  ->  Walker: entry names, metadata (type, size, permissions, timestamps)
+- Exclusion rules  ->  Walker: glob patterns, override rules, hidden/ignore flags
+- Walker  ->  Visitor: `DirEntry` (path + metadata), traversal errors
 
 ## Invariants
 
 - Every entry in the tree must be visited exactly once, unless excluded by rules.
 - Symlinks must be followed only if explicitly configured; the default is to return the symlink entry itself, not its target.
-- Exclusion rules must be evaluated deterministically — the same root and rules must produce the same set of visited entries.
+- Exclusion rules must be evaluated deterministically  --  the same root and rules must produce the same set of visited entries.
 - Traversal must complete in bounded time proportional to the tree size; it must not hang on cyclic directory structures.
 - Errors on individual entries (permission denied, broken symlink) must not abort the entire walk.
 
@@ -36,7 +36,7 @@ Arises whenever a system needs to enumerate filesystem contents — search tools
 
 - **Symlink cycle**: A symlink points to a parent directory, causing infinite recursion without cycle detection.
 - **Permission denied**: An unreadable directory causes the walk to skip an entire subtree silently, or abort with errors.
-- **Filesystem change during walk**: Entries are created, moved, or deleted during traversal — the walk sees an inconsistent snapshot.
+- **Filesystem change during walk**: Entries are created, moved, or deleted during traversal  --  the walk sees an inconsistent snapshot.
 - **Deep nesting**: A tree exceeds the OS or application recursion limit, causing stack overflow.
 - **Ignore rule conflict**: Two exclusion patterns contradict, causing an entry to be both included and excluded.
 - **Encoding mismatch**: Filesystem paths use an encoding that the caller cannot decode, causing garbled output or skipped entries.
@@ -51,19 +51,19 @@ Arises whenever a system needs to enumerate filesystem contents — search tools
 
 ## Related Subproblems
 
-- **venus/filter**: Walked entries are almost always filtered by pattern, type, size, or time.
+- **venus/filtering**: Walked entries are almost always filtered by pattern, type, size, or time.
 - **mercury/display**: Walked entries are typically displayed to the user.
-- **io/exec**: Walked entries may be passed to an external command.
-- **mars/persist**: Walk results may be stored.
-- **earth/sort**: Results may need sorting before display or processing.
+- **io/command-execution**: Walked entries may be passed to an external command.
+- **mars/persistence**: Walk results may be stored.
+- **earth/sorting**: Results may need sorting before display or processing.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that enumerates filesystem contents — search tools, backup software, file managers, build systems, linters.
+Any project that enumerates filesystem contents  --  search tools, backup software, file managers, build systems, linters.
 
 #### Start with (minimal form)
-`os.walk()` (Python), `walkdir::WalkDir` (Rust), `find` command piped to your tool. Process entries as they arrive — don't buffer the full tree.
+`os.walk()` (Python), `walkdir::WalkDir` (Rust), `find` command piped to your tool. Process entries as they arrive  --  don't buffer the full tree.
 
 #### Split into its own module when (observable triggers)
 - You need custom exclusion rules (gitignore, hidden file filtering, size limits).
@@ -81,7 +81,7 @@ Any project that enumerates filesystem contents — search tools, backup softwar
 - **Helix editor** (file picker): Recursive directory walk for file picker with `.gitignore` pattern exclusion and max-depth limit.
 - **Lite XL** (project view): Project panel walks the workspace directory tree, skipping hidden directories and binary files.
 - **nano-backup** (source scanning): File discovery walks source directories with include/exclude patterns before feeding the backup pipeline.
-- **crawley** (URL crawl frontier): URL-level "walk" — follows links recursively with depth limit, domain restriction, and visited-set dedup.
+- **crawley** (URL crawl frontier): URL-level "walk"  --  follows links recursively with depth limit, domain restriction, and visited-set dedup.
 
 #### Common over-engineering traps
 - Building a multi-threaded walker before measuring that single-threaded walk is too slow.

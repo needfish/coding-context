@@ -1,6 +1,6 @@
-# mars: Persist
+# mars: Persistence
 
-> **Pressure class:** Object variation — the storage backend changes while the access contract stays the same.
+> **Pressure class:** Object variation  --  the storage backend changes while the access contract stays the same.
 
 ## Problem
 
@@ -8,7 +8,7 @@ Data must be stored and retrieved across system lifetimes, surviving process ter
 
 ## Context
 
-Arises whenever state must outlive the execution context that produces or consumes it. Persistence is a supporting subproblem — it rarely drives the decomposition on its own. It couples to display (mercury) for read paths, validate (jupiter) for write paths, and transform (neptune) for serialisation.
+Arises whenever state must outlive the execution context that produces or consumes it. Persistence is a supporting subproblem  --  it rarely drives the decomposition on its own. It couples to display (mercury) for read paths, validate (jupiter) for write paths, and transform (neptune) for serialisation.
 
 ## Domains Involved
 
@@ -18,9 +18,9 @@ Arises whenever state must outlive the execution context that produces or consum
 
 ## Shared Phenomena
 
-- Write path: Working set → Schema → Storage (data, serialised bytes)
-- Read path: Storage → Schema → Working set (bytes, deserialised data)
-- Schema → Both: field definitions, type mappings, constraints
+- Write path: Working set  ->  Schema  ->  Storage (data, serialised bytes)
+- Read path: Storage  ->  Schema  ->  Working set (bytes, deserialised data)
+- Schema  ->  Both: field definitions, type mappings, constraints
 
 ## Invariants
 
@@ -48,35 +48,35 @@ Arises whenever state must outlive the execution context that produces or consum
 ## Related Subproblems
 
 - **mercury/display**: Display reads from persisted data.
-- **jupiter/validate**: Data must be validated before writing.
-- **neptune/transform**: Data may need serialisation/deserialisation.
-- **saturn/route**: Queries may need routing to the correct storage backend.
-- **uranus/authenticate**: Access to storage may require authentication.
+- **jupiter/validation**: Data must be validated before writing.
+- **neptune/transformation**: Data may need serialisation/deserialisation.
+- **saturn/routing**: Queries may need routing to the correct storage backend.
+- **uranus/authentication**: Access to storage may require authentication.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project where state must survive process termination — configuration, user data, game saves, caches, logs.
+Any project where state must survive process termination  --  configuration, user data, game saves, caches, logs.
 
 #### Start with (minimal form)
 A single JSON/TOML/YAML file read on startup and written on shutdown. Python: `json.load` / `json.dump`. Rust: `serde_json::from_reader` / `serde_json::to_writer`. No database, no repository abstraction.
 
 #### Split into its own module when (observable triggers)
-- You need incremental saves (not flush-all-on-exit) — users lose work if the process crashes between saves.
+- You need incremental saves (not flush-all-on-exit)  --  users lose work if the process crashes between saves.
 - Two or more concurrent readers/writers access the same data file.
 - You need transactional semantics (partial writes must roll back on failure).
-- The storage format needs versioned migration (v1 → v2 schema changes).
+- The storage format needs versioned migration (v1  ->  v2 schema changes).
 
 #### Signs you're in this pattern
-- Your program loses state when it restarts — configuration, user data, or progress is gone.
+- Your program loses state when it restarts  --  configuration, user data, or progress is gone.
 - You're writing data to a file, but the format keeps changing.
 - Two parts of the system read/write the same data and sometimes see inconsistent values.
 - A crash during save corrupts the stored file, requiring manual recovery.
 
 #### Real project examples
-- **Flowstate** (`state.go`, `driver.go`): Execution state is persisted atomically — step completion + state write is a single transaction. Multiple backends (mem, Postgres, BadgerDB) under the same interface.
+- **Flowstate** (`state.go`, `driver.go`): Execution state is persisted atomically  --  step completion + state write is a single transaction. Multiple backends (mem, Postgres, BadgerDB) under the same interface.
 - **DaemonDB** (`wal.go`, `bufferpool.go`): WAL + buffer pool provide transactional durability. Write-ahead logging serialises changes before they reach the B-tree.
-- **tiny-lsm-go** (`mem_table.go`, `wal.go`): LSM-tree persists in-memory writes to a WAL before acknowledging — crash recovery replays the WAL.
+- **tiny-lsm-go** (`mem_table.go`, `wal.go`): LSM-tree persists in-memory writes to a WAL before acknowledging  --  crash recovery replays the WAL.
 - **miniaudio** (device config persistence): Audio device configuration (sample rate, buffer size) stored in a simple JSON file, read once on startup.
 
 #### Common over-engineering traps
@@ -86,4 +86,4 @@ A single JSON/TOML/YAML file read on startup and written on shutdown. Python: `j
 
 ## Frame Concern
 
-**The durability guarantee boundary.** The system promises that data survives beyond the current execution, but the storage medium has its own failure modes (crash, corruption, disconnection). Any solution must define where the guarantee ends — what counts as "success" and what the caller must do when the guarantee cannot be met.
+**The durability guarantee boundary.** The system promises that data survives beyond the current execution, but the storage medium has its own failure modes (crash, corruption, disconnection). Any solution must define where the guarantee ends  --  what counts as "success" and what the caller must do when the guarantee cannot be met.

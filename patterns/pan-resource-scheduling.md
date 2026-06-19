@@ -1,6 +1,6 @@
 # pan: Resource Scheduling
 
-> **Pressure class:** Behavior variation — the scheduling policy algorithm changes per workload requirement.
+> **Pressure class:** Behavior variation  --  the scheduling policy algorithm changes per workload requirement.
 
 ## Problem
 
@@ -22,17 +22,17 @@ Arises in any system with concurrent contention for a scarce resource: RTOS task
 
 ## Shared Phenomena
 
-- Consumers → Scheduler: arrival events, priority/deadline metadata, state transitions (ready, blocked, suspended)
-- Scheduler → Resource: dispatch decisions (which consumer to serve next)
-- Resource → Scheduler: completion events, preemption interrupts
-- Scheduler → Ready queue: enqueue/dequeue operations
-- Scheduler → Consumers: context switch, priority boost, starvation detection
+- Consumers  ->  Scheduler: arrival events, priority/deadline metadata, state transitions (ready, blocked, suspended)
+- Scheduler  ->  Resource: dispatch decisions (which consumer to serve next)
+- Resource  ->  Scheduler: completion events, preemption interrupts
+- Scheduler  ->  Ready queue: enqueue/dequeue operations
+- Scheduler  ->  Consumers: context switch, priority boost, starvation detection
 
 ## Invariants
 
 - At most one consumer may occupy the resource at any instant (for single-core scheduling).
 - A higher-priority consumer must never wait indefinitely behind a lower-priority one (priority ordering).
-- The scheduler must make progress — if any consumer is ready, the scheduler must eventually select one.
+- The scheduler must make progress  --  if any consumer is ready, the scheduler must eventually select one.
 - A consumer that releases the resource must be able to re-enter the ready queue (no permanent starvation by policy).
 - Preemption must save and restore consumer state completely (register file, program counter, stack pointer).
 - Time consumed by the scheduler itself must be bounded and accounted for (scheduling overhead).
@@ -56,11 +56,11 @@ Arises in any system with concurrent contention for a scarce resource: RTOS task
 
 ## Related Subproblems
 
-- **atlas/memory-allocation**: Memory allocation routines must be reentrant and limited in duration — they share the CPU with application code and must not cause unbounded scheduling delay.
+- **atlas/memory-allocation**: Memory allocation routines must be reentrant and limited in duration  --  they share the CPU with application code and must not cause unbounded scheduling delay.
 - **dione/power-management**: Tickless idle and frequency scaling couple scheduling decisions with energy consumption.
-- **mars/persist**: I/O scheduling (disk, flash) must account for durability and wear-leveling constraints alongside latency.
-- **jupiter/validate**: Schedulers often include watchdog timers and deadline monitors as validation of correct scheduling.
-- **uranus/authenticate**: Real-time systems must authenticate task origins before scheduling critical work.
+- **mars/persistence**: I/O scheduling (disk, flash) must account for durability and wear-leveling constraints alongside latency.
+- **jupiter/validation**: Schedulers often include watchdog timers and deadline monitors as validation of correct scheduling.
+- **uranus/authentication**: Real-time systems must authenticate task origins before scheduling critical work.
 - **hyperion/network-listener**: Network interrupt handling must be scheduled alongside application tasks.
 
 ### ==== Practical Use ====
@@ -84,10 +84,10 @@ First-come, first-served (FIFO queue). A single-threaded event loop. No prioriti
 - A naive FIFO or round-robin causes some tasks to starve or miss deadlines.
 
 #### Real project examples
-- **Flowstate** (`delay.go`): Delayed step execution — schedules workflow steps to run after a timeout or at a specific time using a timer heap.
-- **tiny-lsm-go** (compaction scheduler): Background compaction tasks scheduled when write amplification crosses a threshold — priority to level-0 compaction to bound read amplification.
-- **NessMuxer** (packet scheduling): Video packets from multiple streams are scheduled for muxing based on PTS timestamps — deadline-driven scheduling.
-- **smoltcp** (socket polling): Network sockets are polled round-robin with fairness guarantees — prevents a single socket from starving others.
+- **Flowstate** (`delay.go`): Delayed step execution  --  schedules workflow steps to run after a timeout or at a specific time using a timer heap.
+- **tiny-lsm-go** (compaction scheduler): Background compaction tasks scheduled when write amplification crosses a threshold  --  priority to level-0 compaction to bound read amplification.
+- **NessMuxer** (packet scheduling): Video packets from multiple streams are scheduled for muxing based on PTS timestamps  --  deadline-driven scheduling.
+- **smoltcp** (socket polling): Network sockets are polled round-robin with fairness guarantees  --  prevents a single socket from starving others.
 
 #### Common over-engineering traps
 - Implementing priority queues before confirming that FIFO causes missed deadlines.
@@ -96,4 +96,4 @@ First-come, first-served (FIFO queue). A single-threaded event loop. No prioriti
 
 ## Frame Concern
 
-**The gap between priority assignment and actual timeliness.** The scheduler assigns priority to consumers, but the actual time a consumer waits depends on the interaction between priorities, resource holding times, blocking on shared resources, and preemption patterns. A consumer with high priority can still miss its deadline if it shares a resource with a lower-priority consumer (priority inversion) or if interrupt handling delays its activation. The concern is how the scheduler's policy maps to the actual temporal behaviour experienced by consumers — policy is abstract, but timeliness is concrete.
+**The gap between priority assignment and actual timeliness.** The scheduler assigns priority to consumers, but the actual time a consumer waits depends on the interaction between priorities, resource holding times, blocking on shared resources, and preemption patterns. A consumer with high priority can still miss its deadline if it shares a resource with a lower-priority consumer (priority inversion) or if interrupt handling delays its activation. The concern is how the scheduler's policy maps to the actual temporal behaviour experienced by consumers  --  policy is abstract, but timeliness is concrete.

@@ -1,6 +1,6 @@
 # iapetus: Code Counting / Statistics Aggregation
 
-> **Pressure class:** Behavior variation — the line classifier algorithm changes per language grammar.
+> **Pressure class:** Behavior variation  --  the line classifier algorithm changes per language grammar.
 
 ## Problem
 
@@ -13,24 +13,24 @@ Arises in code analysis tools, project health dashboards, billing systems that c
 ## Domains Involved
 
 - **Source text** (lexical): the raw text content of each file, split into lines.
-- **Language grammar** (lexical): the syntactic rules for the source language — single-line comment markers, multi-line comment delimiters, string literals, doc comment markers.
+- **Language grammar** (lexical): the syntactic rules for the source language  --  single-line comment markers, multi-line comment delimiters, string literals, doc comment markers.
 - **Line classifier** (causal): the state machine that reads lines and assigns each to a category (code, comment, blank, doc comment).
 - **Aggregator** (causal): combines per-file counts into group totals.
 - **Report** (lexical): the output structure of aggregated counts, typically grouped by language or directory.
 
 ## Shared Phenomena
 
-- Source text → Classifier: lines of text
-- Grammar → Classifier: comment markers, string delimiters, nesting rules
-- Classifier → Aggregator: per-file (code, comment, blank) counts
-- Aggregator → Report: group totals, subtotals, hierarchical breakdowns
+- Source text  ->  Classifier: lines of text
+- Grammar  ->  Classifier: comment markers, string delimiters, nesting rules
+- Classifier  ->  Aggregator: per-file (code, comment, blank) counts
+- Aggregator  ->  Report: group totals, subtotals, hierarchical breakdowns
 
 ## Invariants
 
-- Every line must be assigned to exactly one category — no line may be double-counted or unclassified.
+- Every line must be assigned to exactly one category  --  no line may be double-counted or unclassified.
 - The sum of code + comment + blank lines must equal the total lines in the file.
 - The classifier must correctly handle nested comments (e.g., `/* /* */ */`) and comments embedded in string literals.
-- Multi-line comments must be tracked across line boundaries — if a comment starts on line N, lines N through M (where M contains the closing delimiter) are all comment, even if they contain code-like text.
+- Multi-line comments must be tracked across line boundaries  --  if a comment starts on line N, lines N through M (where M contains the closing delimiter) are all comment, even if they contain code-like text.
 - Aggregation must be deterministic: the same set of files and same grammar must produce the same counts.
 
 ## Known Failure Modes
@@ -53,15 +53,15 @@ Arises in code analysis tools, project health dashboards, billing systems that c
 
 - **rhea/syntax-detection**: The correct language grammar must be selected before counting begins.
 - **callisto/filesystem-walk**: Files must be discovered before they can be counted.
-- **venus/filter**: Only a subset of files may be counted (by extension, by path, by modified date).
+- **venus/filtering**: Only a subset of files may be counted (by extension, by path, by modified date).
 - **ganymede/output-format**: The aggregated report must be formatted for display or serialised for export.
-- **earth/sort**: Report rows are typically sorted by count or name.
+- **earth/sorting**: Report rows are typically sorted by count or name.
 - **mercury/display**: The report is displayed to the user.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any project that reports statistics about code — line counters, project health dashboards, billing systems, complexity analysers.
+Any project that reports statistics about code  --  line counters, project health dashboards, billing systems, complexity analysers.
 
 #### Start with (minimal form)
 Count lines with `wc -l` or a script that reads all lines and counts blanks vs. non-blanks. No language-aware classification. Python: `len(lines)`, `sum(1 for l in lines if l.strip())`.
@@ -79,8 +79,8 @@ Count lines with `wc -l` or a script that reads all lines and counts blanks vs. 
 - The counting logic is tangled with file traversal logic.
 
 #### Real project examples
-- **Helix editor** (status line): Shows line count, character count, and cursor line/total-lines ratio — simple counts computed from the document model.
-- **Lite XL** (project view + status bar): Shows file count, line count per file, project-wide line estimates — counts are cached and updated on file save.
+- **Helix editor** (status line): Shows line count, character count, and cursor line/total-lines ratio  --  simple counts computed from the document model.
+- **Lite XL** (project view + status bar): Shows file count, line count per file, project-wide line estimates  --  counts are cached and updated on file save.
 
 #### Common over-engineering traps
 - Implementing a full state-machine parser before confirming that regex-based counting misses critical cases.
@@ -89,4 +89,4 @@ Count lines with `wc -l` or a script that reads all lines and counts blanks vs. 
 
 ## Frame Concern
 
-**Grammar coverage vs. real-world source variety.** A code counter works by classifying text according to language rules, but real-world source code contains edge cases (nested comments in strings, preprocessor directives, template languages embedded in code) that any fixed grammar cannot fully anticipate. The concern is how the classifier behaves when it encounters text that its grammar does not correctly describe — whether it fails safe (misses a count) or fails unsafely (causes a cascade of misclassifications).
+**Grammar coverage vs. real-world source variety.** A code counter works by classifying text according to language rules, but real-world source code contains edge cases (nested comments in strings, preprocessor directives, template languages embedded in code) that any fixed grammar cannot fully anticipate. The concern is how the classifier behaves when it encounters text that its grammar does not correctly describe  --  whether it fails safe (misses a count) or fails unsafely (causes a cascade of misclassifications).

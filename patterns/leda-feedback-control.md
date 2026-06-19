@@ -1,14 +1,14 @@
 # leda: Feedback Control
 
-> **Pressure class:** Behavior variation — the control algorithm changes per plant dynamics.
+> **Pressure class:** Behavior variation  --  the control algorithm changes per plant dynamics.
 
 ## Problem
 
-A system must maintain a physical or logical variable at a desired setpoint by measuring the current value, comparing it to the target, and adjusting an actuator input to minimise the error over time — all while coping with measurement noise, external disturbances, actuator limits, and changing dynamics.
+A system must maintain a physical or logical variable at a desired setpoint by measuring the current value, comparing it to the target, and adjusting an actuator input to minimise the error over time  --  all while coping with measurement noise, external disturbances, actuator limits, and changing dynamics.
 
 ## Context
 
-Arises in any system that regulates a dynamic process: temperature control (3D printer hotend, oven, HVAC), motor speed/position control (CNC spindle, quadcopter motors), chemical process control (pH, flow rate), and software rate/throttle control (TCP congestion, rate limiters). The controller reads a sensor, computes error = setpoint − measured, and applies a correction through an actuator. The physical plant has inertia, delay, and nonlinearities that the controller must compensate for.
+Arises in any system that regulates a dynamic process: temperature control (3D printer hotend, oven, HVAC), motor speed/position control (CNC spindle, quadcopter motors), chemical process control (pH, flow rate), and software rate/throttle control (TCP congestion, rate limiters). The controller reads a sensor, computes error = setpoint - measured, and applies a correction through an actuator. The physical plant has inertia, delay, and nonlinearities that the controller must compensate for.
 
 ## Domains Involved
 
@@ -22,16 +22,16 @@ Arises in any system that regulates a dynamic process: temperature control (3D p
 
 ## Shared Phenomena
 
-- Setpoint → Controller: target value
-- Sensor → Controller: measured value (with noise, delay)
-- Controller → Actuator: control signal (PWM duty, voltage, force)
-- Actuator → Plant: physical input
-- Plant → Sensor: actual state of the controlled variable
-- Disturbance → Plant: unmeasured external influence
+- Setpoint  ->  Controller: target value
+- Sensor  ->  Controller: measured value (with noise, delay)
+- Controller  ->  Actuator: control signal (PWM duty, voltage, force)
+- Actuator  ->  Plant: physical input
+- Plant  ->  Sensor: actual state of the controlled variable
+- Disturbance  ->  Plant: unmeasured external influence
 
 ## Invariants
 
-- The control signal must remain within actuator limits (saturation) — integral windup must be prevented when the actuator is saturated.
+- The control signal must remain within actuator limits (saturation)  --  integral windup must be prevented when the actuator is saturated.
 - The controller must be stable: bounded input produces bounded output, and the error must converge to zero (or a bounded neighbourhood) under constant setpoint.
 - The sensor sample rate must exceed twice the highest-frequency component of the plant dynamics (Nyquist criterion) to avoid aliasing.
 - The combined phase lag of sensor, controller computation, and actuator response must not exceed the stability margin.
@@ -57,36 +57,36 @@ Arises in any system that regulates a dynamic process: temperature control (3D p
 
 ## Related Subproblems
 
-- **pan/resource-scheduling**: The controller runs as a periodic task and must complete its computation within the control interval — scheduling latency directly affects control stability.
-- **jupiter/validate**: Sensor validation (outlier rejection, plausibility checks) prevents bad measurements from corrupting the controller state.
-- **neptune/transform**: The actuator mixer transforms logical control signals (roll/pitch/yaw/thrust) into physical actuator outputs (motor PWMs).
-- **mars/persist**: State estimators (EKF, complementary filter) maintain a persistent estimate of system state across sensor dropout.
+- **pan/resource-scheduling**: The controller runs as a periodic task and must complete its computation within the control interval  --  scheduling latency directly affects control stability.
+- **jupiter/validation**: Sensor validation (outlier rejection, plausibility checks) prevents bad measurements from corrupting the controller state.
+- **neptune/transformation**: The actuator mixer transforms logical control signals (roll/pitch/yaw/thrust) into physical actuator outputs (motor PWMs).
+- **mars/persistence**: State estimators (EKF, complementary filter) maintain a persistent estimate of system state across sensor dropout.
 - **dione/power-management**: Power-aware controllers reduce actuator output to conserve energy, trading control accuracy for power savings.
 
 ### ==== Practical Use ====
 
 #### When this pattern matters
-Any system that regulates a dynamic process — temperature control, motor speed/position control, chemical process control, rate/throttle control.
+Any system that regulates a dynamic process  --  temperature control, motor speed/position control, chemical process control, rate/throttle control.
 
 #### Start with (minimal form)
 On/off (bang-bang) control with hysteresis: turn the actuator on when the value drops below a threshold, off when it rises above another. A simple `if` statement in the control loop.
 
 #### Split into its own module when (observable triggers)
-- On/off control causes visible oscillation (limit cycling) — the process has inertia.
-- You need to eliminate steady-state error (proportional-only leaves a gap — integral term needed).
+- On/off control causes visible oscillation (limit cycling)  --  the process has inertia.
+- You need to eliminate steady-state error (proportional-only leaves a gap  --  integral term needed).
 - The process dynamics change with operating point (gain scheduling needed).
 - Sensor noise or dropouts cause the controller to make bad corrections (filtering/estimation needed).
 
 #### Signs you're in this pattern
 - A system parameter must stay near a setpoint (temperature, speed, position, pressure).
-- The system has inertia — changes to the input don't immediately affect the output.
+- The system has inertia  --  changes to the input don't immediately affect the output.
 - External disturbances push the system away from the desired state.
 - You're writing `if too_high: decrease; if too_low: increase` logic and it oscillates.
 
 #### Real project examples
-- **Flowstate** (retry backoff): Exponential backoff with jitter for workflow step retries — the "controller" adjusts retry delay based on observed failures.
-- **Thebe compaction throttler** (write amplification control): Compaction rate is adjusted based on write amplification ratio — a feedback loop controlling storage throughput.
-- **dione** (DVFS governor): CPU frequency adjusted based on utilisation — measured error (target utilisation vs actual) feeds a PID-like controller.
+- **Flowstate** (retry backoff): Exponential backoff with jitter for workflow step retries  --  the "controller" adjusts retry delay based on observed failures.
+- **Thebe compaction throttler** (write amplification control): Compaction rate is adjusted based on write amplification ratio  --  a feedback loop controlling storage throughput.
+- **dione** (DVFS governor): CPU frequency adjusted based on utilisation  --  measured error (target utilisation vs actual) feeds a PID-like controller.
 
 #### Common over-engineering traps
 - Implementing a full PID controller when on/off with hysteresis meets the spec.
@@ -95,4 +95,4 @@ On/off (bang-bang) control with hysteresis: turn the actuator on when the value 
 
 ## Frame Concern
 
-**The gap between measurement and truth.** The controller acts on sensor measurements, not the actual state of the plant. Every sensor has noise, bias, delay, and finite resolution — the controller cannot directly know the true state. It must infer it from imperfect measurements and compensate for the gap through filtering, estimation, and robust gain margins. When the gap grows too large (sensor failure, unmodelled dynamics, excessive delay), the controller's corrections become counterproductive and the system destabilises.
+**The gap between measurement and truth.** The controller acts on sensor measurements, not the actual state of the plant. Every sensor has noise, bias, delay, and finite resolution  --  the controller cannot directly know the true state. It must infer it from imperfect measurements and compensate for the gap through filtering, estimation, and robust gain margins. When the gap grows too large (sensor failure, unmodelled dynamics, excessive delay), the controller's corrections become counterproductive and the system destabilises.
