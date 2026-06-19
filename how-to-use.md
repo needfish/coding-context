@@ -73,7 +73,7 @@ Frame Concern              ->   The fundamental difficulty
 
 ## How to Navigate the Repository
 
-**You do not need to read all 26 patterns.** The repository is designed for targeted lookup.
+**You do not need to read all 27 patterns.** The repository is designed for targeted lookup.
 
 ### Step 1: Read the core patterns for your project type
 
@@ -95,6 +95,7 @@ hyperion (listener)     ->   also look at neptune (transformation), saturn (rout
 titan (highlighting)    ->   also look at rhea (detection), iapetus (counting)
 eris (pipeline)         ->   also look at neptune (transformation) repeated N times
 pluto (parsing)         ->   also look at jupiter (validation), neptune (transformation), mars (persistence)
+janus (reduction)       ->   also look at venus (filtering), neptune (transformation), earth (sorting), eris (pipeline)
 ```
 
 When you split a pattern into its own module, check its neighbors. If you are building a router, you almost certainly need validation and a listener too.

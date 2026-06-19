@@ -58,6 +58,7 @@ Arises whenever a complex transformation is decomposed into a linear sequence of
 - **saturn/routing**: The pipeline controller routes the input through stages in order.
 - **mars/persistence**: Intermediate pipeline results may be cached to disk for incremental builds.
 - **phoebe/resource-lifecycle**: Each pipeline stage may own resources that must be initialised before and cleaned up after the stage runs.
+- **janus/reduction**: The final pipeline stage is often a reduction (count, sum, aggregate).
 - **io/command-execution**: A build system's compilation pipeline delegates each stage to an external process.
 
 ### ==== Practical Use ====

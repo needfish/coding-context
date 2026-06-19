@@ -48,6 +48,7 @@ Arises whenever a set of items is larger than what the user needs or the next op
 - **mercury/display**: Filtered results are commonly displayed.
 - **earth/sorting**: Filtering and sorting often compose  --  filter first, then sort (or vice versa, depending on selectivity).
 - **neptune/transformation**: Each element in the result may need transformation.
+- **janus/reduction**: Filtered results are often reduced (count matching, sum of matching values).
 - **jupiter/validation**: The predicate itself may need validation before use.
 - **mars/persistence**: The source collection may come from storage.
 

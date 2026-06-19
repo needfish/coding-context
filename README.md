@@ -29,7 +29,7 @@ See [how-to-use.md](how-to-use.md) for a full walk-through and project-type-to-p
 ## Structure
 
 ```
-patterns/                      --  26 problem patterns (one per planet name)
+patterns/                      --  27 problem patterns (one per planet name)
   mercury-display.md
   venus-filtering.md
   earth-sorting.md

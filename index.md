@@ -20,6 +20,7 @@ See [how-to-use.md](how-to-use.md) for a project-type-to-patterns reference and 
 | europa | configuration assembly | Data variation | [patterns/europa-config-assembly.md](patterns/europa-config-assembly.md) | Merge ordering transparency |
 | titan | syntax highlighting | Behavior variation | [patterns/titan-syntax-highlighting.md](patterns/titan-syntax-highlighting.md) | Grammar coverage vs. source variety |
 | rhea | syntax detection | Behavior variation | [patterns/rhea-syntax-detection.md](patterns/rhea-syntax-detection.md) | Information deficit at decision time |
+| janus | reduction / aggregation | Behavior variation | [patterns/janus-reduction-aggregation.md](patterns/janus-reduction-aggregation.md) | Associativity and the identity element |
 | iapetus | code counting | Behavior variation | [patterns/iapetus-code-counting.md](patterns/iapetus-code-counting.md) | Grammar coverage vs. real-world source variety |
 | hyperion | network listener | Object variation | [patterns/hyperion-network-listener.md](patterns/hyperion-network-listener.md) | Connection establishment vs. request processing gap |
 | pan | resource scheduling | Behavior variation | [patterns/pan-resource-scheduling.md](patterns/pan-resource-scheduling.md) | Priority assignment vs. actual timeliness |
@@ -52,6 +53,7 @@ instantiates that second problem type:
 | phoebe (lifecycle) | mars (persistence), hyperion (listener), atlas (memory) |
 | thebe (compaction) | mars (persistence), pan (scheduling), earth (sorting) |
 | charon (workflow) | mars (persistence), saturn (routing), io (command execution) |
+| janus (reduction) | venus (filtering), neptune (transformation), earth (sorting), eris (pipeline) |
 
 ## Low-Level / Systems Projects
 
@@ -437,7 +439,7 @@ A lightweight text editor written in Lua with a C core, featuring a line-based d
 
 ## Unused Planet Names
 
-`adrastea`, `amalthea`, `ananke`, `ariel`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `janus`, `juliet`, `larissa`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pasiphae`, `phobos`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
+`adrastea`, `amalthea`, `ananke`, `ariel`, `belinda`, `bianca`, `caliban`, `calypso`, `carme`, `cordelia`, `cressida`, `deimos`, `desdemona`, `despina`, `elara`, `enceladus`, `epimetheus`, `helene`, `himalia`, `juliet`, `larissa`, `metis`, `mimas`, `miranda`, `naiad`, `nereid`, `oberon`, `ophelia`, `pasiphae`, `phobos`, `portia`, `prometheus`, `prospero`, `proteus`, `puck`, `rosalind`, `setebos`, `sinope`, `stephano`, `sycorax`, `telesto`, `thalassa`, `tethys`, `titania`, `trinculo`, `triton`, `umbriel`
 
 ## Control / Robotics Projects
 

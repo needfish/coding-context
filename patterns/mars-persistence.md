@@ -51,6 +51,7 @@ Arises whenever state must outlive the execution context that produces or consum
 - **jupiter/validation**: Data must be validated before writing.
 - **neptune/transformation**: Data may need serialisation/deserialisation.
 - **saturn/routing**: Queries may need routing to the correct storage backend.
+- **janus/reduction**: Persisted data is often read and reduced into summaries.
 - **uranus/authentication**: Access to storage may require authentication.
 
 ### ==== Practical Use ====

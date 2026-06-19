@@ -50,6 +50,7 @@ Arises whenever items have a natural or user-defined ordering and the consumer r
 - **mercury/display**: Ordered results are typically displayed.
 - **neptune/transformation**: Sort keys may require transformation before comparison.
 - **mars/persistence**: Sorted results may be persisted.
+- **janus/reduction**: Sorted elements are often reduced into a ranked result.
 
 ### ==== Practical Use ====
 

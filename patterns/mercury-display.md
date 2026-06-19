@@ -50,6 +50,7 @@ Occurs whenever a system has internal data that a human needs to see. The data m
 
 - **mars/persistence**: The source data may come from a persistence layer.
 - **neptune/transformation**: Raw data often requires transformation before display.
+- **janus/reduction**: Display often shows aggregated or summarised data.
 - **jupiter/validation**: User commands triggered by display interpretation must be validated.
 - **saturn/routing**: Display events may need routing to handlers.
 - **earth/sorting**: Ordered display requires a sorting subproblem.

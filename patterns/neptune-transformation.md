@@ -49,6 +49,7 @@ Arises whenever two parts of the system use different representations for semant
 
 - **mars/persistence**: Serialisation for storage is a transform.
 - **mercury/display**: Data may need transformation before display.
+- **janus/reduction**: Transformed elements are often reduced (map-reduce pattern).
 - **jupiter/validation**: Validation often precedes transformation.
 - **venus/filtering**: Filter may produce a subset that then needs transformation.
 - **earth/sorting**: Sort keys may need transformation before comparison.
