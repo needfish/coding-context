@@ -34,12 +34,12 @@ Arises whenever a tool finds results and the user wants to act on them  --  unzi
 
 ## Known Failure Modes
 
-- **Command injection**: A malicious item value (e.g., a filename containing `; rm -rf /`) is substituted literally into a shell command, causing unintended execution.
+- **Command injection**: A malicious item value (e.g., a filename containing `; rm -rf /`) is substituted into a shell command, causing unintended execution.
 - **Argument overflow (batch mode)**: Too many items are passed as arguments, exceeding the OS maximum argument length (`ARG_MAX`).
 - **Resource exhaustion**: Too many parallel processes exhaust system memory, file descriptors, or process table entries.
 - **Output interleaving**: Multiple parallel processes write to stdout simultaneously, producing garbled interleaved output.
-- **Deadlock on output buffers**: A subprocess blocks writing to stdout because the parent is not reading, while the parent waits for the subprocess to exit.
-- **Placeholder mismatch**: The command template contains a placeholder token that the executor does not recognise, leading to literal (unsubstituted) characters in the command.
+- **Deadlock on output buffers**: A subprocess blocks writing to stdout because the parent is not reading, while the parent waits for it to exit.
+- **Placeholder mismatch**: The command template contains a token the executor does not recognise, leaving literal (unsubstituted) characters in the command.
 
 ## Forces
 

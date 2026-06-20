@@ -98,4 +98,4 @@ Run at full speed, never sleep. In embedded: `WFI` (wait for interrupt) in the i
 
 ## Frame Concern
 
-**The gap between energy consumption and energy availability.** The system consumes energy at different rates depending on its activity state, but the energy source provides power at a fixed or variable rate (battery discharge, solar harvesting). The gap widens when the system is active (burst consumption) and narrows when it sleeps (trickle charging). Managing power means predicting future energy availability and throttling consumption to stay within budget  --  a prediction problem at the physical level, not a scheduling problem.
+**The gap between energy consumption and energy availability.** The system consumes energy at different rates depending on activity state, while the source provides power at a fixed or variable rate (battery discharge, solar harvesting). The gap widens during bursts of activity and narrows during sleep. Managing power means predicting future energy availability and throttling consumption to stay within budget  --  a physical-level prediction problem, not a scheduling one.

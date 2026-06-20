@@ -86,4 +86,4 @@ A single `if/elif/else` chain or a hash map from key to handler function. Python
 
 ## Frame Concern
 
-**Route table consistency.** The route table is a shared reference that multiple senders and handlers depend on. When the table changes, in-flight messages may be routed inconsistently. The concern is how to version the route table and what happens to in-flight messages during a change.
+**Route table consistency.** The route table is a shared reference that senders and handlers depend on. When it changes, in-flight messages may be routed inconsistently. The concern is how to version the table and what happens to in-flight messages during a change.

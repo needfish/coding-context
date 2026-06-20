@@ -89,4 +89,4 @@ Count lines with `wc -l` or a script that reads all lines and counts blanks vs. 
 
 ## Frame Concern
 
-**Grammar coverage vs. real-world source variety.** A code counter works by classifying text according to language rules, but real-world source code contains edge cases (nested comments in strings, preprocessor directives, template languages embedded in code) that any fixed grammar cannot fully anticipate. The concern is how the classifier behaves when it encounters text that its grammar does not correctly describe  --  whether it fails safe (misses a count) or fails unsafely (causes a cascade of misclassifications).
+**Grammar coverage vs. real-world source variety.** Real-world source code contains edge cases (nested comments in strings, preprocessor directives, template languages embedded in code) that any fixed grammar cannot fully anticipate. The concern is whether the classifier fails safe (misses a count) or fails unsafely (cascade of misclassifications) when it encounters text its grammar does not correctly describe.

@@ -102,4 +102,4 @@ Use the language's built-in allocator. Rust: `Box`, `Vec`, `HashMap`. Python: au
 
 ## Frame Concern
 
-**The gap between allocation request sizes and the underlying page granularity of virtual memory.** The application requests arbitrary byte counts, but the OS provides memory only in page-sized (4 KiB or larger) units. The allocator must bridge this gap by splitting pages into smaller chunks and managing the resulting inventory, but its splitting and coalescing strategies determine how well it can satisfy future requests. When the inventory cannot satisfy a request (fragmentation), the allocator must request more pages, potentially exacerbating the gap further.
+**The gap between request granularity and page granularity.** Applications request arbitrary byte counts, but the OS provides memory only in page-sized (4 KiB or larger) units. The allocator bridges this gap by splitting pages into smaller chunks and managing inventory. Its splitting and coalescing strategies determine how well it can satisfy future requests. When inventory cannot satisfy a request (fragmentation), the allocator requests more pages, potentially widening the gap further.

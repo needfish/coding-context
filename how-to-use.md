@@ -39,6 +39,7 @@ Each pattern uses a consistent structure. Which sections you read depends on whe
 | **Build** | Start with (minimal form), Signs you are in this pattern | Minimal implementation, skeleton structure |
 | **Evaluate** | Known Failure Modes, Real project examples | Edge cases, comparison against real code |
 | **Reflect** | Split into its own module when, Common traps | Refactoring triggers, lessons learned |
+| **Reflect** | [refactoring-catalog.md](refactoring-catalog.md) | Choose the right refactoring technique for a co-change cluster |
 
 **Order for first pass (fast assessment):**
 
@@ -114,6 +115,24 @@ The moment one of these triggers fires, open the corresponding pattern, read the
 | Raw file or network data arrives in bytes | `pluto`: split when encoding detection or format sniffing is needed |
 
 After refactoring, run a 5 whys analysis on the issue that triggered the split. If all root causes are resolved, the design is stable for this pattern. If not, loop back through Model with the new understanding.
+
+### Step 5: Apply the Right Refactoring Technique
+
+After git co-change analysis identifies module-boundary violations, open
+[refactoring-catalog.md](refactoring-catalog.md) and find the row that matches
+your co-change signal. The catalog maps signals to techniques across three
+paradigms:
+
+| Paradigm | Catalog | Use when... |
+|----------|---------|-------------|
+| Object-oriented | [Refactoring.Guru](https://refactoring.guru/refactoring/catalog) | Your code uses classes, objects, inheritance, polymorphism |
+| Functional / algebraic | [Kent Catalog](https://www.cs.kent.ac.uk/projects/refactor-fp/publications/refactoring-draft-catalogue.pdf) | Your code uses sum types, pattern matching, higher-order functions, monads |
+| Data-oriented | [Data-Oriented Design](https://www.dataorienteddesign.com/dodmain/node16.html) | Your code organizes logic as transforms over tables of data |
+
+Apply the refactoring, then re-run the co-change analysis to confirm the cluster
+is now contained within a single module.
+
+---
 
 ---
 

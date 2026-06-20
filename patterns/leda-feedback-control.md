@@ -95,4 +95,4 @@ On/off (bang-bang) control with hysteresis: turn the actuator on when the value 
 
 ## Frame Concern
 
-**The gap between measurement and truth.** The controller acts on sensor measurements, not the actual state of the plant. Every sensor has noise, bias, delay, and finite resolution  --  the controller cannot directly know the true state. It must infer it from imperfect measurements and compensate for the gap through filtering, estimation, and robust gain margins. When the gap grows too large (sensor failure, unmodelled dynamics, excessive delay), the controller's corrections become counterproductive and the system destabilises.
+**The gap between measurement and truth.** The controller acts on sensor readings, not the actual plant state. Every sensor has noise, bias, delay, and finite resolution  --  the true state is never directly known. The controller must infer it through filtering, estimation, and robust gain margins. When the gap grows too large (sensor failure, unmodelled dynamics, excessive delay), corrections become counterproductive and the system destabilises.

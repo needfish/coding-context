@@ -39,7 +39,7 @@ Arises in any system with concurrent contention for a scarce resource: RTOS task
 
 ## Known Failure Modes
 
-- **Priority inversion**: A low-priority consumer holds a resource needed by a high-priority consumer, causing the high-priority one to wait. Mitigated by priority inheritance or priority ceiling protocols.
+- **Priority inversion**: A low-priority consumer holds a resource needed by a high-priority one, causing the high-priority consumer to wait. Mitigated by priority inheritance or priority ceiling protocols.
 - **Starvation**: A consumer never receives service because higher-priority consumers continuously arrive. Mitigated by ageing (gradually increasing priority of starved consumers) or fair queuing.
 - **Convoy effect**: A long-running consumer blocks behind a short one, or vice versa in FIFO scheduling, causing bursty latency.
 - **Thundering herd**: Multiple high-priority consumers become ready simultaneously and the scheduler cannot distinguish which to run first, causing jitter.
@@ -96,4 +96,4 @@ First-come, first-served (FIFO queue). A single-threaded event loop. No prioriti
 
 ## Frame Concern
 
-**The gap between priority assignment and actual timeliness.** The scheduler assigns priority to consumers, but the actual time a consumer waits depends on the interaction between priorities, resource holding times, blocking on shared resources, and preemption patterns. A consumer with high priority can still miss its deadline if it shares a resource with a lower-priority consumer (priority inversion) or if interrupt handling delays its activation. The concern is how the scheduler's policy maps to the actual temporal behaviour experienced by consumers  --  policy is abstract, but timeliness is concrete.
+**The gap between priority assignment and actual timeliness.** The scheduler assigns priority, but wait time depends on the interaction of priorities, resource holding times, shared-resource blocking, and preemption patterns. A high-priority consumer can still miss its deadline due to priority inversion (sharing a resource with a lower-priority consumer) or interrupt handling delays. The concern is how policy maps to actual temporal behaviour  --  policy is abstract, timeliness is concrete.

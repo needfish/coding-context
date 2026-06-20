@@ -64,7 +64,9 @@ Arises at every security boundary  --  API endpoints, inter-service calls, file 
 Any project that distinguishes between users, restricts actions by identity, or communicates with authenticated services.
 
 #### Start with (minimal form)
-A single hard-coded API key checked with a string comparison. A simple username/password pair in a config file. No token generation, no session management.
+Use the framework's built-in auth if available (Elysia's `@elysiajs/auth`, Hono's `hono/auth`, Axum's `axum-extra::extract::cookie`, FastAPI's `OAuth2PasswordBearer`). These handle hashing, session management, and timing-safe comparison behind a standard interface.
+
+Without a framework: use the standard library's constant-time comparison for credential verification (Python's `hmac.compare_digest`, Go's `subtle.ConstantTimeCompare`, Rust's `subtle::ConstantTimeEq`). Store credentials as hashes using standard crypto (Python `hashlib.scrypt`, Go `bcrypt`, Rust `argon2`). The minimal form is a single environment-variable API key verified with constant-time comparison. No token generation, no session management.
 
 #### Split into its own module when (observable triggers)
 - More than one user needs distinct identities.
@@ -85,6 +87,7 @@ A single hard-coded API key checked with a string comparison. A simple username/
 
 #### Common over-engineering traps
 - Integrating OAuth2/OIDC on day 1 when a shared secret suffices.
+- Using raw string comparison (`==`) for credential verification instead of constant-time comparison from the standard library.
 - Building a full role/permission system before you have more than one user type.
 - Implementing token refresh before measuring that sessions expire too frequently.
 

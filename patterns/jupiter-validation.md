@@ -41,8 +41,8 @@ Arises at every boundary where external data enters the system  --  user input, 
 
 ## Forces
 
-- **Strictness vs. tolerance**: Strict validation catches errors early but rejects borderline data that may be acceptable; tolerant validation accepts more but shifts error detection downstream.
-- **Early vs. deferred reporting**: Reporting all errors at once helps the caller fix everything; reporting the first error only avoids wasted computation.
+- **Strictness vs. tolerance**: Strict catches errors early but may reject borderline data; tolerant accepts more but shifts error detection downstream.
+- **Early vs. deferred reporting**: Reporting all errors at once helps the caller fix everything; reporting only the first avoids wasted computation.
 - **Schema-first vs. code-first**: Declarative rules (schemas) are easier to audit but less expressive; imperative rules (code) are more flexible but harder to verify completeness.
 - **Parsing vs. validation**: Distinguishing structural parsing (is this valid JSON?) from semantic validation (is this value in range?) clarifies responsibility.
 

@@ -47,9 +47,9 @@ Arises at every boundary where external data enters the system. It is the outerm
 
 - **Encoding misdetection**: Bytes interpreted as the wrong encoding produce garbled output (mojibake) without error, silently corrupting the user's data.
 - **Silent truncation**: Input ends mid-structure, and the parser produces incomplete output without error or with a misleading "success" status.
-- **Error cascade**: A recovery mechanism after one error misinterprets the remainder of the input, producing a cascade of misleading secondary errors.
+- **Error cascade**: A recovery mechanism misinterprets the remaining input after one error, producing misleading secondary errors.
 - **Position overflow**: Input exceeds the maximum trackable offset (2^31 or 2^63 bytes), causing line/column counters to wrap and error locations to become nonsensical.
-- **Catastrophic backtracking**: Regex-based or PEG parsers take exponential time on crafted input (ReDoS vulnerability), causing denial of service.
+- **Catastrophic backtracking**: Regex-based or PEG parsers take exponential time on crafted input (ReDoS), causing denial of service.
 - **Memory blowup during parse**: Building the full parse tree in memory before streaming causes OOM on large inputs (multi-gigabyte JSON without streaming).
 - **Decompression bomb / entity expansion**: Recursive entity expansion (XML billion laughs), anchor aliases (YAML deep nesting), or repeated indirection (JSON with `__proto__` tricks) causes exponential memory growth.
 - **Line ending ambiguity**: Mixed CR, LF, and CRLF line endings cause off-by-one column counts or spurious blank lines in line-oriented formats.
@@ -133,4 +133,4 @@ let data: MyStruct = serde_json::from_str(&content)?;  // first error aborts
 
 ## Frame Concern
 
-**The gap between byte sequences and structured semantics.** The parser receives a stream of bytes and must recover the structure intended by the producer. But the producer's intent is only partially encoded in the byte stream  --  encodings are underspecified, format versioning is implicit, spec corner cases are exercised unknowingly, and human error introduces malformed data at every boundary. The parser must decide how to bridge this gap: what to infer when bytes are ambiguous (encoding detection, format sniffing), when to reject (malformed but possible to interpret), how to recover (skip, default, or abort after a parse error), and what to tell the user when it fails. Every decision is a trade-off between robustness (process more real-world data) and safety (never silently corrupt data). The concern is not how to parse well-formed input  --  that is mechanical. The concern is how to handle the indeterminate space between bytes and meaning where the structure must be recovered, not given.
+**The gap between byte sequences and structured semantics.** The producer's intent is only partially encoded in the byte stream  --  encodings are underspecified, format versioning is implicit, spec corner cases arise unknowingly, and human error introduces malformed data at every boundary. The parser must decide what to infer when bytes are ambiguous (encoding detection, format sniffing), when to reject (malformed but possible to interpret), how to recover (skip, default, or abort), and what to tell the user. Every choice sits between robustness (process more real-world data) and safety (never silently corrupt data). Parsing well-formed input is mechanical. The concern is the space between bytes and meaning where structure must be recovered, not given.

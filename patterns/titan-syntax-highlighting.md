@@ -35,10 +35,10 @@ Arises in any tool that displays source code  --  text editors, pagers, diff vie
 
 ## Known Failure Modes
 
-- **Misclassification**: The wrong grammar is applied (e.g., highlighting a Markdown file as C++), producing nonsensical colours.
+- **Misclassification**: The wrong grammar is applied (e.g., Markdown highlighted as C++), producing nonsensical colours.
 - **Incomplete grammar**: The grammar does not cover all constructs of the language, leaving some text unstyled or mis-styled.
-- **Performance**: Re-highlighting the entire file on every keystroke in an editor is too slow; incremental highlighting is needed but complex.
-- **Theme gap**: A token type present in the grammar has no corresponding entry in the theme, causing it to render in the default colour (often invisible against the background).
+- **Performance**: Re-highlighting the entire file on every keystroke is too slow; incremental highlighting is needed but complex.
+- **Theme gap**: A token type in the grammar has no corresponding theme entry, causing it to render in the default colour (often invisible).
 - **Grammar conflict**: Two grammars claim the same file extension, or nested grammars conflict on delimiter boundaries.
 - **Encoding mismatch**: The grammar expects a particular encoding (UTF-8) but the source text uses a different encoding, causing garbled tokenization.
 
