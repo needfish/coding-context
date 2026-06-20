@@ -7,7 +7,57 @@
 
 # Refactoring Catalog Reference
 
-Three catalogs, organized by paradigm:
+Refactoring operates at two levels:
+
+| Level | Scope | Reference |
+|-------|-------|-----------|
+| **File / module** | Moving code between files, deciding when to extract or merge modules | Evan Czaplicki, "The Life of a File" -- when to split, when to keep together |
+| **Within-file** | Code transformations inside a module (extract method, inline class, etc.) | Catalogs below (Refactoring.Guru, Kent, Data-Oriented) |
+
+## File / Module Level: Evan Czaplicki's Split Strategy
+
+Evan Czaplicki (creator of Elm) describes a strategy for file evolution in
+"The Life of a File" (Elm Conf 2017, <https://www.youtube.com/watch?v=XpDsk374LDE>):
+
+1. **Start in one file.** Do not pre-split. Let the code grow until a coherent
+   abstraction emerges.
+2. **Extract when the abstraction is clear.** Pull the abstraction into its own
+   file when its interface is stable and it has a single responsibility.
+3. **Split when a module changes for multiple reasons.** If git co-change
+   analysis shows files in the same module never co-change, the module has
+   multiple responsibilities -- split it.
+4. **Merge when a cluster spans modules.** If git co-change analysis shows
+   files in different modules always change together, the boundary is wrong --
+   merge them into one module.
+
+The trigger is always **observed co-change**, not anticipated future need.
+Do not split or merge based on speculation.
+
+**Connection to data representation:** The same exploration applies to data models.
+Czaplicki's talk walks through concrete Elm examples of checkbox lists that look
+identical but demand different data representations:
+
+- **User settings** (notifications, autoplay, location) -- simple boolean toggles,
+  modeled as a record of Bool fields
+- **Fruit selection with a limit** (max 2 items) -- needs to enforce count constraints
+  at the type level, modeled as a custom type or a set with a size invariant
+
+The talk demonstrates multiple Elm type-level representations for each -- records,
+dictionaries, custom types with different shapes -- as a concrete catalog of design
+alternatives for the same UI pattern. This is the practical counterpart of William
+Kent's systematic catalog of 37+ design options for a single fact (see
+[many-forms.md](many-forms.md)).
+
+Key insight from Czaplicki: **not everything that looks the same is the same thing.**
+Two checkbox lists may appear identical, but different domain constraints demand
+different data models. Exploring all the possible representations before committing
+avoids premature abstraction that serves no concrete use case.
+
+When a module's internal data model becomes awkward during git co-change analysis,
+revisit the representation -- Kent's catalog shows the alternatives, Czaplicki's
+examples demonstrate them in code.
+
+Three catalogs for within-file transformations, organized by paradigm:
 
 | Catalog | Paradigm | Scope |
 |---------|----------|-------|
@@ -433,4 +483,4 @@ Reference: <https://www.dataorienteddesign.com/dodmain/node16.html>
 ### General
 
 - **Martin Fowler's Catalog** (<https://refactoring.com/catalog/>) -- the original catalog, paradigm-neutral for most composing-method refactorings (Extract Function, Inline Variable, etc.).
-- **Safety Enforcement Tool References** ([safety-enforcement-tool-references.md](safety-enforcement-tool-references.md)) -- linting, static analysis, and enforcement tools for JavaScript, C/C++, Rust, and Python.
+- **Safety Enforcement Tool References** ([safety-tools.md](safety-tools.md)) -- linting, static analysis, and enforcement tools for JavaScript, C/C++, Rust, and Python.
