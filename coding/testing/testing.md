@@ -16,6 +16,7 @@ Test with:
 - Single-element input
 - Structurally invalid input (wrong type, missing field, out-of-range value)
 - Maximum-size input at the domain boundary
+- Optional/absent values -- for each optional field, test the present and absent cases. See [modeling/optionality.md](../modeling/optionality.md) for how absence is modeled.
 
 Add guard clauses that return Err or raise at function entry for each invalid state.
 

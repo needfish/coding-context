@@ -10,6 +10,8 @@ Write a function signature and stub with an entry point. Run it (does nothing). 
 
 Pick the helper with the fewest parameters and no dependencies on other helpers. Implement with a literal return (empty list, null, zero) first. Replace the literal with real logic using the pattern's minimal form. Test and repeat.
 
+For optional fields, choose the absent representation during stubbing -- match the choice made during modeling (see [modeling/optionality.md](../modeling/optionality.md)). A stub that returns `None` vs. `[]` vs. `-1` signals different semantics to callers.
+
 ## Minimal Forms from Patterns
 
 Open each pattern's "Start with (minimal form)" section from [patterns/](../patterns/). These give the simplest correct implementation for each subproblem.
@@ -32,3 +34,9 @@ Add hierarchical section headers. Order top-down (caller before callee). Group c
 2. **NATIVE OVER LIBRARIES** --- does a built-in language feature or platform API cover this without an import?
 3. **ONE LINE WHERE POSSIBLE** --- can this be expressed as a single expression?
 4. **EXISTING DEPS ONLY** --- is there already an installed dependency that covers this? If not, ask the user.
+
+## Loop Invariants and Higher-Order Functions
+
+See [correctness-reasoning.md](correctness-reasoning.md) for loop invariants,
+higher-order functions, and reasoning about code correctness.
+
