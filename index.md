@@ -61,10 +61,3 @@ instantiates that second problem type:
 (found during Reflect phase git history analysis) to concrete refactoring
 techniques from three catalogs:
 
-| Catalog | Paradigm |
-|---------|----------|
-| [Refactoring.Guru](https://refactoring.guru/refactoring/catalog) | Object-oriented |
-| [Kent Functional Refactorings](https://www.cs.kent.ac.uk/projects/refactor-fp/publications/refactoring-draft-catalogue.pdf) | Functional / algebraic |
-| [Data-Oriented Design](https://www.dataorienteddesign.com/dodmain/node16.html) | Data-oriented / transforms |
-
-Use during the **Reflect** phase after running git co-change analysis.
