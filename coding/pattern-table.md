@@ -21,7 +21,6 @@ See [how-to-use.md](how-to-use.md) for a project-type-to-patterns reference and 
 | titan | syntax highlighting | Behavior variation | [patterns/titan-syntax-highlighting.md](patterns/titan-syntax-highlighting.md) | Grammar coverage vs. source variety |
 | rhea | syntax detection | Behavior variation | [patterns/rhea-syntax-detection.md](patterns/rhea-syntax-detection.md) | Information deficit at decision time |
 | janus | reduction / aggregation | Behavior variation | [patterns/janus-reduction-aggregation.md](patterns/janus-reduction-aggregation.md) | Associativity and the identity element |
-| iapetus | code counting | Behavior variation | [patterns/iapetus-code-counting.md](patterns/iapetus-code-counting.md) | Grammar coverage vs. real-world source variety |
 | hyperion | network listener | Object variation | [patterns/hyperion-network-listener.md](patterns/hyperion-network-listener.md) | Connection establishment vs. request processing gap |
 | pan | resource scheduling | Behavior variation | [patterns/pan-resource-scheduling.md](patterns/pan-resource-scheduling.md) | Priority assignment vs. actual timeliness |
 | atlas | memory allocation | Object variation | [patterns/atlas-memory-allocation.md](patterns/atlas-memory-allocation.md) | Request size granularity vs. page granularity |
@@ -47,7 +46,7 @@ instantiates that second problem type:
 | pandora (workpiece) | mercury (display), mars (persistence), neptune (transformation) |
 | callisto (walk) | venus (filtering), ganymede (output format) |
 | hyperion (listener) | neptune (transformation), saturn (routing) |
-| titan (highlighting) | rhea (detection), iapetus (counting) |
+| titan (highlighting) | rhea (detection) |
 | eris (pipeline) | neptune (transformation) repeated N times |
 | pluto (parsing) | jupiter (validation), neptune (transformation), mars (persistence) |
 | phoebe (lifecycle) | mars (persistence), hyperion (listener), atlas (memory) |

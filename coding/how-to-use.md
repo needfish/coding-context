@@ -74,7 +74,7 @@ Frame Concern              ->   The fundamental difficulty
 
 ## How to Navigate the Repository
 
-**You do not need to read all 27 patterns.** The repository is designed for targeted lookup.
+**You do not need to read all 26 patterns.** The repository is designed for targeted lookup.
 
 ### Step 1: Read the core patterns for your project type
 
@@ -86,14 +86,14 @@ As you read each pattern, you will recognise that your system has multiple probl
 
 ### Step 3: Watch for co-occurring patterns
 
-The Common Clusters section in [index.md](index.md) shows patterns that travel together:
+The Common Clusters section in [pattern-table.md](pattern-table.md) shows patterns that travel together:
 
 ```
 saturn (routing)        ->   also look at hyperion (listener), jupiter (validation)
 pandora (workpieces)    ->   also look at mercury (display), mars (persistence)
 callisto (walk)         ->   also look at venus (filtering), ganymede (output format)
 hyperion (listener)     ->   also look at neptune (transformation), saturn (routing)
-titan (highlighting)    ->   also look at rhea (detection), iapetus (counting)
+titan (highlighting)    ->   also look at rhea (detection)
 eris (pipeline)         ->   also look at neptune (transformation) repeated N times
 pluto (parsing)         ->   also look at jupiter (validation), neptune (transformation), mars (persistence)
 janus (reduction)       ->   also look at venus (filtering), neptune (transformation), earth (sorting), eris (pipeline)
