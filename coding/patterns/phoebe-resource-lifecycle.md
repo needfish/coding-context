@@ -1,119 +1,78 @@
-# phoebe: Resource Lifecycle
+# ------------------------------------------------------------------------------
+#  phoebe-resource-lifecycle.md
+#  Object variation -- the resource type changes while the acquire/release contract stays the same.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Object variation  --  the resource type changes while the acquire/release contract stays the same.
+# - Problem -
 
-## Problem
+Your system manages a finite resource -- an audio device, file handle, GPU context, network socket, or memory arena. It must be acquired before use, released after use, and guaranteed to be released on every exit path, including errors and early returns.
 
-A finite system resource (audio device, file handle, GPU context, network socket, memory arena) must be acquired before use, released after use, and guaranteed to be released on every exit path  --  including error paths, early returns, and exceptions.
+# - When You'll See This -
 
-## Context
+Any system that manages limited resources with global side effects. Audio libraries (init/uninit), GPU programming (context creation/destruction), file I/O (open/close), network services (bind/close), memory management (arena allocate/reset). The lifecycle is visible through explicit init/uninit or open/close function pairs.
 
-Arises whenever a system manages resources that are limited in number, have global side effects, or must be returned to a known state after use. Found in audio libraries (init/uninit), GPU programming (context creation/destruction), file I/O (open/close), network services (bind/close), and memory management (arena allocate/reset). The lifecycle is visible to the caller through explicit init/uninit or open/close function pairs. The system must ensure that partial initialisation does not leak resources and that concurrent access to the same resource is safe.
+# - How It Works -
 
-## Domains Involved
+- **Resource**: the finite entity being managed -- audio device, file handle, GPU device, network socket.
+- **Lifecycle states**: uninitialized -> initializing -> ready -> error -> closing -> closed.
+- **Acquire**: obtain the resource and transition it to the ready state.
+- **Release**: return the resource to the system and transition to closed.
+- **Guard**: a mechanism (RAII in C++, `with` in Python, `defer` in Go) that ensures release happens on all exit paths.
 
-- **Resource** (causal): the finite entity being managed (audio device, file handle, GPU device, network socket). Has state: uninitialized, initializing, ready, error, closing.
-- **Resource handle** (lexical): an opaque identifier or pointer through which the caller interacts with the resource.
-- **Acquirer** (causal): the caller that requests the resource and is responsible for releasing it.
-- **Initialiser** (causal): the system component that sets up the resource, allocates backing state, and transitions it to the ready state.
-- **Finaliser** (causal): the system component that tears down the resource, releases backing state, and transitions it to the uninitialized state.
-- **Configuration** (lexical): the parameters that control how the resource is initialised (device ID, buffer size, format, flags).
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every acquire has a matching release on all exit paths (success, error, early return, exception).
+- Acquiring an already-acquired resource either fails or is a no-op (no double-init).
+- Releasing an already-released resource either fails or is a no-op (no double-free).
+- Partial initialisation (an error occurs mid-init) leaves no resources leaked.
+- Concurrent access to the same resource is safe (mutex, atomic state, or single-owner semantics).
 
-- Acquirer  ->  Initialiser: configuration parameters
-- Initialiser  ->  Resource: allocation, configuration, state transition
-- Initialiser  ->  Acquirer: ready resource handle (or error)
-- Acquirer  ->  Resource: usage operations (read, write, process)
-- Acquirer  ->  Finaliser: release request
-- Finaliser  ->  Resource: deallocation, state cleanup
-- Initialiser  ->  Finaliser: partial initialisation state (for cleanup on error during init)
+# - What Goes Wrong -
 
-## Invariants
+- **Resource leak**: an acquire without a matching release eventually exhausts the resource pool.
+- **Double-free**: releasing the same resource twice corrupts the allocator's state.
+- **Use-after-free**: using a resource after it's been released causes undefined behaviour.
+- **Leak on error path**: an early return or exception bypasses the release call.
+- **Thread safety**: two threads access the same resource without synchronisation.
+- **Partial init leak**: initialisation fails halfway through, and the partially-allocated sub-resources are never freed.
 
-- A resource must not be used before it is initialised or after it is finalised.
-- Initialisation must be atomic from the caller's perspective  --  either the resource is fully ready, or initialisation fails and no resource is leaked.
-- Finalisation must succeed even if some operations on the resource failed during its lifetime.
-- A resource must not be finalised while it is in use by a concurrent operation.
-- Calling init on an already-initialised resource must either fail gracefully or reinitialise it (defined policy).
-- Calling uninit on an already-uninitialised resource must be safe (idempotent or no-op).
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Automatic vs. manual management**: RAII/defer/`with` ensures release automatically but constrains lifetimes; manual open/close gives flexibility but risks leaks.
+- **Eager vs. lazy acquisition**: acquire at startup (fail fast, simple) vs. acquire on demand (efficient, but can fail mid-operation).
+- **Single-owner vs. shared**: single ownership is simple and safe; shared ownership (reference counting) is flexible but adds complexity and can leak with cycles.
 
-- **Partial init leak**: Initialisation allocates resource A successfully, then fails on resource B. The destructor is never called, and resource A leaks.
-- **Double free**: The caller calls uninit twice, and the second call operates on freed memory or closed handles.
-- **Use-after-free**: A concurrent operation holds a reference to the resource after the caller has finalised it.
-- **Init-order dependency**: Resource A must be initialised before resource B, but the caller initialises B first and A fails, leaving B orphaned.
-- **Error swallowed during finalise**: The finaliser encounters an error (e.g., close() returns EIO) but the caller has no way to handle it because the resource is already logically released.
-- **Resource exhaustion**: Resources are acquired but not released (even one leak per call in a long-running process exhausts the pool).
-- **Context manager mismatch**: The caller uses the wrong finaliser for a resource (e.g., closes a device handle instead of releasing an audio engine).
+# - Related Problems -
 
-## Forces
+- **atlas/memory-allocation**: memory is a resource with an acquire/release lifecycle.
+- **hyperion/network-listener**: sockets are resources with open/close lifecycles.
+- **mars/persistence**: file handles are resources with open/close lifecycles.
 
-- **Manual vs. automatic lifecycle**: Manual init/uninit gives the caller full control over lifetime but is error-prone; automatic lifecycle (RAII, GC, reference counting) is safer but introduces unpredictability in release timing.
-- **Synchronous vs. asynchronous finalisation**: Synchronous finalisation is simple but blocks the caller; asynchronous finalisation (deferred cleanup) is non-blocking but complicates resource state tracking.
-- **Leak detection vs. performance**: Tracking every allocation for leak detection adds memory and CPU overhead; skipping tracking risks undetected leaks in production.
-- **Implicit vs. explicit acquisition**: Some resources are acquired implicitly (first use) and released implicitly (last use); explicit acquire/release is clearer but requires caller discipline.
+# - Getting Started -
 
-## Related Subproblems
+Pair every `open()` with a `close()` in the same function. Use the language's resource management: Python's `with` statement, C++ RAII, Rust's ownership, Go's `defer`. One resource, no sharing.
 
-- **mars/persistence**: File handles and storage resources follow the lifecycle pattern.
-- **hyperion/network-listener**: Network sockets must be opened, configured, and closed through a lifecycle.
-- **atlas/memory-allocation**: Memory arenas have explicit init/reset/destroy lifecycles.
-- **pan/resource-scheduling**: Resource acquisition may block waiting for a contended resource.
-- **jupiter/validation**: Initialisation parameters must be validated before resource creation.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You manage multiple resources with different lifecycle requirements.
+- Resources need to be shared across threads.
+- You need to track resource usage for debugging or profiling.
+- The resource lifecycle logic is duplicated across the codebase.
 
-#### When this pattern matters
-Any project that manages external resources  --  audio devices, GPU contexts, file handles, network sockets, hardware peripherals, memory arenas.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-A single `init()` function that allocates resources in order, and a single `uninit()` function that frees them in reverse order. Use a boolean flag to track initialised state. No error recovery during init beyond returning an error code.
+- You have init/uninit or open/close function pairs.
+- You need to ensure cleanup happens on error paths.
+- Resource leaks are a recurring bug in your system.
+- You have a pool or cache of limited resources.
 
-```c
-typedef struct { bool ready; ... } MyResource;
-int my_init(MyResource *r, Config *cfg) {
-    if (r->ready) return -1;
-    // allocate resources in order
-    if (allocate_a() < 0) return -1;
-    if (allocate_b() < 0) { free_a(); return -1; }
-    r->ready = true;
-    return 0;
-}
-void my_uninit(MyResource *r) {
-    if (!r->ready) return;
-    // free in reverse order
-    free_b(); free_a();
-    r->ready = false;
-}
-```
+# - Common Mistakes -
 
-#### Split into its own module when (observable triggers)
-- Initialisation involves more than 3 resources that must be cleaned up independently on failure.
-- The resource has multiple valid states (uninitialised, initialising, ready, suspended, error) with different allowed operations per state.
-- Resources have dependencies on each other (A must outlive B).
-- Concurrent access to the same resource is possible (reference counting or locking needed).
-- The caller needs to configure the resource differently across invocations.
+- Not using the language's resource management features (RAII, `with`, `defer`).
+- Manually calling close on every exit path instead of using a guard -- one early return misses it and leaks.
+- Allowing resources to be used after they've been released.
+- Not protecting shared resources with synchronisation.
 
-#### Signs you're in this pattern
-- Your types have `init`/`close` or `open`/`destroy` methods.
-- Forgetting to call the cleanup method causes resource leaks (file handles, sockets, memory).
-- Resources can be in multiple states (uninitialised, ready, paused, closed).
-- Error paths must ensure cleanup happens even when intermediate steps fail.
+# - The Core Challenge -
 
-#### Real project examples
-- **miniaudio** (device lifecycle): `ma_device_init`  ->  `ma_device_start`/`ma_device_stop`  ->  `ma_device_uninit`  --  every init must have a matching uninit, enforced by convention.
-- **NessMuxer** (muxer lifecycle): `MuxerOpen`  ->  `MuxerWritePacket` (xN)  ->  `MuxerClose`  --  write errors during the packet loop must still call close to flush and release resources.
-- **Flowstate** (driver lifecycle): Each storage driver (mem, Postgres, BadgerDB) has `Open`  ->  `Commit`/`Rollback`  ->  `Close`  --  drivers are state machines under a common interface.
-- **DaemonDB** (WAL segment lifecycle): WAL segment is opened, written to, finalised (sealed), and eventually deleted after checkpoint  --  four distinct states with cross-state invariants.
-
-#### Common over-engineering traps
-- Adding reference counting before confirming concurrent access is a real problem.
-- Implementing a full state machine when a boolean `ready` flag suffices.
-- Building an automatic resource manager (RAII wrapper) before manual init/uninit causes measurable bugs.
-- Adding asynchronous initialisation before measuring that synchronous init blocks the caller.
-
-## Frame Concern
-
-**Leak prevention across all exit paths.** A resource that is acquired must be released exactly once, regardless of how many early returns, error branches, or exception paths exist between acquire and release. The concern is not about acquiring the resource but about guaranteeing its release under every possible execution path  --  a control-flow problem, not a resource problem.
+Resource management is a correctness problem on every exit path. A leak looks like no problem during testing (resources are plentiful) but becomes a crash in production (resource exhaustion). The challenge is ensuring that every acquire has exactly one matching release, on every code path, forever.

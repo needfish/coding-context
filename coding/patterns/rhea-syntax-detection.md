@@ -1,89 +1,74 @@
-# rhea: Syntax Detection
+# ------------------------------------------------------------------------------
+#  rhea-syntax-detection.md
+#  Behavior variation -- the detection rule mapping changes per file type heuristic.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the detection rule mapping changes per file type heuristic.
+# - Problem -
 
-## Problem
+Given a file path, extension, shebang line, or content signature, determine what language or format the file contains so the right processing rules can be applied.
 
-A file path, extension, shebang line, or content signature must be mapped to a language identifier so that the correct processing rules (grammar, formatter, linter) can be applied.
+# - When You'll See This -
 
-## Context
+Any tool that needs to decide how to process a file based on its content type -- syntax highlighting, linting, formatting, diff generation. Detection must work from partial information (just the filename, or just the first line) and handle ambiguous cases gracefully.
 
-Arises whenever a tool needs to decide how to process a file based on its content type  --  syntax highlighting (titan), linting, formatting, diff generation. The detection must work from partial information (the file path alone, or just the first line of content) and must handle ambiguous or unknown cases gracefully.
+# - How It Works -
 
-## Domains Involved
+- **File path**: the path or filename to classify -- may include extension, basename, or full path.
+- **Shebang line**: the first line of the file, like `#!/usr/bin/env python3`.
+- **Content signature**: magic bytes at the start of the file that identify the format (PDF starts with `%PDF`, PNG with `\x89PNG`).
+- **Heuristic rules**: the mapping from signals (extension, shebang, magic bytes) to language identifiers.
+- **Language identifier**: a string or enum that names the detected language (`python`, `rust`, `javascript`).
 
-- **File path** (lexical): the path or filename of the file to classify. May include extension, basename, or full path.
-- **Content sample** (lexical): initial bytes or lines of the file content, typically the shebang line.
-- **Mapping rules** (lexical): the set of rules that associate extensions, filenames, shebangs, and content patterns to language identifiers. May include overrides and user-defined mappings.
-- **Language identifier** (lexical): the canonical name of the detected language (e.g., "Rust", "Python", "JavaScript").
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every input produces a language identifier -- there's always a fallback (plain text).
+- Detection based on extension is instant (no file reads).
+- Shebang detection reads at most the first line.
+- Magic byte detection doesn't read more bytes than necessary for known signatures.
+- When multiple signals conflict, the most specific one wins.
 
-- File path  ->  Detector: extension, basename, parent directory names
-- Content sample  ->  Detector: shebang line (`#!/usr/bin/env python`), XML declaration (`<?xml`), magic bytes (`%PDF`)
-- Mapping rules  ->  Detector: priority-ordered mapping table
-- Detector  ->  Consumer: language identifier, confidence score (matched vs. inferred vs. guessed)
+# - What Goes Wrong -
 
-## Invariants
+- **Ambiguous extension**: `.md` could be Markdown or Mandoc -- which one do you pick?
+- **Wrong shebang**: a file has `#!/usr/bin/python` but contains Rust code -- the shebang lies.
+- **Missing extension**: a file with no extension falls back to plain text even when it's valid Python.
+- **Performance**: reading content for every file in a large project slows down startup.
+- **Heuristic conflicts**: extension says JSON, shebang says nothing, content looks like XML -- what do you report?
 
-- The same file path must always map to the same language identifier, unless mapping rules change.
-- A language identifier must be returned for every input  --  "Unknown" is a valid result, not an error.
-- Explicit user overrides (e.g., `-l rust`) must take precedence over automatic detection.
-- Mapping by extension must not match files whose extension is ambiguous (e.g., `.h` could be C, C++, or Objective-C) without consulting additional signals.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Speed vs. accuracy**: extension-based detection is instant but wrong for unusual files; content-based detection is accurate but requires reading the file.
+- **Simple vs. comprehensive**: a few rules (extension map) cover 90% of cases; a full detection system (shebang, magic bytes, content analysis) covers 99% but is more code.
 
-- **Extension collision**: The same extension is used by multiple languages (`.h`, `.pl`, `.cl`), and the detector picks the wrong one.
-- **Shebang not present**: A script file without a shebang is classified by extension alone, which may be missing or misleading.
-- **Shebang override**: An interpreter path in the shebang is non-standard (`#!/usr/local/custom/python3`), and the detector does not recognise it.
-- **Content not yet available**: The file content cannot be read (stdin, pipe, remote), so only the filename can be used.
-- **User override misspelled**: The user specifies `-l rustt`, which does not match any known language, so the override is silently ignored.
-- **Ambiguous with no tiebreaker**: Two mappings match with equal priority and the detector picks one arbitrarily.
+# - Related Problems -
 
-## Forces
+- **titan/syntax-highlighting**: detection selects the grammar for highlighting.
+- **pluto/input-parsing**: detection selects the format parser.
 
-- **Precision vs. recall**: A conservative detector returns "Unknown" for ambiguous cases (precise but frustrating); an aggressive detector guesses the most likely language (convenient but sometimes wrong).
-- **Extension vs. content**: Extension-based detection is fast but fallible; content-based detection is more accurate but requires reading the file, which may be costly or impossible.
-- **Built-in vs. configurable rules**: Built-in rules cover common cases; user-configurable rules handle project-specific conventions but add complexity.
-- **Single vs. multiple signals**: Using a single signal (extension only) is simple but inaccurate; combining multiple signals (extension + shebang + content + directory context) is more accurate but has more failure modes.
+# - Getting Started -
 
-## Related Subproblems
+A hash map from file extension to language identifier: `{".py": "python", ".rs": "rust", ".js": "javascript"}`. If not found, return "text" (plain text). No shebang, no magic bytes, no content analysis.
 
-- **titan/syntax-highlight**: Syntax highlighting depends on syntax detection to select the grammar.
-- **jupiter/validation**: The detected language may need validation against allowed languages.
-- **neptune/transformation**: Transformation may depend on the detected language.
-- **europa/config-assembly**: Language overrides are part of the configuration.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You need shebang detection (files without extensions like CLI scripts).
+- Users report wrong detection for common file types.
+- You need content-based detection for formats without standard extensions.
+- Detection logic needs independent testing from the tools that use it.
 
-#### When this pattern matters
-Any project that needs to decide how to process a file based on its content type  --  syntax highlighting, linting, formatting, diff generation.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-A hash map from file extension to language name. Python: `{'py': 'python', 'rs': 'rust', 'js': 'javascript'}`. No shebang parsing, no content sniffing.
+- Your code checks file extensions to decide how to process a file.
+- You have a list of extension-to-language mappings.
+- A file without a recognised extension gets treated as plain text and looks wrong.
+- You read the first line of a file to see if it has a shebang.
 
-#### Split into its own module when (observable triggers)
-- Extension-based mapping is insufficient  --  you need shebang detection, content sniffing, or magic bytes.
-- Over 50+ language mappings exist  --  the table becomes unwieldy to maintain in a single file.
-- Users need custom overrides for project-specific conventions.
-- Detection needs to work from partial information (stdin with no filename).
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Your editor/IDE needs to decide which language rules to apply for a file.
-- The file extension alone is ambiguous (`.h` could be C, C++, or Objective-C; `.js` could be JSX).
-- You're writing rules like "if first line starts with #!/usr/bin/python, it's Python".
-- Users complain that their files have wrong highlighting or wrong formatting.
+- Reading the whole file to detect the format when the first few bytes suffice.
+- Ordering extension checks so that `.js` matches before `.jsx` (specific before general).
+- Not providing a fallback language for unrecognised extensions.
 
-#### Real project examples
-- **Helix editor** (`syntax.rs`): Language detection is file-extension-first, with content-based shebang detection as fallback. The detection result determines which Tree-sitter grammar to load.
-- **Lite XL** (`core/doc.lua`): File extension maps to language module; shebang detection for scripts without extensions. Detection runs once on file open.
-- **chibicc** (source file type): Compiler detects source language from extension (`.c` vs `.h`) and sets preprocessor dialect accordingly.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Implementing content sniffing before confirming that extension-based detection misses too many files.
-- Building a cascading detection pipeline (extension  ->  shebang  ->  content  ->  model) when a single fallback suffices.
-- Supporting every language known to exist when your users only use 10.
-
-## Frame Concern
-
-**Information deficit at decision time.** The detector must commit to a language before it has all the information  --  the file path is available immediately, but the content (shebang, magic bytes) may require I/O. The concern is how to make the best possible decision with whatever information is currently available, and whether to revise the decision when more information arrives.
+Detection works with incomplete information. A filename alone doesn't guarantee the content, and reading content to confirm defeats the purpose of fast detection. The challenge is getting the right answer most of the time from minimal signals and failing gracefully when unsure.

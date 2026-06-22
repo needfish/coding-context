@@ -1,87 +1,75 @@
-# earth: Sorting
+# ------------------------------------------------------------------------------
+#  earth-sorting.md
+#  Behavior variation -- the comparator algorithm changes per sort key.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the comparator algorithm changes per sort key.
+# - Problem -
 
-## Problem
+You have a collection of items that need to be in a specific order. You need to arrange them by some key -- alphabetically, by number, by date, or by a custom rule.
 
-A collection must be ordered by a key derived from each element, establishing a total order among items.
+# - When You'll See This -
 
-## Context
+Any time items need to be presented, processed, or stored in a defined order -- ranked lists, sorted tables, ordered output, priority queues. Sorting feeds into display, further processing, or storage.
 
-Arises whenever items have a natural or user-defined ordering and the consumer requires ordered access. Sorting is rarely the terminal subproblem  --  sorted collections feed display (mercury), further processing (neptune), or storage (mars/persistence). The sort key may be a single field, a compound key, or a computed function.
+# - How It Works -
 
-## Domains Involved
+- **Source collection**: the items in whatever order they happen to be in.
+- **Comparator**: the rule that decides which item comes first (by name, by date, by score).
+- **Ordered collection**: the same items, now in the right sequence.
 
-- **Source collection** (lexical): unordered or partially ordered items.
-- **Comparator** (lexical): a function or key extractor that defines the ordering relation.
-- **Ordered collection** (lexical): items in the established total order.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- For any two items, one comes before the other in the result (total order).
+- If A comes before B and B comes before C, then A comes before C (transitive).
+- The sorted collection has exactly the same items as the original.
+- Equal elements keep their original relative order if you need stable sorting.
 
-- Source  ->  Sort: items
-- Comparator  ->  Sort: comparison function or key extractor
-- Sort  ->  Ordered: items in sequence
+# - What Goes Wrong -
 
-## Invariants
+- **Broken comparator**: A < B, B < C, but C < A -- the sort produces garbage or never finishes.
+- **Comparator with side effects**: the comparison function mutates state or makes network calls.
+- **Hidden O(n^2)**: sorting an already-sorted list with a bad comparator is way slower than it should be.
+- **Partial order confusion**: the comparator says two different items are "equal" when they're not.
 
-- For any two distinct elements a, b in the source, either a precedes b or b precedes a in the result (totality).
-- The ordering is transitive: if a precedes b and b precedes c, then a precedes c.
-- The ordered collection contains exactly the same elements as the source collection.
-- Sorting is stable if elements with equal keys preserve their original relative order.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Stable vs. unstable**: keeping original order for equal items costs extra memory but matters for multi-key sorts.
+- **In-place vs. copying**: sorting in place saves memory but makes concurrency harder.
+- **Cheap vs. expensive comparisons**: an expensive comparator favours algorithms that minimise comparisons (merge sort); a cheap one favours cache-friendly algorithms (quicksort, timsort).
+- **Adaptive sorting**: real-world data is often nearly sorted -- an adaptive sort runs in O(n) on almost-ordered input.
 
-- **Non-transitive comparator**: The comparison violates transitivity (a < b, b < c, c < a), causing garbage output or non-termination.
-- **Comparator side effects**: The comparator mutates state or produces external effects during comparison.
-- **Performance cliff**: Sorting an already-sorted collection with a naive comparator is O(n^2)  --  the worst implicit assumption.
-- **Partial order mishandling**: A comparator that returns "equal" for distinct elements when the domain has only a partial order.
-- **Memory pressure**: Sorting in memory when the collection exceeds available memory.
+# - Related Problems -
 
-## Forces
+- **venus/filtering**: sort often combines with filter.
+- **mercury/display**: ordered results usually get displayed.
+- **neptune/transformation**: sort keys might need processing before comparison.
+- **mars/persistence**: sorted results might get saved.
+- **janus/reduction**: sorted elements often feed into a ranked result.
 
-- **Stability**: Maintaining original order for equal keys adds memory overhead but is essential for multi-key sorts.
-- **In-place vs. copying**: In-place sorting reduces memory but constrains concurrency and aliasing.
-- **Comparison cost**: An expensive comparator favours algorithms that minimise comparisons (merge sort, tournament sort); a cheap comparator favours algorithms with good cache behaviour (quicksort, timsort).
-- **Adaptivity**: The collection may be nearly sorted (common in practice)  --  an adaptive sort runs in O(n) on nearly-sorted input.
+# - Getting Started -
 
-## Related Subproblems
+Use your language's built-in sort: Python `sorted(items, key=...)`, Rust `items.sort_by_key(...)`, JavaScript `items.sort(...)`. Pass a simple key-extraction function.
 
-- **venus/filtering**: Sort often follows or precedes filter.
-- **mercury/display**: Ordered results are typically displayed.
-- **neptune/transformation**: Sort keys may require transformation before comparison.
-- **mars/persistence**: Sorted results may be persisted.
-- **janus/reduction**: Sorted elements are often reduced into a ranked result.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You need multiple sort keys (primary, secondary, tertiary).
+- The sort key is expensive to compute -- cache it.
+- The sort direction or key is configurable at runtime.
+- The collection is too large to fit in memory (external sort).
 
-#### When this pattern matters
-Any project where items must be presented, processed, or stored in a defined order.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-Call the language's built-in sort: Python `sorted(items, key=...)`, Rust `items.sort_by_key(...)`, JavaScript `items.sort(...)`. Use a simple key-extraction function.
+- Your collection needs ordering and the default order isn't what you want.
+- The comparison logic involves multiple fields, some ascending and some descending.
+- Different parts of your code need different orderings of the same data.
+- You see the same key-extraction function copied in several places.
 
-#### Split into its own module when (observable triggers)
-- Multiple sort keys are needed (primary, secondary, tertiary).
-- The sort key is expensive to compute  --  you need to cache it.
-- The sort direction or key is user-configurable at runtime.
-- The collection is larger than available memory (external sort).
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- You have a collection that needs ordering, and the default order is wrong.
-- The comparison logic involves multiple fields, some ascending some descending.
-- Different call sites need different orderings of the same data type.
-- A sort-key extraction function appears in multiple places, varying slightly each time.
-
-#### Real project examples
-- **DaemonDB** (`b_tree.go`): B-tree maintains sorted order of keys  --  the comparator defines the tree's traversal order.
-- **tiny-lsm-go** (`sst.go`, `compaction.go`): SST file keys are sorted within each level; compaction merges sorted runs into a new sorted run.
-- **Helix editor** (picker sorting): File picker, buffer picker, symbol search  --  each sorts by different criteria (name, recency, relevance).
-
-#### Common over-engineering traps
-- Writing a custom sort algorithm before the built-in sort is proven too slow.
-- Implementing a stable sort when element identity doesn't matter.
+- Writing a custom sort algorithm before proving the built-in sort is too slow.
+- Implementing stable sort when element identity doesn't matter.
 - Pre-sorting data that the consumer will re-sort anyway.
 
-## Frame Concern
+# - The Core Challenge -
 
-**Comparator consistency.** The comparator must define a valid total order on the domain, must be consistent across multiple invocations, and must not mutate. The sort algorithm depends on this contract being met  --  but the comparator is supplied externally and may violate it.
+The comparator defines a contract the sort algorithm depends on (total order, consistency, no side effects). But the comparator comes from outside -- it might violate that contract. You need a valid, consistent, pure comparison function.

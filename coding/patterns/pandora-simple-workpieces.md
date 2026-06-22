@@ -1,103 +1,78 @@
-# pandora: Simple Workpieces
+# ------------------------------------------------------------------------------
+#  pandora-simple-workpieces.md
+#  Behavior variation -- the edit operation changes per user action, but the document state consistency contract stays the same.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the edit operation changes per user action, but the document state consistency contract stays the same.
+# - Problem -
 
-## Problem
+Users edit a structured document -- text, source code, a diagram, a spreadsheet. The system must maintain internal consistency, support undo and redo, keep multiple views synchronised, and preserve state across sessions.
 
-A user interacts with a structured document (text, spreadsheet, diagram, source code) through a sequence of editing operations. The system must maintain the document's internal consistency, support undo and redo across operations, keep multiple views synchronised, and preserve the editing state across sessions.
+# - When You'll See This -
 
-## Context
+Any application that creates and modifies documents. Text editors, IDEs, spreadsheet editors, image editors, CAD tools, note-taking apps. The document has internal structure (lines, cells, layers, nodes) that must stay consistent after every edit. Users expect to undo mistakes, redo reapplied operations, view the same document in multiple windows, and return to the same state after restarting.
 
-Arises in any application that creates and modifies documents: text editors, IDEs, spreadsheet editors, image editors, CAD tools, and note-taking apps. The workpiece has internal structure (lines, cells, layers, nodes) that must remain consistent after every edit. The user expects to reverse mistakes (undo), reapply reversed operations (redo), view the same document in multiple windows, and return to the same editing state after closing and reopening the document. The system must track which edits have been saved (dirty flag) and prompt the user before discarding unsaved work.
+# - How It Works -
 
-## Domains Involved
+- **Document model**: the internal representation of the workpiece -- a sequence of lines (text), a grid of cells (spreadsheet), or a graph of nodes (diagram editor).
+- **Edit operation**: a single change to the document -- insert, delete, replace, transform. Each operation is reversible (has an inverse for undo).
+- **Undo stack**: the history of applied operations, stored as deltas or snapshots. Popping from the stack and applying the inverse restores previous state.
+- **Dirty flag**: tracks whether the document has unsaved changes since the last save.
+- **View projection**: a visual representation of the document model -- multiple views can project different parts of the same model.
 
-- **Document model** (lexical): the internal representation of the workpiece  --  typically a sequence of lines (text), a grid of cells (spreadsheet), or a graph of nodes (diagram editor).
-- **Document view** (causal): a projection of the document model onto the screen, with scroll offset, selection state, and visual annotations.
-- **Edit operation** (causal): a single atomic change to the document (insert character, delete line, paste, replace).
-- **Transaction** (lexical): a group of edit operations that are applied and undone together as a unit (e.g., a single "paste" may insert dozens of characters, but the entire paste is a single undo step).
-- **Undo stack** (lexical): the history of committed transactions, navigable backwards.
-- **Redo stack** (lexical): transactions popped from the undo stack, available for reapplication.
-- **Dirty flag** (lexical): a boolean indicating whether the in-memory document differs from the persisted copy on disk.
-- **Selection** (lexical): the range(s) of the document that the user has highlighted and that subsequent operations will act on.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every edit leaves the document in a valid internal state (no half-applied changes).
+- Undo reverses exactly one edit and restores the exact previous state.
+- All views of the same document are consistent -- an edit in one view appears in all others.
+- The dirty flag accurately reflects whether unsaved changes exist.
+- A save persists the current state so that reopening the file restores it.
 
-- User  ->  Editor: edit commands (type, delete, paste, cut, indent)
-- Editor  ->  Document model: atomic edit operations constrained to maintain structural invariants
-- Document model  ->  Undo stack: composed transactions pushed on each command boundary
-- Undo stack  ->  Document model: reversed operations applied on undo, original operations stored on redo
-- Document model  ->  Views: change notifications (line inserted, lines deleted, selection changed)
-- Views  ->  Screen: redrawn regions after change notification
-- Editor  ->  File system: read on open, write on save
+# - What Goes Wrong -
 
-## Invariants
+- **Undo breaks after save**: saving resets the undo stack, so users can't undo changes made before the save.
+- **Inconsistent multi-view**: editing in one window doesn't update another window showing the same file.
+- **Lost work on crash**: edits since the last save disappear when the process crashes.
+- **Undo corruption**: applying undo after a long editing session produces a corrupted state because operations weren't correctly inverted.
+- **Large undo stack**: storing full snapshots for every edit consumes too much memory.
+- **Dirty flag desync**: the flag says there are unsaved changes when there aren't, or vice versa.
 
-- Every undo must restore the document to the exact state before the corresponding transaction was applied.
-- Undo must reverse the effects of a transaction without side effects  --  no other state changes may leak.
-- The undo stack must not grow unbounded; old transactions may be discarded under memory pressure, but only from the oldest end.
-- A new edit after an undo (but no redo) must discard the redo stack  --  the undone state becomes the new head.
-- The dirty flag must be set on any edit that modifies the document and cleared on save.
-- The dirty flag must be computed correctly across undo/redo  --  undoing back to the saved state must clear the flag.
-- All views of the same document must reflect the same document state at all times; a change in one view must invalidate all others.
-- The selection must remain valid after every edit  --  if the selection spans a region that was deleted, it must clamp to the available range.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Delta vs. snapshot undo**: storing deltas (what changed) uses less memory but is harder to implement; storing full snapshots is simple but memory-heavy.
+- **Coalescing vs. individual undo**: grouping rapid keystrokes into one undo step is more useful but complicates the undo model.
+- **Synchronous vs. asynchronous persistence**: saving on every edit loses no work but may be slow; saving on a timer batches writes but risks losing recent edits.
 
-- **Stale undo pointers**: After an undo, synthesised edit operations (auto-indent, bracket completion) create new undo entries that reference the undone state, creating a corrupted history.
-- **Selection drift**: Undo restores document content but the selection position is not restored, leaving the cursor in a different location than when the original edit was made.
-- **Transaction coalescing mismatch**: Adjacent typing is coalesced into one transaction for undo efficiency, but the coalescing threshold is too aggressive and merges edits the user thinks of as separate.
-- **Dirty flag desync**: The saved-state checkpoint shifts after undo past the save point, but the dirty flag is not recalculated, causing the user to either lose work on close or be prompted unnecessarily.
-- **Multi-view desync**: A second view (minimap, split pane) is not invalidated after an edit in the primary view, showing stale content.
-- **Large document undo blowup**: Storing the entire document state per undo entry consumes too much memory; storing only the delta requires correct recomposition on undo.
-- **Encoding corruption**: The document stores content in one encoding (UTF-8) but the file system uses another, causing save/load to produce different byte sequences even though the logical content is the same.
+# - Related Problems -
 
-## Forces
+- **mars/persistence**: documents are saved to and loaded from storage.
+- **mercury/display**: the document is displayed in one or more views.
+- **neptune/transformation**: document formats may need conversion.
 
-- **Undo granularity vs. memory**: Storing every keystroke as a separate undo entry gives fine-grained undo but uses memory; coalescing keystrokes into time-bounded transactions (e.g., 2-second window) reduces memory but loses per-character undo.
-- **Full snapshot vs. delta**: Storing the full document state per undo entry is simple but wasteful; storing a delta (inverse operations) is memory-efficient but requires careful composition.
-- **Selection preservation vs. edit correctness**: Restoring the exact pre-edit selection after undo may place the cursor in an invalid position if the surrounding content changed; clamping the selection is safer but may not match the user's expectation.
-- **Document model complexity vs. edit efficiency**: A rope data structure scales well for large documents but is more complex than a simple array of lines; the array is simple but degrades on large insertions.
+# - Getting Started -
 
-## Related Subproblems
+A text buffer (string) with insert/delete at a cursor position. Undo: store the previous string before each edit. One view. No syntax highlighting, no multi-cursor, no incremental save.
 
-- **mars/persistence**: The save/load cycle bridges the in-memory workpiece to durable storage.
-- **neptune/transformation**: The document model transforms user intent (key presses) into structural changes to the document.
-- **mercury/display**: Views project the document model onto the screen, translating internal coordinates (line/column) to screen coordinates (pixel offset).
-- **saturn/routing**: The command system routes user input through key bindings to specific editing commands.
-- **titan/syntax-highlighting**: The highlighter is an incremental computation over the document  --  it must re-highlight only the changed region.
-- **atlas/memory-allocation**: The document model must manage memory efficiently for large files (line count, total bytes).
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You need multiple views of the same document (split pane, minimap, outline).
+- You need coalesced undo (typing "hello" is one undo step, not five).
+- The document structure is complex enough that delta-based undo matters.
+- You need to preserve editing state across sessions (cursor position, undo stack).
 
-#### When this pattern matters
-Any application that creates and modifies documents  --  text editors, IDEs, spreadsheet editors, image editors, CAD tools, note-taking apps.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-Store the document as a single string or list of strings. On each edit, replace the entire content. No undo, no multi-view sync, no incremental highlighting. Python: `doc = ""`, `doc = doc[:pos] + char + doc[pos:]`.
+- You're building an editor or a tool that edits structured content.
+- Users can undo and redo their changes.
+- The document has internal structure that must stay consistent.
+- Multiple UI components display the same document and need to stay in sync.
 
-#### Split into its own module when (observable triggers)
-- Users need to undo mistakes (undo/redo stack emerges).
-- The document is large enough that full-string replacement on every keystroke is slow (incremental data structure needed).
-- Multiple views or split panes show the same document (change notification across views).
-- The document must track whether it differs from the saved copy (dirty flag with history awareness).
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Your application lets users create and modify structured content (text, diagrams, spreadsheets).
-- Users complain about losing work on accidental edits (no undo).
-- The document model and the display code are tangled in the same functions.
-- Saving and loading involve converting the in-memory model to/from a file format.
+- Storing the full document state for every edit when delta-based undo would use less memory.
+- Not coalescing rapid edits (every keystroke is a separate undo step).
+- Allowing the document to enter an invalid state during an edit.
+- Forgetting to update all views when the document changes.
 
-#### Real project examples
-- **Helix editor** (Rope + Transaction): Document model built on a rope data structure with CRDT-style transactions. Undo stack stores inverse operations per transaction group (keystroke coalescing).
-- **Lite XL** (TextDoc + View): Document model as array of lines, view as scroll offset + selection. Undo stack of full-snapshot deltas. Dirty flag computed from save-point checkpoint.
-- **NessMuxer** (VideoEditCommand): Frame-level edit history for video cutting  --  cut, trim, split operations with undo/redo per edit session.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Building a rope data structure before measuring that string replacement is too slow for your file sizes.
-- Implementing a branching undo tree before confirming that linear undo/redo suffices.
-- Adding multi-cursor support before single-cursor editing is stable.
-
-## Frame Concern
-
-**The gap between edit operations and document state.** The user thinks in terms of edits (insert a word, delete a line, paste a block), but the document is a structured state that must stay consistent across every edit. An insert, for example, not only adds text but shifts line and column positions, invalidates selections, marks the document dirty, updates highlighting, and pushes a transaction onto the undo stack  --  all atomically. The user's conceptual edit is a single action; the system's response touches nearly every subsystem. Any subsystem that fails to update leaves the document inconsistent.
+An editor must maintain consistency at every step while providing a responsive, undoable editing experience. Each edit transforms the document from one valid state to another, and the sequence of edits must be reversible, composable, and persistent. The challenge is keeping the document model, undo stack, views, and storage synchronised through an unbounded sequence of user actions.

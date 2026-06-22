@@ -1,90 +1,78 @@
-# jupiter: Validation
+# ------------------------------------------------------------------------------
+#  jupiter-validation.md
+#  Rules variation -- rules combine, grow, and change independently.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Rules variation  --  rules combine, grow, and change independently.
+# - Problem -
 
-## Problem
+Data comes into your system from the outside. Before you process it, you need to check that it meets your requirements -- right shape, right types, right ranges, right values.
 
-Input data must be checked against a set of rules before it is accepted for processing, ensuring that downstream operations receive data that meets their expectations.
+# - When You'll See This -
 
-## Context
+Any boundary where external data enters -- user input, API requests, file imports, network messages, config files. Validation is a gate: it either passes data through or rejects it with a reason. Valid data then flows to transformation, storage, or routing.
 
-Arises at every boundary where external data enters the system  --  user input, API requests, file imports, network messages, inter-service calls. Validation is a gate; it does not transform data, it either passes it through or rejects it with a reason. It is rarely a terminal subproblem  --  valid data feeds transform (neptune), persist (mars), or route (saturn).
+# - How It Works -
 
-## Domains Involved
+- **Input**: the raw data to check -- could be JSON, form fields, a text file, or bytes from the network.
+- **Rule set**: the constraints the input must satisfy -- a schema, a list of predicates, a type definition.
+- **Result**: the validated data (if it passes) or a rejection report listing what failed.
 
-- **Input** (lexical): the raw data to be validated. May be structured (JSON, XML, protocol buffer) or unstructured (text, bytes).
-- **Rule set** (lexical): the constraints that the input must satisfy. May be a schema, a set of predicates, a formal specification.
-- **Result** (lexical): the validated data (if accepted) or a rejection report (if rejected).
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Accepted data satisfies every rule in the rule set.
+- Rejected data comes with a report saying which rule failed and on which field.
+- The same input and rules always produce the same result (deterministic).
+- Validation never mutates the input or any system state -- it's a pure check.
 
-- Input  ->  Validate: raw data, metadata (format hints, provenance)
-- Rule set  ->  Validate: constraints, type definitions, allowed ranges, required fields
-- Validate  ->  Result: accepted data (typed, coerced) or rejection (field-level errors, codes)
+# - What Goes Wrong -
 
-## Invariants
+- **Silent coercion**: the validator changes "123" (string) to 123 (int) without telling anyone, and downstream code gets a type the author didn't expect.
+- **Contradictory rules**: two rules can never both be true, so nothing ever passes.
+- **Too loose**: the rule is too broad and lets bad data through.
+- **Too strict**: the rule rejects valid data it should accept.
+- **Slow validation**: rules query external systems or run expensive checks, blocking the caller.
+- **Vague errors**: "invalid input" with no indication of which field or rule failed.
+- **Version drift**: the rules changed but old data was checked against an older version.
 
-- Accepted data must satisfy every rule in the rule set.
-- Rejected data must produce a report that identifies which rule failed and on which field.
-- Validation must be deterministic  --  the same input and rule set must produce the same result every time.
-- Validation must not mutate the input or any system state (it is a pure check).
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Strict vs. lenient**: strict catches errors early but might reject borderline data; lenient accepts more but pushes detection downstream.
+- **Report all vs. report first**: showing all errors at once helps the caller fix everything; showing only the first avoids wasted work.
+- **Declarative vs. imperative**: schemas are easier to audit but less expressive; code is more flexible but harder to verify.
+- **Parsing vs. validation**: parsing checks structure (is this valid JSON?), validation checks meaning (is this value in range?). Keep them separate.
 
-- **Coercion without confirmation**: The validator silently coerces valid-looking data (e.g., string "123" to integer 123) and the downstream receives a type the author did not intend.
-- **Rule contradiction**: Two rules cannot both be satisfied, so no input can ever pass.
-- **Over-permissiveness**: A rule is too broad and allows invalid data through.
-- **Over-rejection**: A rule is too narrow and rejects valid data.
-- **Performance**: Validation rules that query external systems or compute expensive predicates block the caller.
-- **Error location loss**: The validator reports "invalid" but does not identify which field or rule failed.
-- **Rule set version drift**: The rule set evolves but old input was validated against an older version.
+# - Related Problems -
 
-## Forces
+- **neptune/transformation**: validation runs before transformation -- clean data first, then reshape it.
+- **mars/persistence**: data gets validated before writing.
+- **saturn/routing**: incoming requests get validated before routing.
+- **mercury/display**: user input from a form needs validation before action.
+- **venus/filtering**: filter predicates might need validation.
 
-- **Strictness vs. tolerance**: Strict catches errors early but may reject borderline data; tolerant accepts more but shifts error detection downstream.
-- **Early vs. deferred reporting**: Reporting all errors at once helps the caller fix everything; reporting only the first avoids wasted computation.
-- **Schema-first vs. code-first**: Declarative rules (schemas) are easier to audit but less expressive; imperative rules (code) are more flexible but harder to verify completeness.
-- **Parsing vs. validation**: Distinguishing structural parsing (is this valid JSON?) from semantic validation (is this value in range?) clarifies responsibility.
+# - Getting Started -
 
-## Related Subproblems
-
-- **neptune/transformation**: Validation often precedes transformation  --  validate first, then transform the clean data.
-- **mars/persistence**: Data is validated before writing.
-- **saturn/routing**: Incoming requests are validated before routing.
-- **mercury/display**: User input through a display requires validation before action.
-- **venus/filtering**: A filter predicate may need validation.
-
-### ==== Practical Use ====
-
-#### When this pattern matters
-Any project that accepts external input  --  API requests, file imports, user forms, configuration files, network messages.
-
-#### Start with (minimal form)
 Inline `if` checks at the point of use. Python: `if not isinstance(value, int): raise ValueError(...)`. Rust: `if value > MAX { return Err(...) }`. No schema library, no validator trait.
 
-#### Split into its own module when (observable triggers)
-- The same validation rules are needed in multiple places (duplication emerges).
+# - When to Split Into Its Own Module -
+
+- The same validation rules appear in multiple places (you're copy-pasting).
 - The rule set grows beyond what fits on one screen (10+ rules).
-- Rules need to be composed (AND/OR across fields) or conditional (field A requires field B).
-- Validation needs to produce structured error reports (field-level, code-level).
+- Rules need composition (AND/OR across fields) or conditionality (field A requires field B).
+- Validation needs to produce structured error reports (field-level error codes).
 
-#### Signs you're in this pattern
-- Your code has guard clauses at the start of a function that check input properties and return errors.
+# - Signs You're in This Pattern -
+
+- Your functions start with guard clauses that check inputs and return errors.
 - The same validation checks appear in multiple functions with slight variations.
-- You need to reject bad input but the checks are interleaved with processing logic.
-- Users submit data that causes crashes because boundary conditions were not checked.
+- You need to reject bad input but the checks are mixed in with processing logic.
+- Users submit data that causes crashes because boundary conditions weren't checked.
 
-#### Real project examples
-- **chibicc** (semantic analysis): Type-checking validates expressions against declared types  --  mismatches produce source-located error messages.
-- **Flowstate** (input validation): Workflow step inputs are validated before execution  --  schema checks prevent downstream corruption.
-- **MiniJinja** (`environment.rs`  ->  template compilation): Template syntax validation catches malformed Jinja2 syntax during compilation, not at render time.
-- **DaemonDB** (SQL parser): Syntax validation during parsing rejects invalid SQL before execution  --  early failure prevents wasted work.
+# - Common Mistakes -
 
-#### Common over-engineering traps
-- Adopting a schema validation library (JSON Schema, Zod, Pydantic) before you have 5+ fields to validate.
-- Building a declarative rule engine before imperative `if` checks are proven to be the bottleneck.
-- Validating data that comes from a trusted internal source (defensive programming without the threat model).
+- Adopting a schema library (JSON Schema, Zod, Pydantic) before you have 5+ fields to validate.
+- Building a declarative rule engine before `if` checks are proven to be the bottleneck.
+- Validating data that comes from a trusted internal source.
 
-## Frame Concern
+# - The Core Challenge -
 
-**Rule set completeness.** The validator can only enforce the rules it is given. It cannot detect that a missing rule would have caught a problem. The frame concern is not how to check rules but how to know enough rules have been written  --  what the rule set does not say is as important as what it says.
+The validator can only enforce the rules it's given. It can't know that a missing rule would have caught a problem. The real challenge isn't checking rules -- it's knowing you have enough rules. What the rule set doesn't say is as important as what it says.

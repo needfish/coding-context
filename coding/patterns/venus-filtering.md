@@ -1,87 +1,74 @@
-# venus: Filtering
+# ------------------------------------------------------------------------------
+#  venus-filtering.md
+#  Object variation -- the predicate shape stays the same, the target collection changes.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Object variation  --  the predicate shape stays the same, the target collection changes.
+# - Problem -
 
-## Problem
+You have a list of items and you want only the ones that match a certain condition. Keep the matches, discard the rest.
 
-A collection must be reduced to a subset based on a predicate, discarding elements that do not match.
+# - When You'll See This -
 
-## Context
+Any time you select a subset from a larger collection -- search results, browsing a directory, filtering a list, building a report query. Filtering usually feeds into display, transformation, or a pipeline.
 
-Arises whenever a set of items is larger than what the user needs or the next operation can handle. Filtering is rarely a standalone problem  --  it typically feeds a display (mercury), a transformation (neptune), or a processing pipeline. The predicate may be fixed at design time or supplied dynamically by a user.
+# - How It Works -
 
-## Domains Involved
+- **Source collection**: the full list of items you're filtering from.
+- **Predicate**: the rule that decides what stays and what goes. Could be a hard-coded check or something a user types in.
+- **Result collection**: the smaller list of items that passed the check.
 
-- **Source collection** (lexical): the full set of items to be filtered. May be in-memory or accessed lazily.
-- **Predicate** (lexical or biddable): the criterion for inclusion. May be a static expression, a user-supplied query, or a function computed from other data.
-- **Result collection** (lexical): the subset of items that satisfy the predicate.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every item in the result satisfies the predicate.
+- Every item from the source that satisfies the predicate shows up in the result.
+- Filtering only selects -- it doesn't change or duplicate items.
 
-- Source  ->  Filter: items, item count
-- Predicate  ->  Filter: matching function, parameters
-- Filter  ->  Result: subset, count of discarded items
-- Result  ->  Consumer: items (when enumerated)
+# - What Goes Wrong -
 
-## Invariants
+- **Predicate with side effects**: the filter condition modifies something or makes network calls while checking.
+- **Non-deterministic predicate**: the same item passes the check sometimes and fails other times.
+- **Slow predicate on big data**: checking each item takes too long because the condition is expensive.
+- **Stateful predicate**: the filter result depends on which items were checked before (like a running average).
+- **One bad apple crashes everything**: a predicate that throws on one item kills the whole filter pass.
 
-- Every element in the result must satisfy the predicate.
-- Every element in the source that satisfies the predicate must appear in the result.
-- The filter must not modify or duplicate elements  --  it selects, it does not transform.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Eager vs. lazy**: process everything now (predictable cost) or wait until someone reads the results (lower peak, harder to predict).
+- **Generic vs. optimised**: a general predicate handles any condition but can't exploit sorted or indexed data.
 
-- **Side effects**: The predicate mutates state or produces external effects during evaluation.
-- **Non-determinism**: The predicate returns different results for the same element on different evaluations, leading to inconsistent subsets.
-- **Performance**: Filtering a large collection with an expensive predicate blocks the caller beyond acceptable latency.
-- **Order dependence**: The predicate behaviour depends on previously filtered elements (e.g., stateful predicates).
-- **All-or-nothing errors**: A predicate that throws on one element aborts the entire filter, discarding valid results.
+# - Related Problems -
 
-## Forces
+- **mercury/display**: filtered results usually get shown to someone.
+- **earth/sorting**: filter then sort (or sort then filter, depending on which is cheaper).
+- **neptune/transformation**: each filtered item might need processing.
+- **janus/reduction**: count or sum the matching items.
+- **jupiter/validation**: the filter rule itself might need checking.
+- **mars/persistence**: the source data might come from disk.
 
-- **Eager vs. lazy evaluation**: Eager filtering materialises the result immediately (predictable cost); lazy filtering defers work until elements are consumed (lower peak cost, harder to predict).
-- **Generality vs. optimisation**: A generic predicate handles any criterion but cannot exploit index or sort order of the source.
-- **Strictness vs. fault tolerance**: A strict filter aborts on the first predicate failure; a fault-tolerant filter skips failing elements.
+# - Getting Started -
 
-## Related Subproblems
+A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rust: `items.iter().filter(|x| predicate(x))`. One function that takes a collection and returns the subset.
 
-- **mercury/display**: Filtered results are commonly displayed.
-- **earth/sorting**: Filtering and sorting often compose  --  filter first, then sort (or vice versa, depending on selectivity).
-- **neptune/transformation**: Each element in the result may need transformation.
-- **janus/reduction**: Filtered results are often reduced (count matching, sum of matching values).
-- **jupiter/validation**: The predicate itself may need validation before use.
-- **mars/persistence**: The source collection may come from storage.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- Users can configure the filter condition at runtime.
+- You need AND/OR/NOT combinations of multiple filters.
+- The source is large enough that lazy streaming matters.
+- Filter logic needs its own tests separate from the rest of the pipeline.
 
-#### When this pattern matters
-Any project that selects a subset from a larger collection  --  search, browse, list, query, report.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rust: `items.iter().filter(|x| predicate(x))`. A single function that takes the collection and returns the subset.
+- A loop with an `if` inside decides what to keep or discard.
+- The same filter condition appears in multiple places with tiny differences.
+- You pass a collection to a function and get back a smaller collection of the same type.
+- Filter logic is mixed with display logic, making each harder to change.
 
-#### Split into its own module when (observable triggers)
-- The predicate becomes user-configurable (dynamic, not hard-coded).
-- Multiple filter criteria compose (AND/OR/NOT combinations).
-- The source collection is large enough that lazy/streaming filtering matters.
-- The filtering logic needs independent testing from the rest of the pipeline.
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Your code has a loop with an `if` inside that decides what to keep or discard.
-- The predicate condition appears in multiple places, slightly different each time.
-- You're passing a collection through a function that returns a smaller collection of the same type.
-- Filter logic is interleaved with display logic, making each harder to change independently.
+- Building a filter expression parser before measuring that hard-coded conditions are the bottleneck.
+- Abstracting filter into a generic pipeline stage before you have a second stage.
+- Adding parallel filtering before profiling shows single-threaded is too slow.
 
-#### Real project examples
-- **crawley** (`extractor` module): URL link extraction filters parsed HTML by element type (img, script, video)  --  a predicate per resource type.
-- **smoltcp** (socket dispatch): TCP socket matching filters incoming packets by port/protocol  --  a predicate per socket type.
-- **MiniJinja** (`filters.rs`): Template filter chain applies predicate tests (defined, string length, regex match) to values before rendering.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Building a predicate parser/interpreter before measuring that the fixed predicates are the bottleneck.
-- Abstracting the filter into a generic pipeline stage before you have a second pipeline stage.
-- Implementing parallel filtering before profiling shows single-threaded is too slow.
-
-## Frame Concern
-
-**Predicate ownership.** The predicate and the filter execute in different contexts  --  the predicate may hold state, access external resources, or change over time. The filter must handle a predicate that is not trustworthy for the domain it inspects.
+The predicate and the filter run in different contexts. The predicate might hold state, access external resources, or behave differently over time. The filter has to work with a predicate it can't fully trust.

@@ -1,89 +1,78 @@
-# saturn: Routing
+# ------------------------------------------------------------------------------
+#  saturn-routing.md
+#  Behavior variation -- the dispatch algorithm changes per message attribute.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the dispatch algorithm changes per message attribute.
+# - Problem -
 
-## Problem
+Messages arrive at your system and need to reach the right handler based on what they contain. The sender doesn't need to know which handler will process the message.
 
-An incoming message must be delivered to the correct handler based on attributes of the message, decoupling the sender from knowledge of which handler processes it.
+# - When You'll See This -
 
-## Context
+Any system that receives messages (requests, events, commands) from multiple sources and dispatches them to different processing paths. Think API gateways, message brokers, event buses, UI navigation, and workflow engines.
 
-Arises whenever a system receives messages (requests, events, commands) from multiple sources and must dispatch them to different processing paths. Routing is a structural subproblem  --  it defines the topology of the system. It appears at API gateways, message brokers, event buses, UI navigation, and workflow engines.
+# - How It Works -
 
-## Domains Involved
+- **Message**: the incoming data with attributes -- path, type, source, headers, payload.
+- **Route table**: the mapping from message attributes to handler identifiers.
+- **Handler**: the code that processes messages matching a particular route.
 
-- **Message** (lexical): the incoming data unit with attributes (path, type, source, headers, payload).
-- **Route table** (lexical): the mapping from message attributes to handler identifiers.
-- **Handler** (causal or lexical): the processing unit that handles messages matching a route.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every message reaches the handler that matches its attributes, or a fallback if nothing matches.
+- The route table is deterministic -- same attributes always route to the same handler.
+- Routing doesn't modify the message content (unless the route definition explicitly includes a transform).
+- A message never reaches a handler that doesn't match its attributes.
 
-- Source  ->  Route: message, attributes
-- Route table  ->  Route: routing rules, priority, fallback
-- Route  ->  Handler: message (possibly transformed), context
+# - What Goes Wrong -
 
-## Invariants
+- **Ambiguous match**: two routes match the same message and the tiebreaker is undefined.
+- **Broad route shadows specific ones**: `/*` matches before `/users/:id`, so the specific route never runs.
+- **No match, no fallback**: a message matches nothing and gets silently dropped.
+- **Route table changes mid-flight**: the table updates while messages are being processed, causing inconsistent routing.
+- **Handler unavailable**: the matched handler is down or removed.
+- **Routing loop**: handler A sends to handler B which sends back to handler A.
+- **Attribute mismatch**: the message attributes don't match what the route table expects (typo, version drift).
 
-- Every message must be delivered to the handler(s) matching its attributes, or to a fallback if none match.
-- The route table must be deterministic  --  the same message attributes must route to the same handler, unless the table changes.
-- Routing must not modify the message content (unless the route definition explicitly includes a transform step).
-- A message must not be delivered to a handler that does not match its attributes.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Static vs. dynamic routing**: a compiled route table is fast but needs recompilation to change; dynamic routing is flexible but slower and harder to verify.
+- **Exact vs. pattern matching**: exact matches are simple but rigid; pattern matching (regex, glob) is expressive but has edge cases.
+- **Single vs. multicast**: one handler per message is simple; multiple handlers enable fan-out but raise ordering questions.
+- **Centralised vs. distributed**: one router is easy to reason about but is a single point of failure.
 
-- **Ambiguous matching**: Two routes match the same message attributes, and the resolution order is undefined.
-- **Catch-all shadowing**: A broad route (e.g., `/*`) matches before a specific route, causing the specific route to never be reached.
-- **No match / fallback missing**: A message matches no route and there is no fallback  --  the message is dropped silently.
-- **Route table inconsistency**: The route table evolves while messages are in flight, causing different messages of the same type to be routed differently.
-- **Handler unavailability**: The matched handler is not reachable or has been removed.
-- **Routing loop**: Handler A routes to handler B which routes back to handler A.
-- **Attribute mismatch**: The attributes available on the message differ from what the route table expects (typo, version drift).
+# - Related Problems -
 
-## Forces
-
-- **Static vs. dynamic routing**: Static routing (compiled table) is fast but requires recompilation to change; dynamic routing (evaluated at runtime) is flexible but slower and harder to verify.
-- **Exact vs. pattern matching**: Exact matching is simple but rigid; pattern matching (regex, glob, URI templates) is expressive but has edge cases.
-- **Single vs. multicast**: One handler per message is simple; multiple handlers per message enables fan-out but introduces ordering and dependency issues.
-- **Centralised vs. distributed routing**: A central router has a single point of decision but also a single point of failure; distributed routing spreads the decision but makes the route table harder to reason about.
-
-## Related Subproblems
-
-- **jupiter/validation**: Messages are typically validated before routing.
-- **neptune/transformation**: Messages may need transformation before delivery to the handler.
-- **uranus/authentication**: Messages may need authentication before routing.
+- **jupiter/validation**: messages typically get validated before routing.
+- **neptune/transformation**: messages might need reshaping before delivery.
+- **uranus/authentication**: messages might need auth before routing.
 - **mercury/display**: UI navigation is a routing problem.
-- **mars/persistence**: Persisted messages may be routed on retrieval.
+- **mars/persistence**: stored messages might get routed on retrieval.
 
-### ==== Practical Use ====
+# - Getting Started -
 
-#### When this pattern matters
-Any project where an incoming token (request, event, command, signal) must be dispatched based on some property to different handlers.
-
-#### Start with (minimal form)
 A single `if/elif/else` chain or a hash map from key to handler function. Python: `{'create': create_handler, 'delete': delete_handler}`. Rust: `match command { Command::Create => ... }`.
 
-#### Split into its own module when (observable triggers)
-- The dispatch table grows beyond what fits on one screen (20+ routes).
+# - When to Split Into Its Own Module -
+
+- The dispatch table grows beyond one screen (20+ routes).
 - Different handlers share setup/teardown logic (middleware emerges).
 - Routes need to be registered from separate files (plugin system).
-- Routing logic needs independent testing from handler logic.
+- Routing logic needs independent tests.
 
-#### Signs you're in this pattern
-- Your code has a chain of `if/elif/else` or `match` that dispatches based on a message property.
-- Adding a new message type requires editing a central dispatch function.
-- Different message types need different middleware or pre-processing.
-- You have a catch-all handler that silently absorbs unmatched messages.
+# - Signs You're in This Pattern -
 
-#### Real project examples
-- **Flowstate** (`flow.go`): Flow registry routes workflow type identifiers to step graph definitions  --  a route table per workflow kind.
-- **smoltcp** (socket dispatch): Incoming TCP/UDP packets are routed to the correct socket based on port/protocol tuple  --  exact-match routing.
-- **chibicc** (preprocessor directive dispatch): `#include`, `#define`, `#ifdef` directives are routed to different handlers via a function pointer table.
+- A chain of `if/elif/else` or `match` dispatches based on a message property.
+- Adding a new message type means editing a central dispatch function.
+- Different message types need different pre-processing.
+- A catch-all handler silently absorbs unmatched messages.
 
-#### Common over-engineering traps
+# - Common Mistakes -
+
 - Introducing a full middleware stack when you have 3 routes and 1 shared concern.
-- Building a trie-based router when a simple hash map handles your 10 endpoints.
+- Building a trie-based router when a hash map handles your 10 endpoints.
 - Abstracting route groups before you have a second group.
 
-## Frame Concern
+# - The Core Challenge -
 
-**Route table consistency.** The route table is a shared reference that senders and handlers depend on. When it changes, in-flight messages may be routed inconsistently. The concern is how to version the table and what happens to in-flight messages during a change.
+The route table is shared knowledge that senders and handlers depend on. When it changes, in-flight messages might route inconsistently. The challenge is versioning the table and deciding what happens to messages already in transit during a change.

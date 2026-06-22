@@ -1,105 +1,76 @@
-# atlas: Memory Allocation
+# ------------------------------------------------------------------------------
+#  atlas-memory-allocation.md
+#  Object variation -- the allocation strategy changes while the allocate/free contract stays the same.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Object variation  --  the allocation strategy changes while the allocate/free contract stays the same.
+# - Problem -
 
-## Problem
+Your program needs to carve up a pool of memory into variable-sized blocks for different requests, then recycle those blocks when they're freed -- all while avoiding fragmentation and keeping it fast.
 
-A finite pool of memory blocks must be carved up for variable-sized allocation requests and recycled when freed, while minimising fragmentation, bounding overhead, and supporting concurrent access patterns.
+# - When You'll See This -
 
-## Context
+Any system that manages dynamic memory. General-purpose allocators (malloc), heap implementations for embedded systems, slab allocators for kernel objects, pool allocators for game engines, and garbage-collected heaps. Different workloads demand different strategies.
 
-Arises in any system that manages dynamic memory: general-purpose allocators (malloc), RTOS heap implementations, slab allocators for kernel objects, embedded pool allocators, game engine frame allocators, and garbage-collected heaps. The allocator mediates between the operating system's page-level memory interface and the application's byte-level allocation requests. Different workloads (many small allocations, few large ones, high concurrency, real-time bounds) demand different strategies.
+# - How It Works -
 
-## Domains Involved
+- **Memory pool**: the contiguous or segmented region of memory the allocator manages.
+- **Allocation request**: a call asking for N bytes of memory.
+- **Free request**: a call returning previously allocated memory to the pool.
+- **Free list**: the data structure tracking which blocks are available.
+- **Metadata**: bookkeeping information embedded in each block (size, next/prev pointers, flags).
 
-- **Memory pool** (lexical): the contiguous or segmented region of addressable memory managed by the allocator.
-- **Chunks** (lexical): contiguous sub-regions within the pool that can be allocated or free.
-- **Allocation request** (causal): a call to `malloc(n)` or equivalent, specifying a size and optionally alignment and lifetime hints.
-- **Free request** (causal): a call to `free(p)` returning a previously allocated chunk to the pool.
-- **Allocator** (causal): the data structures and logic that satisfy allocation requests by finding a suitable chunk and splitting or coalescing as needed.
-- **Free list** (lexical): a data structure indexing available chunks by size, address, or both.
-- **Arena** (lexical): a per-thread or per-CPU sub-allocator that reduces lock contention.
-- **Cache** (lexical): a thread-local pool of pre-split chunks for frequently used sizes (tcache in jemalloc).
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every allocation returns a region of at least the requested size that doesn't overlap with any other live allocation.
+- Freeing a valid pointer returns that memory to the pool for reuse.
+- Double-free or use-after-free produces undefined behaviour -- the allocator can detect some cases but not all.
+- Metadata overhead is bounded and predictable.
+- The allocator handles concurrent access correctly (locking or lock-free).
 
-- Application  ->  Allocator: allocation request with size
-- Allocator  ->  Memory pool: split, coalesce, commit, decommit operations
-- Allocator  ->  Free list: insert freed chunk, look up suitable chunk by size
-- Allocator  ->  OS: `mmap`/`sbrk`/`VirtualAlloc` when pool is exhausted, `munmap`/`madvise` when surplus
-- Allocator  ->  Application: pointer to allocated region (or null on failure)
-- Application  ->  Allocator: free request with pointer
-- Arena  ->  Allocator: load-balance allocations across arenas by thread ID or round-robin
+# - What Goes Wrong -
 
-## Invariants
+- **Fragmentation**: after many allocations and frees, the pool has many small gaps and no single region large enough for a new request, even though total free space is sufficient.
+- **Memory leak**: allocated blocks are never freed, exhausting the pool over time.
+- **Fragmentation**: external fragmentation (gaps between blocks) and internal fragmentation (wasted space inside a block) both waste memory.
+- **False sharing**: two threads write to different data that happens to share a cache line, causing performance degradation.
+- **Blowup**: per-allocation metadata overhead becomes significant for many small allocations.
 
-- Every allocated chunk must be uniquely identifiable by its starting address (no overlapping allocations).
-- Freeing an invalid pointer or double-freeing must be detected or prevented (guard pages, quarantine, magic numbers).
-- The allocator must not leak memory between allocation contexts  --  freeing in one thread must correctly return to the pool available to other threads.
-- Coalescing adjacent free chunks must never produce a chunk larger than the maximum allocatable size.
-- The allocator must maintain an upper bound on internal fragmentation (worst-case waste per allocation).
-- The total memory managed by the allocator must equal the sum of allocated + free + overhead (metadata).
-- All metadata structures (free list pointers, size headers, arena control blocks) must themselves be allocated without circular dependency.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Speed vs. fragmentation**: a simple free list (first-fit) is fast but fragments; a buddy allocator is slower but fragments less.
+- **Generality vs. specialisation**: a general-purpose allocator handles any size but is slower for specific patterns; a pool allocator is fast for fixed-size objects but can't handle variable sizes.
+- **Thread-safe vs. single-threaded**: locking every allocation is safe but slow; thread-local caches are fast but risk imbalance.
 
-- **External fragmentation**: Free memory is fragmented into many small chunks, and a large allocation request cannot be satisfied despite sufficient total free space.
-- **Internal fragmentation**: An allocation request rounds up to a larger size class, wasting the rounded-up excess within the allocated chunk.
-- **Blowup**: The allocator's metadata overhead grows beyond acceptable limits (e.g., one metadata word per allocation in a system with millions of small allocations).
-- **False cache-line sharing**: Allocators that place unrelated objects on the same cache line cause performance degradation on multi-core systems.
-- **Lock contention**: A single global free list serialises all allocation/free calls under high concurrency, becoming a bottleneck.
-- **Memory leak**: Allocated chunks are never freed, causing monotonic pool growth until exhaustion.
-- **Use-after-free**: A freed chunk is reallocated while a dangling pointer still references it, causing corruption.
-- **Heap overflow**: A write past the end of an allocated chunk corrupts adjacent metadata or data.
-- **OOM**: The pool is exhausted and the OS refuses to supply more memory; the allocator must surface an error without crashing the process in an inconsistent state.
+# - Related Problems -
 
-## Forces
+- **dione/power-management**: memory allocation and deallocation has energy cost.
+- **phoebe/resource-lifecycle**: memory is a resource with acquire/release lifecycle.
 
-- **Speed vs. fragmentation**: A simple free-list allocator (first-fit) is fast but fragments badly; a segregated-fit allocator (size-class bins) minimises fragmentation but incurs overhead for bin management.
-- **Concurrency vs. simplicity**: Per-thread arenas eliminate lock contention but increase total memory footprint due to per-arena fragmentation; a single global heap is space-efficient but serialises.
-- **Generality vs. specialisation**: A general-purpose allocator must handle any request size; specialised allocators (object pools, frame allocators) can be faster and more space-efficient for specific workloads.
-- **Bounded time vs. throughput**: Real-time allocators (TLSF) bound worst-case allocation time to O(1) but sacrifice throughput for the general case; general allocators optimise for throughput at the cost of unpredictable worst-case times.
-- **Return-to-OS vs. caching**: Returning freed memory to the OS reduces process footprint but incurs syscall overhead on reallocation; caching freed memory avoids syscalls but increases footprint.
+# - Getting Started -
 
-## Related Subproblems
+Use the language's built-in allocator. In C, `malloc` / `free`. In Rust, the default allocator. No custom allocator, no pool, no slab.
 
-- **pan/resource-scheduling**: Memory allocation requests compete for the same allocator locks as application threads, coupling allocation latency with scheduling.
-- **mars/persistence**: Persistent memory allocators (for flash, NVRAM) must be power-fail safe and wear-level aware.
-- **jupiter/validation**: Bounds checking, canary values, and address sanitizers validate allocator correctness.
-- **neptune/transformation**: Allocators transform raw page-granular memory from the OS into byte-granular chunks for the application.
-- **hyperion/network-listener**: Network packet buffers are allocated and freed per-packet, making allocator throughput a primary factor in network performance.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You need to allocate many objects of the same size (pool allocator helps).
+- You need to bound allocation latency (real-time requirements).
+- The default allocator causes unacceptable fragmentation in your workload.
+- You need to track allocation statistics for debugging or profiling.
 
-#### When this pattern matters
-Any project that manages dynamic memory  --  most non-trivial software outside embedded systems with no heap.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-Use the language's built-in allocator. Rust: `Box`, `Vec`, `HashMap`. Python: automatic allocation. C: `malloc`/`free`. No custom allocator, no memory pool.
+- You're considering a custom memory allocator.
+- Your application uses lots of small, short-lived allocations.
+- Memory fragmentation causes OOM errors despite enough total free memory.
+- You need deterministic allocation latency.
 
-#### Split into its own module when (observable triggers)
-- Allocation latency is causing measurable performance problems (benchmarks show allocator as bottleneck).
-- Many small, short-lived allocations cause fragmentation in the default allocator.
-- Real-time constraints require bounded allocation time (O(1) pool allocator).
-- You need to track allocation statistics or detect leaks programmatically.
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Your program allocates and frees many small objects of the same size.
-- Memory fragmentation causes out-of-memory errors even though total free memory is sufficient.
-- Allocation/deallocation is a measurable fraction of CPU time in profiles.
-- You need deterministic allocation latency (real-time or embedded constraints).
+- Writing a custom allocator before profiling shows the default one is a problem.
+- Using a general-purpose allocator for fixed-size objects (pool allocator is simpler and faster).
+- Ignoring alignment requirements of the platform.
+- Not handling OOM gracefully.
 
-#### Real project examples
-- **chibicc** (arena allocator): Tokens and AST nodes are allocated from a linear arena during compilation  --  single free at end of each source file, no individual frees.
-- **DaemonDB** (buffer pool): Database pages are allocated from a fixed-size buffer pool with clock-sweep eviction  --  avoids per-page malloc/free overhead.
-- **tiny-lsm-go** (block cache): SST blocks are cached in a fixed-capacity LRU  --  allocation is pooled to avoid GC pressure.
-- **miniaudio** (audio buffer pool): Audio frames are allocated from ring buffers to avoid allocation during real-time audio callbacks.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Writing a custom slab allocator before measuring that the default allocator causes fragmentation.
-- Building per-thread arenas before confirming that lock contention on the global allocator is measurable.
-- Implementing memory pooling for a type that is allocated infrequently.
-
-## Frame Concern
-
-**The gap between request granularity and page granularity.** Applications request arbitrary byte counts, but the OS provides memory only in page-sized (4 KiB or larger) units. The allocator bridges this gap by splitting pages into smaller chunks and managing inventory. Its splitting and coalescing strategies determine how well it can satisfy future requests. When inventory cannot satisfy a request (fragmentation), the allocator requests more pages, potentially widening the gap further.
+Allocation is a search problem -- finding a free block of at least the requested size. The search strategy (first-fit, best-fit, buddy, slab) determines speed, fragmentation, and memory overhead. No single strategy works well for all workloads, and the allocator must choose without knowing future allocation patterns.

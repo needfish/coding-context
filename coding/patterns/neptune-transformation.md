@@ -1,91 +1,78 @@
-# neptune: Transformation
+# ------------------------------------------------------------------------------
+#  neptune-transformation.md
+#  Behavior variation -- the mapping algorithm changes per source/target pair.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the mapping algorithm changes per source/target pair.
+# - Problem -
 
-## Problem
+You have data in one shape and you need it in a different shape. Same information, different structure -- like converting a database row to a JSON response, or a Celsius reading to Fahrenheit.
 
-Data in one representation must be converted to another representation, changing its structure, encoding, or level of abstraction without changing its essential content.
+# - When You'll See This -
 
-## Context
+Any time two parts of your system use different representations for the same data. Serialisation (internal objects to bytes and back), DTO mapping (database models to API responses), version migration (v1 format to v2 format). Transformation connects two subproblems that would otherwise be incompatible.
 
-Arises whenever two parts of the system use different representations for semantically equivalent data. The boundary between internal and external formats (serialisation), between layers of abstraction (DTO mapping), between system versions (migration). Transform is a connecting subproblem  --  it sits between two other problem types that would otherwise be incompatible.
+# - How It Works -
 
-## Domains Involved
+- **Source representation**: the input data in its original form.
+- **Target representation**: the output data in the desired form.
+- **Mapping**: the rules that translate source fields to target fields.
 
-- **Source representation** (lexical): the input data in its original form.
-- **Target representation** (lexical): the output data in the desired form.
-- **Mapping** (lexical): the rules that define how source elements correspond to target elements.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- If the mapping is bidirectional, transforming there and back gives you the original (round-trip).
+- Source fields with no target equivalent are handled explicitly -- dropped, defaulted, or flagged as error.
+- The transformation adds no information that wasn't in the source, unless the mapping explicitly defines it.
+- Transformation has no side effects on the source or external systems.
 
-- Source  ->  Transform: data, metadata (format, version)
-- Mapping  ->  Transform: field correspondences, type coercions, default values
-- Transform  ->  Target: converted data
+# - What Goes Wrong -
 
-## Invariants
+- **Information loss**: the target format can't express something the source has, and nobody notices.
+- **Silent coercion**: converting a float to an int truncates the decimal without warning.
+- **Incomplete mapping**: some source fields have no target defined, producing broken output.
+- **Cyclic structures**: the source has circular references and the transformer loops forever.
+- **Version mismatch**: the source data is from a different schema version than the mapping expects.
+- **Identity loss**: two values that mean different things ("123" and 123) become identical in the target.
 
-- The transformation must be reversible if the mapping is bidirectional (round-trip: transform then inverse must yield the original).
-- Elements in the source that have no corresponding element in the target must be handled explicitly (dropped, defaulted, or error).
-- The transformation must not introduce information not present in the source, unless the mapping explicitly defines a derivation.
-- The transformation must not have side effects on the source or external systems.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Explicit vs. convention-based**: listing every field correspondence is clear but verbose; using conventions and defaults is compact but surprising.
+- **Strict vs. forgiving**: strict mode fails on unexpected input; forgiving mode skips unknown fields.
+- **In-place vs. copy**: transforming in place saves memory but risks aliasing; copying is safe but costs time and space.
+- **Declarative vs. procedural**: declarative mappings are easier to verify; procedural transformations are more powerful.
 
-- **Information loss**: The target representation cannot express some information present in the source, and the loss goes undetected.
-- **Implicit coercion**: The mapping silently converts a value to a type or range that changes its meaning (e.g., float to int truncation).
-- **Incomplete mapping**: Some source fields have no target field defined, and the transformer fails or produces incomplete output.
-- **Cyclic structure**: The source contains cycles that the transformer does not handle, causing infinite recursion or stack overflow.
-- **Version mismatch**: The source was produced by a different version of the schema than the mapping expects.
-- **Identity loss**: Two source values that are semantically distinct (e.g., "123" and 123) become identical in the target.
+# - Related Problems -
 
-## Forces
+- **mars/persistence**: saving data to disk is a transformation (serialisation).
+- **mercury/display**: data often needs reshaping before display.
+- **janus/reduction**: transformed elements often get reduced (map then reduce).
+- **jupiter/validation**: validation runs before transformation.
+- **venus/filtering**: filtered items might need transformation.
+- **earth/sorting**: sort keys might need transformation before comparison.
 
-- **Explicitness vs. brevity**: An explicit mapping lists every field correspondence (clear but verbose); an implicit mapping uses conventions and defaults (compact but surprising).
-- **Strictness vs. flexibility**: A strict transform fails on unexpected input; a flexible transform skips or defaults unknown fields.
-- **In-place vs. copy**: Transforming in place avoids allocation but risks aliasing; copying is safe but costs memory and time.
-- **Schema-driven vs. code-driven**: Declarative mappings are easier to verify; procedural transformations are more powerful.
+# - Getting Started -
 
-## Related Subproblems
+Write a function that takes the source type and returns the target type. Map fields one at a time. Python: a dict comprehension or a simple loop. Rust: `From` / `Into` trait implementations or a `match` on fields.
 
-- **mars/persistence**: Serialisation for storage is a transform.
-- **mercury/display**: Data may need transformation before display.
-- **janus/reduction**: Transformed elements are often reduced (map-reduce pattern).
-- **jupiter/validation**: Validation often precedes transformation.
-- **venus/filtering**: Filter may produce a subset that then needs transformation.
-- **earth/sorting**: Sort keys may need transformation before comparison.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- The same transformation logic is needed in multiple places.
+- The mapping has special cases, conditional logic, or error handling.
+- You need to test the transformation independently from the data sources.
+- The transformation becomes bidirectional and you need to keep both directions in sync.
 
-#### When this pattern matters
-Any project that converts data between representations  --  serialisation, parsing, DTO mapping, format conversion, migration.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-A single function that takes source format and returns target format. Write it inline at the call site. Python: `{'id': str(obj.id), 'name': obj.name}`. Rust: `MyDto { field: source.field.into() }`.
+- You're writing code that converts one data structure into another.
+- The conversion logic has field renames, type casts, or default values.
+- You see the same field mapping in multiple places with slight differences.
+- Adding a field means updating the conversion code in several spots.
 
-#### Split into its own module when (observable triggers)
-- The same conversion is needed in multiple places (duplication emerges).
-- Multiple source or target formats exist (JSON  <->  XML  <->  Protobuf).
-- The conversion logic becomes complex enough to need its own tests.
-- Round-trip correctness matters (serialise  ->  deserialise  ->  original).
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- You have a function that takes one type and returns a different type with the same essential data.
-- The same data appears in two different structs with similar field names.
-- Serialisation/deserialisation logic changes whenever the data model changes.
-- You're writing boilerplate copy-code from one object to another.
+- Building a generic mapping framework before you have three different transformations.
+- Using implicit conventions (field names must match!) without documenting them.
+- Forgetting to handle null/missing fields in one direction.
 
-#### Real project examples
-- **MiniJinja** (`src/parser.rs`  ->  `src/compiler/`  ->  `src/vm.rs`): Template text  ->  AST  ->  compiled instructions  ->  rendered output  --  a chain of transforms across three representations.
-- **Monocypher** (`src/monocypher.c`): Every crypto primitive is a transform  --  plaintext  ->  ciphertext, key  ->  shared secret, message  ->  signature.
-- **DaemonDB** (SQL parser  ->  bytecode  ->  execution): SQL text  ->  AST  ->  bytecode instructions  ->  query result  --  the classic compiler pipeline as transforms.
-- **micrograd** (`engine.py`): Scalar values through forward/backward transforms  --  the forward pass computes output from inputs, the backward pass computes gradients from loss.
-- **NessMuxer** (packet demuxer): Raw MPEG-TS packets  ->  parsed PES packets  ->  elementary stream  --  three transform stages in a video pipeline.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Building a generic mapper/reflection framework before you have 3+ conversion functions.
-- Using a schema-driven code generator (OpenAPI  ->  types) before the API contract stabilises.
-- Implementing bidirectional mapping when only one direction is ever used.
-
-## Frame Concern
-
-**Semantic equivalence across heterogeneous representations.** Two representations rarely align perfectly. The mapping must decide what to do when the source has more information than the target, less information, or different structure. The concern is not the mechanics of conversion but the handling of structural mismatch  --  every transform is a lossy compression of semantics into a different shape.
+Transformation sits between two representations that evolve independently. When the source adds a field, the target might not need it -- but you need to decide explicitly whether to pass it through, drop it, or flag it. The challenge is keeping the mapping complete and correct as both sides change over time.

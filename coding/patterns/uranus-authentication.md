@@ -1,96 +1,80 @@
-# uranus: Authentication
+# ------------------------------------------------------------------------------
+#  uranus-authentication.md
+#  Object variation -- the authentication provider changes while the verification contract stays the same.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Object variation  --  the authentication provider changes while the verification contract stays the same.
+# - Problem -
 
-## Problem
+A user, service, or process claims an identity. Your system needs to verify that claim before letting them do anything.
 
-An actor (user, service, process) must prove its identity before being allowed to perform an action, and the system must verify that proof.
+# - When You'll See This -
 
-## Context
+Any security boundary -- API endpoints, inter-service calls, file access, privileged UI actions. Authentication answers "who is this?" It's separate from authorisation, which answers "what are they allowed to do?" Authentication gates access to routes, persistence, and commands.
 
-Arises at every security boundary  --  API endpoints, inter-service calls, file access, UI actions. Authentication determines who the actor is; it is distinct from authorisation (what the actor is allowed to do). Authentication is rarely a terminal subproblem  --  it gates access to routes (saturn), persistence (mars), or commands.
+# - How It Works -
 
-## Domains Involved
+- **Actor**: the entity claiming an identity -- a human user, another service, a background process.
+- **Credential**: the proof of identity -- a password, API token, certificate, or biometric.
+- **Verifier**: the mechanism that checks the credential against a trusted source.
+- **Identity store**: the authoritative database of identity information -- a user database, LDAP, OAuth provider.
 
-- **Actor** (biddable or causal): the entity claiming an identity. A human user (biddable), a service (causal), a process (causal).
-- **Credential** (lexical): the proof of identity presented by the actor. A password, a token, a certificate, a biometric.
-- **Verifier** (causal): the mechanism that checks the credential against an authority.
-- **Identity store** (causal): the authoritative source of identity information. A database, an LDAP directory, an OAuth provider.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- The same valid credential always authenticates as the same actor.
+- An invalid credential never authenticates as any actor.
+- Credentials are stored in a form that can't be reversed (one-way hashing).
+- The verification process doesn't leak why it failed (no "username not found" vs "wrong password" distinction).
+- A session token is bound to the actor and verifiable without re-sending the credential.
 
-- Actor  ->  System: claimed identity, credential
-- System  ->  Verifier: credential, verification request
-- Verifier  ->  Identity store: lookup request
-- Identity store  ->  Verifier: stored credential, status
-- Verifier  ->  System: verification result (valid/invalid), actor attributes
-- System  ->  Actor: session token (if successful), error (if failed)
+# - What Goes Wrong -
 
-## Invariants
+- **Credential leakage**: passwords or tokens are transmitted or stored in plain text.
+- **Timing side channel**: the verifier returns faster for "user exists" than "user doesn't exist", allowing attackers to enumerate valid usernames.
+- **Token theft**: a valid session token is intercepted and reused by someone else.
+- **Session fixation**: an attacker forces a known session token onto a legitimate user.
+- **Identity store compromised**: the user database itself is breached.
+- **Revocation delay**: a user's access is revoked but their cached token still works.
+- **Credential rotation failure**: a user's password expires and the system locks them out because the new password hasn't propagated everywhere.
 
-- A valid credential must produce a consistent identity  --  the same credential always authenticates as the same actor.
-- An invalid credential must never authenticate as any actor.
-- Credentials must not be recoverable from the system's stored representation (one-way hashing).
-- The verification process must not leak information about why a verification failed (no distinction between "actor does not exist" and "wrong password").
-- A session token must be bound to the actor and verifiable without re-presenting the credential.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Convenience vs. security**: passwords are easy but easy to compromise; multi-factor auth is secure but annoying.
+- **Stateless vs. stateful tokens**: JWT tokens contain everything needed for verification but can't be revoked early; server-side sessions can be revoked but need a database lookup.
+- **Centralised vs. federated**: one auth server is simple to manage but a single point of compromise; OAuth distributes trust but adds protocol complexity.
+- **Caching vs. freshness**: caching verification results is faster but risks accepting a recently-revoked credential.
 
-- **Credential leakage**: Credentials are transmitted or stored in plain text, allowing interception and replay.
-- **Timing side channel**: The verifier returns faster for "actor exists" than "actor does not exist", allowing enumeration.
-- **Token theft**: A valid session token is intercepted and reused by a different actor.
-- **Session fixation**: An attacker forces a known session token onto a legitimate actor.
-- **Authority compromise**: The identity store itself is compromised, allowing arbitrary identity claims.
-- **Revocation delay**: An actor's access is revoked but the system continues to accept their cached tokens or sessions.
-- **Credential rotation failure**: An actor's credential expires or is rotated, and the system prevents access because the new credential hasn't propagated.
+# - Related Problems -
 
-## Forces
+- **saturn/routing**: authentication gates routing decisions.
+- **mars/persistence**: data access may require authentication.
+- **jupiter/validation**: credentials need validation before verification.
+- **mercury/display**: the UI may show different content based on who's logged in.
 
-- **Convenience vs. security**: Simple authentication (username + password) is easy to use but easy to compromise; multi-factor authentication is more secure but burdensome.
-- **Stateless vs. stateful tokens**: Stateless tokens (JWT) contain all information needed for verification but cannot be revoked before expiry; stateful tokens (sessions) can be revoked but require a server-side lookup.
-- **Centralised vs. federated identity**: Centralised identity (single authority) is simple to manage but a single point of compromise; federated identity (OAuth, SAML) distributes trust but adds protocol complexity.
-- **Caching vs. freshness**: Caching verification results improves performance but risks accepting a credential that was recently revoked.
+# - Getting Started -
 
-## Related Subproblems
+Hard-code a single API key checked at the entry point. `if request.headers.get("Authorization") != expected_key: return 401`. One key, one check, no database.
 
-- **saturn/routing**: Authentication gates routing decisions.
-- **mars/persistence**: Data access may require authentication.
-- **jupiter/validation**: Credentials must be validated before verification.
-- **mercury/display**: Display may show different content based on authenticated identity.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You have more than one user with different credentials.
+- You need to store and verify passwords securely (hashing, salting).
+- You need session management (login, logout, expiry).
+- You support multiple auth providers (password, OAuth, SSO).
 
-#### When this pattern matters
-Any project that distinguishes between users, restricts actions by identity, or communicates with authenticated services.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-Use the framework's built-in auth if available (Elysia's `@elysiajs/auth`, Hono's `hono/auth`, Axum's `axum-extra::extract::cookie`, FastAPI's `OAuth2PasswordBearer`). These handle hashing, session management, and timing-safe comparison behind a standard interface.
+- Your code checks a password or token before allowing an action.
+- Multiple endpoints repeat the same auth check logic.
+- You need to know who made a request but the identity check is mixed in with business logic.
+- You're storing passwords anywhere.
 
-Without a framework: use the standard library's constant-time comparison for credential verification (Python's `hmac.compare_digest`, Go's `subtle.ConstantTimeCompare`, Rust's `subtle::ConstantTimeEq`). Store credentials as hashes using standard crypto (Python `hashlib.scrypt`, Go `bcrypt`, Rust `argon2`). The minimal form is a single environment-variable API key verified with constant-time comparison. No token generation, no session management.
+# - Common Mistakes -
 
-#### Split into its own module when (observable triggers)
-- More than one user needs distinct identities.
-- Credentials must be stored securely (hashed, not plaintext).
-- Sessions or tokens need to survive beyond a single request (stateful sessions, JWTs).
-- Multiple authentication methods need to coexist (password + OAuth + API key).
+- Storing passwords in plain text (use bcrypt, argon2, or PBKDF2).
+- Building your own cryptographic protocol instead of using a standard one.
+- Adding OAuth before you have a second user.
+- Checking auth on every request without caching when performance matters.
 
-#### Signs you're in this pattern
-- Your server code checks a token, API key, or password before processing requests.
-- Different users should see different data or perform different actions.
-- You have a login endpoint or API key verification step.
-- Access control logic is scattered across handler functions.
+# - The Core Challenge -
 
-#### Real project examples
-- **Flowstate** (netdriver server): gRPC server authenticates clients via TLS certificates and API tokens before allowing workflow operations.
-- **thinproxy** (sandbox module): After initialisation, the proxy applies seccomp/capsicum sandbox  --  authentication of its own execution environment.
-- **smoltcp** (no auth built-in): Embedded stacks typically delegate authentication to the application layer  --  demonstrates that auth is often external.
-
-#### Common over-engineering traps
-- Integrating OAuth2/OIDC on day 1 when a shared secret suffices.
-- Using raw string comparison (`==`) for credential verification instead of constant-time comparison from the standard library.
-- Building a full role/permission system before you have more than one user type.
-- Implementing token refresh before measuring that sessions expire too frequently.
-
-## Frame Concern
-
-**Trust delegation.** The system delegates identity verification to an external authority (identity store, OAuth provider) or a stored representation (hashed password). Verification depends on an authority the system does not fully control. The concern is how far the verification result can be trusted and for how long  --  the gap between "verified at request time" and "authorised at action time."
+Authentication is a trust problem. Your system trusts the credential, the verifier trusts the identity store, and the user trusts your system with their credential. A breach at any level breaks the whole chain. The challenge is defining the trust boundary and protecting each link.

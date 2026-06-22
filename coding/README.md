@@ -19,7 +19,6 @@ Interaction rules:
 - Prefer built-in platform features.
 - Use an already-installed dependency when it covers the request. Ask before adding new ones.
 - Solve new problems with the shortest correct code.
-- Output only ASCII characters (U+0000--U+007F). No Unicode dashes, arrows, boxes, or any non-ASCII glyphs.
 - Comments reference docs links when the function or library use case is not the most common one.
 
 # Defaults

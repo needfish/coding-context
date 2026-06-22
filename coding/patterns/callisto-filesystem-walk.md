@@ -1,93 +1,78 @@
-# callisto: Filesystem Walk
+# ------------------------------------------------------------------------------
+#  callisto-filesystem-walk.md
+#  Data variation -- same traversal algorithm, different exclusion rules and root paths.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Data variation  --  same traversal algorithm, different exclusion rules and root paths.
+# - Problem -
 
-## Problem
+You need to explore a directory tree -- visiting every file, subdirectory, and symlink -- while respecting rules about what to skip, whether to follow symlinks, and how deep to go.
 
-A directory tree must be traversed recursively, visiting every entry (file, directory, symlink) while respecting exclusion rules, following (or not following) symlinks, and controlling depth.
+# - When You'll See This -
 
-## Context
+Any time a system needs to enumerate filesystem contents. Search tools, backup software, file managers, build systems, linters. The walk almost always feeds into filtering, display, transformation, or command execution.
 
-Arises whenever a system needs to enumerate filesystem contents  --  search tools, backup software, file managers, build systems, linters. The walk is almost never the terminal subproblem  --  visited entries feed filter (venus), display (mercury), transform (neptune), or command execution (io).
+# - How It Works -
 
-## Domains Involved
+- **Root path**: the starting directory for the traversal (or multiple starting points).
+- **Entry**: each item found during the walk -- a file, directory, or symlink.
+- **Exclusion rules**: patterns or conditions that decide which entries to skip (.git, node_modules, *.tmp).
+- **Visitor**: what you do with each entry -- collect it, process it, display it.
 
-- **Root path** (lexical): the starting directory path(s) for the traversal.
-- **Filesystem** (causal): the underlying OS filesystem that provides directory listings and entry metadata.
-- **Exclusion rules** (lexical): patterns that determine which entries to skip  --  `.gitignore`, `.fdignore`, hidden file rules, custom ignore patterns.
-- **Visitor** (causal or lexical): the consumer of walked entries. May be a callback (causal  --  called for each entry) or a channel (lexical  --  entries pushed to a buffer).
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every reachable entry is visited exactly once (unless explicitly excluded).
+- Symlinks are handled consistently -- either always followed or never followed.
+- Directory loops (symlink cycles) don't cause infinite traversal.
+- The walk respects the specified depth limit and exclusion rules.
+- Errors on individual entries (permission denied, broken symlink) don't abort the entire walk.
 
-- Walker  ->  Filesystem: `readdir()`, `lstat()` calls
-- Filesystem  ->  Walker: entry names, metadata (type, size, permissions, timestamps)
-- Exclusion rules  ->  Walker: glob patterns, override rules, hidden/ignore flags
-- Walker  ->  Visitor: `DirEntry` (path + metadata), traversal errors
+# - What Goes Wrong -
 
-## Invariants
+- **Symlink loops**: a symlink pointing to a parent directory creates an infinite loop.
+- **Permission denied**: the walk stops entirely when it can't read a directory.
+- **Too many files**: traversing a directory with millions of files uses too much memory or time.
+- **Encoding issues**: filenames with unusual characters cause crashes or skipped files.
+- **Race conditions**: files are added or deleted during the walk, producing inconsistent results.
+- **Exclusion rule mistakes**: a pattern like `*.tmp` doesn't match `.tmp` files in subdirectories.
 
-- Every entry in the tree must be visited exactly once, unless excluded by rules.
-- Symlinks must be followed only if explicitly configured; the default is to return the symlink entry itself, not its target.
-- Exclusion rules must be evaluated deterministically  --  the same root and rules must produce the same set of visited entries.
-- Traversal must complete in bounded time proportional to the tree size; it must not hang on cyclic directory structures.
-- Errors on individual entries (permission denied, broken symlink) must not abort the entire walk.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Breadth-first vs. depth-first**: BFS uses more memory but respects directory ordering; DFS is lighter but goes arbitrarily deep.
+- **Eager vs. lazy**: collecting all entries first gives you the full picture; yielding entries as you find them lets you start processing immediately.
+- **Parallel vs. single-threaded**: parallel traversal is faster on SSDs but harder to control depth and exclusions.
 
-- **Symlink cycle**: A symlink points to a parent directory, causing infinite recursion without cycle detection.
-- **Permission denied**: An unreadable directory causes the walk to skip an entire subtree silently, or abort with errors.
-- **Filesystem change during walk**: Entries are created, moved, or deleted during traversal  --  the walk sees an inconsistent snapshot.
-- **Deep nesting**: A tree exceeds the OS or application recursion limit, causing stack overflow.
-- **Ignore rule conflict**: Two exclusion patterns contradict, causing an entry to be both included and excluded.
-- **Encoding mismatch**: Filesystem paths use an encoding that the caller cannot decode, causing garbled output or skipped entries.
-- **Network filesystem latency**: Walking over NFS/SMB with high latency causes the walk to stall.
+# - Related Problems -
 
-## Forces
+- **venus/filtering**: visited entries usually get filtered (keep only .py files).
+- **mercury/display**: results get displayed to the user.
+- **neptune/transformation**: file paths might need conversion.
+- **io/command-execution**: each visited file might be processed by an external command.
 
-- **Breadth-first vs. depth-first**: BFS finds all entries at shallow depth first (responsive display); DFS finds entries in a single branch completely before moving on (better cache locality).
-- **Sequential vs. parallel**: Sequential walk is simple and predictable; parallel walk (multiple threads reading different directories) is faster but introduces ordering nondeterminism.
-- **Eager vs. lazy filtering**: Applying exclusion rules during the walk (eager) reduces memory but couples walk to filter; filtering after the walk (lazy) keeps walk generic but stores more entries.
-- **Inode ordering vs. name ordering**: Natural filesystem order is inode (arbitrary); most tools need name order, which requires buffering and sorting.
+# - Getting Started -
 
-## Related Subproblems
+`os.walk()` in Python, `walkdir::WalkDir` in Rust, or `fs.readdirSync` recursively in JavaScript. Collect entries in a list and print them.
 
-- **venus/filtering**: Walked entries are almost always filtered by pattern, type, size, or time.
-- **mercury/display**: Walked entries are typically displayed to the user.
-- **io/command-execution**: Walked entries may be passed to an external command.
-- **mars/persistence**: Walk results may be stored.
-- **earth/sorting**: Results may need sorting before display or processing.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You need configurable exclusion rules (ignore files, pattern matching).
+- You need to control traversal depth or follow symlinks selectively.
+- The walk logic becomes tangled with what you do with the results.
+- You need to test traversal behavior independently.
 
-#### When this pattern matters
-Any project that enumerates filesystem contents  --  search tools, backup software, file managers, build systems, linters.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-`os.walk()` (Python), `walkdir::WalkDir` (Rust), `find` command piped to your tool. Process entries as they arrive  --  don't buffer the full tree.
+- You have a recursive function that lists files in a directory.
+- You're passing around directory paths and accumulating file lists.
+- You need to skip certain folders but the skip logic is mixed with the loop.
+- Your backup, search, or build tool walks the filesystem.
 
-#### Split into its own module when (observable triggers)
-- You need custom exclusion rules (gitignore, hidden file filtering, size limits).
-- You need parallel traversal (multiple directories simultaneously).
-- You need to handle symlink cycles, permission errors, or deep trees gracefully.
-- The traversal logic needs independent testing from the consumer logic.
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Your code uses `os.Walk`, `glob`, `readdir`, or recursive directory traversal.
-- You need to skip certain directories or file types during traversal.
-- The traversal order matters (depth-first vs breadth-first, lexicographic vs modification-time).
-- You're filtering files as you walk them, mixing traversal with selection logic.
+- Writing a recursive traversal when `os.walk` handles it.
+- Forgetting to handle permission errors gracefully.
+- Not detecting symlink loops and crashing with a stack overflow.
+- Loading all file paths into memory before processing the first one.
 
-#### Real project examples
-- **Helix editor** (file picker): Recursive directory walk for file picker with `.gitignore` pattern exclusion and max-depth limit.
-- **Lite XL** (project view): Project panel walks the workspace directory tree, skipping hidden directories and binary files.
-- **nano-backup** (source scanning): File discovery walks source directories with include/exclude patterns before feeding the backup pipeline.
-- **crawley** (URL crawl frontier): URL-level "walk"  --  follows links recursively with depth limit, domain restriction, and visited-set dedup.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Building a multi-threaded walker before measuring that single-threaded walk is too slow.
-- Implementing inode sorting before confirming that the consumer needs deterministic order.
-- Supporting every filesystem event (inotify, FSEvents) when a one-shot scan suffices.
-
-## Frame Concern
-
-**The gap between filesystem order and consumer order.** The filesystem returns entries in inode order (arbitrary and unstable). Most consumers expect sorted or deterministic order. Buffering all entries for sorting works for small sets but fails for large trees. The concern is how to reconcile the filesystem's natural ordering with the consumer's expected ordering without unbounded memory.
+The filesystem is not a clean tree -- it has symlinks, permissions, race conditions, and encoding surprises. A walk must be robust to all of these while still visiting every intended entry exactly once.

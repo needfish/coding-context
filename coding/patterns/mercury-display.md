@@ -1,91 +1,78 @@
-# mercury: Display
+# ------------------------------------------------------------------------------
+#  mercury-display.md
+#  Data variation -- same rendering pipeline, different values to display.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Data variation  --  same rendering pipeline, different values to display.
+# - Problem -
 
-## Problem
+Your program has data that a human needs to see. You need to format it, keep it up to date, and show it on a screen, terminal, or web page.
 
-Data from a source must be presented to a user in a readable form, potentially involving transformation, formatting, and timely updates.
+# - When You'll See This -
 
-## Context
+Any time you build something that shows data to a person. Think CLI tools that print results, dashboards, text editors, games, or monitoring UIs. Display almost always pairs with a data source (file, database, computation result) and often leads into user commands.
 
-Occurs whenever a system has internal data that a human needs to see. The data may be structured (records, tables, trees) or unstructured (text, images, streams). The user may be an operator, a customer, or another system interpreted as biddable. Display is rarely alone  --  it couples to a data source (mars/persistence or neptune/transformation) and often precedes a command path (jupiter/validation, saturn/routing).
+# - How It Works -
 
-## Domains Involved
+- **Source**: where the data comes from -- could be a file, a live stream, or just a variable in memory.
+- **Display surface**: where the output goes -- a terminal window, a GUI widget, an HTML element, or a file.
+- **User**: the person reading the display. They might respond by clicking a button or typing a command.
 
-- **Source** (lexical or causal): provides the raw data to be displayed. May be a database (causal  --  queried on demand), a stream (causal  --  pushes updates), or an in-memory structure (lexical  --  polled).
-- **Display surface** (lexical): the rendering target. A terminal, a GUI widget, an HTML element, a file. Receives formatted representations.
-- **User** (biddable): interprets the display. May react by issuing commands, which feeds other problem patterns.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every value shown on screen can be traced back to a real source value at some point in time.
+- Format conversions keep the information the user actually needs (you can drop details they don't care about).
+- Updates happen fast enough for the context -- under a second for interactive use, a few seconds for a dashboard.
+- The screen never shows contradictory data from the same source at the same time.
 
-- Source  ->  Display: data values, timestamps, schema descriptors
-- Display  ->  Surface: formatted output (text, pixels, DOM nodes)
-- User  ->  System: commands or queries triggered by interpretation of the display
-- Surface  ->  Display: events (resize, scroll, focus) that affect what can be shown
+# - What Goes Wrong -
 
-## Invariants
+- **Stale data**: the display shows old information because it hasn't refreshed.
+- **Overflow**: there's more data than fits on screen, so some of it gets cut off silently.
+- **Inconsistent views**: different parts of the UI update from different snapshots and show conflicting info.
+- **Lost precision**: a conversion drops details the user actually needed (like rounding off cents in a price).
+- **Slow updates**: the display refresh can't keep up with the data changes, causing flicker or missed states.
+- **Misleading visuals**: a colour or icon implies something that isn't true in the data.
 
-- Every displayed value must correspond to a source value at some identifiable snapshot time.
-- Format transformations must be lossless with respect to the information the user needs (loss may be acceptable for information the user does not need).
-- The display must update within the user's perceptual threshold for the domain (sub-second for interactive, seconds for monitoring, minutes for dashboards).
-- The display must not present contradictory information from the same source at the same time.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Perfect rendering vs. speed**: showing every detail accurately takes time; sometimes a rough picture fast is better.
+- **Everything vs. something useful**: showing all data at once overwhelms the user; hiding some behind navigation loses context.
+- **Smooth vs. responsive**: smoothing out updates looks nicer but adds delay.
 
-- **Aliasing / staleness**: Display shows a value that no longer reflects the source state. The user acts on outdated information.
-- **Overflow**: The data quantity exceeds the display surface capacity. Information is truncated or omitted without indication.
-- **Inconsistent framing**: Different parts of the display update from different snapshots, showing contradictory states.
-- **Format loss**: Transformation discards information the user needs (e.g., truncating decimals in a financial display).
-- **Latency mismatch**: The display update cycle is slower than the source change cycle, causing visible flicker or missed states.
-- **Semantic mismatch**: The representation (colour, position, icon) implies a meaning not present in the data.
+# - Related Problems -
 
-## Forces
+- **mars/persistence**: data often comes from storage.
+- **neptune/transformation**: raw data usually needs reshaping before display.
+- **janus/reduction**: dashboards show summaries, not every row.
+- **jupiter/validation**: user commands triggered by what they see need checking.
+- **saturn/routing**: clicks and key presses need to reach the right handler.
+- **earth/sorting**: ordered lists need sorting first.
+- **venus/filtering**: showing a subset means filtering first.
 
-- **Fidelity vs. timeliness**: Rendering every detail accurately takes time; the user may prefer a fast approximate display.
-- **Breadth vs. depth**: Showing all information at once overwhelms the user; hiding information requires navigation that may obscure context.
-- **Stability vs. responsiveness**: Smoothing updates avoids flicker but introduces latency.
-- **Generality vs. specificity**: A generic display framework handles many cases but may not handle any case well.
+# - Getting Started -
 
-## Related Subproblems
+Print raw values to stdout with `print()` / `console.log()` / `println!`. Format as a table with simple string padding. Re-render everything on each update.
 
-- **mars/persistence**: The source data may come from a persistence layer.
-- **neptune/transformation**: Raw data often requires transformation before display.
-- **janus/reduction**: Display often shows aggregated or summarised data.
-- **jupiter/validation**: User commands triggered by display interpretation must be validated.
-- **saturn/routing**: Display events may need routing to handlers.
-- **earth/sorting**: Ordered display requires a sorting subproblem.
-- **venus/filtering**: Subset display requires a filtering subproblem.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You need multiple output targets (terminal, HTML file, JSON export).
+- Data arrives faster than you can re-render -- time to add throttling or diffing.
+- Users interact with the display (scroll, click, filter) -- events need to flow back to data.
+- The display layout needs to survive a restart.
 
-#### When this pattern matters
-Any project that shows data to a human  --  CLI tools with output, dashboards, editors, games, monitoring UIs.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-Print raw values to stdout with `println!` / `print()` / `console.log()`. Format as a table with simple string padding. Refresh by re-rendering the entire output on each update.
+- Your computation code is mixed with `print` / `format` / `write` calls.
+- Changing the output format means editing the same functions that do the real work.
+- You're copy-pasting rendering logic for different output targets.
+- The same data flows through different display paths depending on context.
 
-#### Split into its own module when (observable triggers)
-- Multiple output targets (terminal, file, JSON, HTML) need different renderers.
-- The source data updates faster than the display refresh cycle  --  you need throttling or diffing.
-- The user can interact with the display (scroll, click, filter)  --  events must route back to data.
-- The display needs to survive process restart (session state, window layout).
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Your code mixes computation with print/format/write calls.
-- Changing the output format requires editing the same functions that compute results.
-- You need to support multiple output targets (stdout, file, HTML, JSON) and the logic is duplicated.
-- The same data flows through different rendering paths depending on context.
+- Building a fancy widget framework before you have more than one view type.
+- Separating display from data fetching before you have a second data source.
+- Implementing virtual scrolling before measuring that rendering everything is actually slow.
 
-#### Real project examples
-- **crawley** (`output` module): Results rendered as plain text, JSON, or CSV depending on CLI flags  --  display is a separate concern from crawling.
-- **Helix editor** (View + render): Multiple views (editor, status bar, minimap, picker) render the same document model through different projections.
-- **Lite XL** (view.lua): Renders the document model as lines on screen with scroll offset, cursor, and selection highlight.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Building a widget/compositor framework before you have more than one view type.
-- Separating display logic from data fetching before you have a second data source.
-- Implementing virtual scrolling before you measure that rendering all items is a bottleneck.
-
-## Frame Concern
-
-**The temporal coupling between source and display.** The source changes independently of the display cycle. The solution must decide when to sample, when to push, and what to show during transition  --  without the user acting on inconsistent state.
+Display has a timing problem. The source data changes on its own schedule, but the display updates on a different cycle. You have to decide when to sample the data, when to push updates, and what to show during transitions -- all without the user acting on stale or inconsistent information.

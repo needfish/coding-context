@@ -1,114 +1,82 @@
-# charon: Durable Workflow / Saga
+# ------------------------------------------------------------------------------
+#  charon-durable-workflow.md
+#  Behavior variation -- the workflow step sequence changes per business process.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the workflow step sequence changes per business process.
+# - Problem -
 
-## Problem
+Your system needs to run a multi-step process that may take hours or days, span multiple services, and survive crashes along the way. Each step must execute at least once, the overall process must eventually finish (success or failure), and failed steps need compensating actions (rollbacks).
 
-A multi-step process must make progress across process restarts, partial failures, and arbitrary delays, ensuring that each step is executed exactly once and the overall process eventually reaches a terminal state (success or failure) without manual intervention.
+# - When You'll See This -
 
-## Context
+Any system with long-running business processes that span multiple operations, services, or time boundaries. Order fulfilment, payment processing, data migration pipelines, deployment rollouts, document approval chains, and multi-step ETL jobs. The process is broken into discrete steps, each with well-defined input and output.
 
-Arises in any system with long-running business processes that span multiple operations, services, or time boundaries: order fulfilment, payment processing, data migration pipelines, deployment rollouts, document approval chains, and multi-step ETL jobs. The process is decomposed into discrete steps, each with a well-defined input and output. The system must persist the progress between steps so that a crash or restart picks up where it left off. Steps may have compensating actions (rollbacks) that must be run if a later step fails.
+# - How It Works -
 
-## Domains Involved
+- **Workflow definition**: the static description of the process -- a graph of steps with transitions, retry policies, timeouts, and compensating actions.
+- **Workflow instance**: a single running copy of a workflow definition, with its own state (which step it's on, what data it has accumulated).
+- **Step**: one unit of work in the workflow -- calling an API, sending an email, writing to a database.
+- **Compensating action**: the undo for a step -- if step 3 fails, run the compensation for step 2 to roll back its effects.
+- **Workflow state**: persisted progress so that a crash or restart picks up where it left off.
 
-- **Workflow definition** (lexical): the static description of the process  --  a graph of steps with transitions, retry policies, timeouts, and compensating actions.
-- **Execution state** (lexical): the current position in the workflow  --  which step is active, what data has been accumulated, what side effects have been applied.
-- **Step handler** (causal): the function or service that implements a single step of the workflow. May call external services, perform computation, or schedule future work.
-- **State store** (causal): the persistent storage that holds execution state across restarts. Must be transactional: step completion and state update must be atomic.
-- **Recovery controller** (causal): the process that scans for incomplete workflows on startup and resumes them.
-- **Compensation handler** (causal): the inverse of a step handler  --  undoes the side effects of a completed step when a later step fails.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Each step executes exactly once (or at least once with idempotent retry).
+- The workflow state persists between steps so a crash resumes from the last completed step.
+- If a step fails, compensating actions run for all previously completed steps (saga pattern).
+- The workflow eventually reaches a terminal state (success or failure) without manual intervention.
+- Concurrent workflows don't interfere with each other.
 
-- Step handler  ->  State store: read current state, write new state (atomically with step completion)
-- Workflow definition  ->  Engine: step graph, transition rules, retry policy
-- Engine  ->  Step handler: input data, context, deadline metadata
-- State store  ->  Recovery controller: incomplete workflows on startup
-- Recovery controller  ->  Engine: resume workflows, retry failed steps
-- Engine  ->  Compensation handler: rollback request with original step output
+# - What Goes Wrong -
 
-## Invariants
+- **Step runs twice**: a step executes, the system crashes before persisting completion, and on restart the step runs again -- producing duplicate payments, emails, or API calls.
+- **Compensation fails**: a compensating action also fails, leaving the system in an inconsistent state that requires manual repair.
+- **Orphaned workflow**: a workflow gets stuck mid-execution and no mechanism detects or recovers it.
+- **Timeout misconfiguration**: a step's timeout is too short, causing the workflow to abort a slow but correct operation.
+- **State explosion**: storing the full workflow state (including all accumulated data) for thousands of concurrent instances consumes too much storage.
+- **Non-deterministic recovery**: the workflow definition changed between the crash and recovery, so the resumed instance runs different logic than the original.
 
-- The execution state must be persisted atomically with the step completion  --  no step is "done" until its state is safely stored.
-- A workflow must eventually reach a terminal state (completed, failed, or compensated)  --  no infinite pending states.
-- A step must be executed at most once (idempotency) or its side effects must be idempotent.
-- If a workflow fails after some steps have completed, compensating actions must be run in reverse order for all completed steps.
-- Two recovery controllers must not execute the same workflow step concurrently (exclusive ownership of execution state).
-- A step timeout must advance the workflow to the failure path, not leave it stuck in a pending state.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Orchestration vs. choreography**: a central orchestrator manages the workflow (simple to reason about, single point of failure); choreography lets services coordinate via events (distributed, but harder to trace).
+- **Eager vs. lazy compensation**: eager compensation runs rollbacks immediately (fast recovery); lazy compensation defers them (may leave resources locked longer).
+- **Checkpoint frequency**: checkpoint after every step (more durable, more writes) vs. checkpoint periodically (fewer writes, more work lost on crash).
 
-- **Orphaned workflow**: A crash occurs after step execution but before state persistence  --  on recovery, the step is re-executed, potentially duplicating side effects.
-- **Partial compensation**: A compensating action fails, leaving the system in a partially rolled-back state that requires manual cleanup.
-- **Deadlock**: Two workflows hold locks on each other's resources and cannot make progress.
-- **Zombie step**: A step timeout fires, the workflow moves to the failure path, but the original step eventually completes and updates the now-stale execution state.
-- **State explosion**: The execution state grows with each step (accumulated data, retry counts, timestamps) until it exceeds storage capacity.
-- **Infinite retry**: A step persistently fails but the retry policy never marks it as a terminal failure.
-- **Cascading failure**: The failure of one workflow triggers compensating actions that fail, triggering more compensating actions in a failure cascade.
+# - Related Problems -
 
-## Forces
+- **mars/persistence**: workflow state is persisted between steps.
+- **saturn/routing**: steps may need routing to different handlers.
+- **io/command-execution**: steps may execute external commands.
+- **jupiter/validation**: workflow inputs need validation.
+- **eris/pipeline**: a workflow is a pipeline that spans time and failures.
 
-- **At-most-once vs at-least-once delivery**: At-most-once avoids duplicates but may lose work; at-least-once guarantees progress but requires idempotent handlers.
-- **Forward recovery vs backward recovery**: Forward recovery retries failed steps (try again); backward recovery runs compensating actions (undo what was done).
-- **Eager vs lazy compensation**: Eager compensation runs as soon as a step fails (minimises locked resources); lazy compensation runs at the end (maximises chance of forward recovery).
-- **State size vs recovery speed**: Storing the full accumulated state after every step makes recovery instant but uses storage; storing only the step ID and recomputing on recovery saves space but takes time.
-- **Orchestration vs choreography**: Centralised orchestration (engine coordinates all steps) is simpler to manage but a single point of failure; choreography (each step triggers the next) is more distributed but harder to reason about.
+# - Getting Started -
 
-## Related Subproblems
+A linear sequence of steps in a single script. Each step writes its completion status to a file. On restart, read the file and resume from the last uncompleted step. No orchestration, no compensation, no concurrency.
 
-- **mars/persistence**: Execution state must be durably persisted for crash recovery.
-- **saturn/routing**: The engine routes the workflow to the correct step handler based on current state.
-- **phoebe/resource-lifecycle**: Each workflow execution has a lifecycle (init  ->  step  ->  step  ->  ...  ->  complete/fail).
-- **pan/resource-scheduling**: Step timeouts and retry scheduling are resource scheduling problems.
-- **jupiter/validation**: Step inputs and outputs must be validated before transitioning.
-- **neptune/transformation**: Step handlers often transform data from one representation to another.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- Steps need individual retry policies and timeouts.
+- A step failure requires rolling back earlier steps (saga pattern).
+- Multiple workflows with different step sequences exist.
+- Workflows run concurrently and must not interfere.
+- Workflows take hours or days and must survive process restarts.
 
-#### When this pattern matters
-Any multi-step process that must survive crashes and partial failures  --  payment processing, order fulfilment, deployment orchestration, data pipeline orchestration, approval workflows.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-A single-threaded loop that reads the current step from a file, executes the step handler, writes the next step to the file, and repeats. No compensation, no parallel execution, no timeout.
+- Your process has multiple steps that must happen in order.
+- A failure in step 3 requires undoing steps 1 and 2.
+- The process takes longer than a single request/response cycle.
+- Restarting the process from the beginning on failure is too costly.
+- You need to track progress across process restarts.
 
-```go
-func Run(steps []Step) {
-    state := readState("workflow.state")
-    for i := state.CurrentStep; i < len(steps); i++ {
-        result := steps[i].Execute()
-        if result.Error != nil {
-            return result.Error
-        }
-        state.CurrentStep = i + 1
-        writeState("workflow.state", state)
-    }
-}
-```
+# - Common Mistakes -
 
-#### Split into its own module when (observable triggers)
-- A step needs to call an external service that may fail or time out.
-- A step must be retried with backoff if it fails.
-- A crash during step execution causes duplicated work or lost progress.
-- Steps need compensating actions that run in reverse order on failure.
-- Multiple workflows run concurrently and must not interfere.
+- Implementing durable workflows without idempotent steps (a step running twice causes duplicate side effects).
+- Not testing crash recovery -- assuming recovery works without actually simulating crashes.
+- Building a workflow engine before you need more than two workflows.
+- Making compensating actions optional instead of mandatory for every step that has side effects.
 
-#### Signs you're in this pattern
-- You have a multi-step business process that must survive server restarts.
-- Each step may call external services that can fail or hang.
-- You need to track "which step was last completed" to resume after a crash.
-- A failure in a later step requires undoing earlier steps (compensating actions).
+# - The Core Challenge -
 
-#### Real project examples
-- **Flowstate** (`engine.go`, `recovery.go`): The canonical instantiation. Workflow steps are executed via the engine, state is persisted atomically in the driver, recovery scans incomplete workflows on startup and resumes from the last committed step.
-- **DaemonDB** (WAL checkpoint recovery): Database recovery replays the WAL from the last checkpoint  --  a simpler form of workflow: `BEGIN  ->  WAL entries x N  ->  CHECKPOINT  ->  switch to new WAL  ->  truncate old`.
-
-#### Common over-engineering traps
-- Implementing a full saga orchestration engine before confirming that a single linear retry loop is insufficient.
-- Adding distributed locking before workflows run in a single process.
-- Building a graphical workflow editor before the step graph is stable.
-- Implementing parallel step execution before sequential execution is proven too slow.
-
-## Frame Concern
-
-**Progress across failure boundaries.** Each step may succeed, fail, or time out independently. The system must ensure that the workflow makes progress toward completion despite partial failures  --  without getting stuck, without duplicating work, and without leaving the system in an inconsistent state. The concern is not individual step reliability but the trajectory of the workflow across many independent failure points.
+Durable workflows span time, failures, and service boundaries. Each step may succeed, fail, or hang. The system must persist progress, detect failures, retry transient errors, and compensate for permanent failures -- all while the workflow definition may evolve independently.

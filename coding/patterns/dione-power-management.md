@@ -1,101 +1,75 @@
-# dione: Power Management
+# ------------------------------------------------------------------------------
+#  dione-power-management.md
+#  Behavior variation -- the power policy algorithm changes per energy/performance trade-off.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the power policy algorithm changes per energy/performance trade-off.
+# - Problem -
 
-## Problem
+Your system needs to minimise energy consumption while staying responsive enough to handle external events. You need to trade off performance for power across CPU frequency, sleep states, peripheral gating, and communication duty cycling.
 
-A system must minimise energy consumption while maintaining sufficient responsiveness to external events, requiring dynamic tradeoffs between performance and power at multiple levels: CPU frequency, sleep states, peripheral gating, and communication duty cycling.
+# - When You'll See This -
 
-## Context
+Battery-powered IoT devices, mobile phones, laptops, and energy-harvesting systems. Power is the primary constrained resource -- often more constrained than CPU cycles or memory. The system must react to events (sensor readings, network packets, user input) but spend the rest of its time in the deepest possible sleep state.
 
-Arises in battery-powered IoT devices, mobile phones, laptops, and energy-harvesting systems. Power is the primary constrained resource  --  often more constrained than CPU cycles or memory. The system must react to external events (sensor readings, network packets, user input) but spend the rest of its time in the deepest possible sleep state. Each subsystem (CPU, radio, sensor, display) contributes to the power budget, and each has its own latency tradeoff for wakeup.
+# - How It Works -
 
-## Domains Involved
+- **Energy source**: battery, supercapacitor, or energy harvester (solar, piezoelectric, RF) -- provides finite or intermittent power.
+- **Power domains**: subsystems that can be independently powered -- CPU core, radio, sensor array, display, storage.
+- **Operating states**: each domain has states with different power/performance trade-offs (active, idle, sleep, deep sleep, off).
+- **Wake sources**: events that can transition a domain from sleep to active -- timer expiry, GPIO interrupt, network activity.
 
-- **Energy source** (causal): battery, supercapacitor, energy harvester (solar, piezoelectric, RF)  --  provides finite or intermittent power.
-- **Power domains** (lexical): independently gated regions of the chip (CPU core, peripheral bus, radio, memory retention) that can be powered off separately.
-- **Sleep states** (lexical): graduated depth of power saving (clock gating  ->  voltage scaling  ->  power gating  ->  memory off), each with a wakeup latency and energy cost.
-- **Duty cycle** (causal): the fraction of time a subsystem is active vs. asleep, typically expressed as a ratio or schedule.
-- **Wakeup source** (causal): an event (pin change, timer, radio preamble, comparator threshold) that can bring the system out of sleep.
-- **Scheduler** (causal): decides when to enter sleep and which sleep state to use based on predicted idle duration and pending work.
-- **Frequency scaler** (causal): adjusts operating voltage and clock frequency (DVFS) to trade performance for power during active periods.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- The system spends as much time as possible in the lowest power state that still meets responsiveness requirements.
+- Transitioning between states costs energy and time -- the benefit of sleeping must exceed the transition cost.
+- All wake sources are configured before entering sleep.
+- No domain is kept active unnecessarily.
 
-- Scheduler  ->  Power domain: sleep state entry command, wakeup timer configuration
-- Sleep state  ->  Scheduler: wakeup interrupt, resume time, sleep duration measurement
-- Frequency scaler  ->  CPU: voltage/frequency pair, transition completion notification
-- Peripheral  ->  Scheduler: idle notification (no pending work), request for clock gating
-- Radio  ->  Duty cycle: wake-up receiver signal, preamble detection, scheduled listen interval
-- Energy source  ->  Scheduler: remaining capacity, voltage droop warning
-- Application  ->  Scheduler: latency constraint, required wakeup deadline
+# - What Goes Wrong -
 
-## Invariants
+- **Wake-up storm**: the system wakes up too frequently, spending more energy on transitions than it saves by sleeping.
+- **Timer coupling**: timers are not aligned, so the system wakes up at many closely-spaced times instead of once.
+- **Peripheral leak**: a sensor or radio stays powered on after use, draining the battery.
+- **Transition overhead misestimation**: the energy cost of entering and leaving sleep exceeds the energy saved during sleep.
+- **Worst-case provisioning**: the system is designed for peak power draw, but most of the time it needs much less.
 
-- The system must wake from any sleep state within the maximum allowed latency for pending events.
-- Transitioning between power states consumes energy; entering a deeper state is only beneficial if the idle duration exceeds the break-even time.
-- All wakeup sources must be configured before entering sleep  --  an unconfigured source may cause the system to sleep indefinitely.
-- Peripheral state (DMA descriptors, FIFO contents, register configurations) must be preserved across sleep or explicitly reinitialised on wake.
-- The duty cycle must not exceed the available energy budget over the harvesting/charging interval.
-- Frequency scaling must not cause the CPU to miss instruction-level deadlines  --  voltage must be sufficient for the chosen frequency.
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Sleep depth vs. wake latency**: deeper sleep saves more power but takes longer to wake up -- if wake latency exceeds event deadlines, you can't sleep that deep.
+- **Aggressive vs. conservative**: aggressive power management saves more energy but risks missing events; conservative is safer but wastes power.
+- **Centralised vs. distributed**: a central power manager has complete information but is a bottleneck; distributed decisions are faster but may conflict.
 
-- **Wakeup latency miss**: The system enters a deep sleep state, but an event arrives that requires faster wakeup, causing a missed ADC sample, lost radio packet, or user-perceptible delay.
-- **Break-even violation**: Entering a deep sleep state for a very short idle period costs more energy than staying in a lighter state, due to wakeup transition energy.
-- **State loss**: A deep sleep state powers off memory or peripheral state that was not saved, causing corruption on resume.
-- **Frequency scaling lag**: The workload increases but the DVFS governor responds too slowly, causing performance degradation before frequency ramps up.
-- **Energy cliff**: Battery voltage drops below the regulator's minimum, causing an abrupt system shutdown without clean state preservation.
-- **Timer drift**: Low-power oscillators (RC, 32 kHz) drift with temperature, causing duty-cycle misalignment over long sleep periods.
-- **Priority inversion in sleep**: A high-priority wakeup event arrives while the system is committing to sleep entry, and the wakeup handling is delayed until sleep entry completes.
+# - Related Problems -
 
-## Forces
+- **pan/resource-scheduling**: power management is a scheduling problem over energy as the resource.
+- **atlas/memory-allocation**: memory has power implications (more memory, more refresh power).
+- **hyperion/network-listener**: networking is often the largest power consumer.
 
-- **Power vs. latency**: Deeper sleep saves more power but takes longer to wake. The system must choose a sleep state whose wakeup latency is tolerable for the expected next event.
-- **Active power vs. idle power**: DVFS reduces power when the CPU is active but less urgently; sleep states reduce power when the CPU is idle. The two strategies interact  --  a faster CPU finishes work sooner and can sleep longer.
-- **Radio duty cycle vs. throughput**: Low duty cycling (e.g., 0.1% listen interval) saves battery but reduces throughput and increases end-to-end latency for network communication.
-- **Hardware complexity vs. software control**: Dedicated power management hardware (PMIC, PWRCTRL) offloads sequencing but fixes the state machine; software control is flexible but requires careful timing and state tracking.
-- **Harvesting vs. consuming**: Energy-harvesting systems must consume less power than the harvester supplies on average, but may burst above it using a storage buffer, requiring long-term energy accounting.
+# - Getting Started -
 
-## Related Subproblems
+Put the CPU to sleep in a loop when there's no work. Use the platform's idle/sleep instruction. No dynamic frequency scaling, no peripheral gating, no multiple power domains.
 
-- **pan/resource-scheduling**: Scheduling decisions (tickless idle, priority-based wakeup ordering) directly determine power consumption.
-- **atlas/memory-allocation**: Memory retention across sleep states determines which regions can be powered off and which must stay alive.
-- **saturn/routing**: Network routing decisions affect radio duty cycling  --  choosing a high-power neighbour shortens battery life.
-- **hyperion/network-listener**: Network interfaces driver must coordinate wakeup timing with remote senders (e.g., TSCH slot scheduling, wake-on-LAN).
-- **mars/persistence**: Power loss forces data to be committed to non-volatile storage before the energy reserve is exhausted.
-- **europa/config-assembly**: Power management parameters (sleep thresholds, voltage tables, duty-cycle ratios) must be configured correctly for the hardware platform.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You have multiple power domains that can be independently controlled.
+- The system has battery life requirements that aren't being met.
+- You need different power policies for different usage scenarios (performance vs. battery saver).
+- The power management logic is scattered across drivers and application code.
 
-#### When this pattern matters
-Any battery-powered or energy-harvesting device  --  IoT sensors, wearables, mobile phones, laptops, wireless nodes.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-Run at full speed, never sleep. In embedded: `WFI` (wait for interrupt) in the idle loop. No DVFS, no tickless idle, no peripheral gating.
+- Your device runs on a battery and you need to extend its life.
+- You're setting CPU frequency or sleep states.
+- You turn peripherals on and off based on usage.
+- You measure energy consumption to optimise behaviour.
 
-#### Split into its own module when (observable triggers)
-- Battery life is measured and found insufficient (quantified gap between actual and required).
-- The device spends most of its time idle  --  sleeping reduces average power measurably.
-- Different operating modes have different performance requirements (active sensing vs. periodic reporting).
-- The energy source is intermittent (harvesting) and consumption must track availability.
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Your device runs on battery and battery life is a product requirement.
-- Different operating modes consume significantly different power (active vs idle vs sleep).
-- You need to trade off performance for battery life depending on remaining charge.
-- The system generates heat that must be managed (thermal throttling).
+- Sleeping too shallow (wasting power) because wake latency calculation is wrong.
+- Sleeping too deep (missing events) because not all wake sources are configured.
+- Not accounting for transition energy cost -- sleeping for very short periods wastes more energy than staying awake.
+- Optimising CPU power while ignoring the radio or display, which dominate total power.
 
-#### Real project examples
-- **smoltcp** (no explicit power management): Embedded TCP/IP stack designed for low-power MCUs  --  the pattern informs the design: poll-based operation avoids interrupt-driven wakeups.
-- **zt terminal emulator** (framebuffer sleep): Terminal renders only on input or screen change  --  no idle refresh, display sleeps between updates.
-- **tinykvm** (VM power management): KVM-based micro-VMs can be suspended/resumed  --  host manages VM power state via KVM API.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Implementing DVFS before measuring that CPU active power dominates the power budget.
-- Building a tickless scheduler before confirming that periodic timer wakeups drain the battery.
-- Adding power-aware routing before measuring that the radio dominates the energy budget.
-
-## Frame Concern
-
-**The gap between energy consumption and energy availability.** The system consumes energy at different rates depending on activity state, while the source provides power at a fixed or variable rate (battery discharge, solar harvesting). The gap widens during bursts of activity and narrows during sleep. Managing power means predicting future energy availability and throttling consumption to stay within budget  --  a physical-level prediction problem, not a scheduling one.
+Power management is a prediction problem. The system must decide whether to sleep or stay active based on an unknown future -- when will the next event arrive? How long will it take to process? The wrong prediction wastes energy or misses deadlines.

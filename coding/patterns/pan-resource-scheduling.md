@@ -1,99 +1,78 @@
-# pan: Resource Scheduling
+# ------------------------------------------------------------------------------
+#  pan-resource-scheduling.md
+#  Behavior variation -- the scheduling policy algorithm changes per workload requirement.
+# ------------------------------------------------------------------------------
 
-> **Pressure class:** Behavior variation  --  the scheduling policy algorithm changes per workload requirement.
+# - Problem -
 
-## Problem
+Multiple consumers compete for a shared resource (CPU time, network bandwidth, I/O channel, memory). Your system must allocate access according to a policy while avoiding starvation, priority inversion, and overload.
 
-Multiple consumers compete for a shared resource (CPU, network bandwidth, memory bandwidth, I/O channel), and the system must allocate access according to a policy (priority, fairness, deadline) while avoiding starvation, priority inversion, and overload.
+# - When You'll See This -
 
-## Context
+Any system with concurrent contention for a scarce resource -- OS task schedulers, I/O schedulers, network packet schedulers, database transaction schedulers, GPU command schedulers. Consumers have different urgency levels, and the scheduler must balance throughput, latency, and fairness.
 
-Arises in any system with concurrent contention for a scarce resource: RTOS task schedulers, I/O schedulers, network packet schedulers, GPU command schedulers, database transaction schedulers, and disk schedulers. The resource is typically single-unit but can be partitioned (e.g., CPU time slices, disk timeslots). Consumers have different urgency levels, and the scheduling policy must balance throughput, latency, and fairness.
+# - How It Works -
 
-## Domains Involved
+- **Consumers**: tasks, threads, requests, packets, or transactions that need the resource.
+- **Resource**: the thing they compete for -- CPU core, disk bandwidth, network link, memory arena.
+- **Scheduling policy**: the rules that decide which consumer gets the resource next (priority, FIFO, round-robin, deadline).
+- **Ready queue**: the set of consumers waiting for the resource.
+- **Dispatcher**: the mechanism that hands the resource to the chosen consumer and preempts it when its turn ends.
 
-- **Consumers** (causal): tasks, threads, processes, I/O requests, packets, or transactions that need access to the resource.
-- **Resource** (causal): the shared entity (CPU core, network link, disk, bus) that can serve one consumer at a time (or N consumers in parallel, with N fixed).
-- **Scheduler** (causal): the policy function that selects which consumer to serve next, given their priorities, deadlines, and past service.
-- **Ready queue** (lexical): the ordered data structure holding consumers that are eligible to run.
-- **Priority** (lexical): an urgency level assigned to each consumer, either statically or dynamically.
-- **Deadline** (lexical): a time by which a consumer must receive service to meet its requirement.
-- **Preemption** (causal): the ability to suspend a running consumer and switch to a higher-priority one.
+# - What Must Always Be True -
 
-## Shared Phenomena
+- Every consumer eventually gets access to the resource (no starvation).
+- The scheduling policy is followed consistently.
+- Priority inversion is bounded or prevented (a low-priority task doesn't block a high-priority one indefinitely).
+- The scheduler overhead is small compared to the resource's work time.
+- Consumers that exceed their allocation are preempted or throttled.
 
-- Consumers  ->  Scheduler: arrival events, priority/deadline metadata, state transitions (ready, blocked, suspended)
-- Scheduler  ->  Resource: dispatch decisions (which consumer to serve next)
-- Resource  ->  Scheduler: completion events, preemption interrupts
-- Scheduler  ->  Ready queue: enqueue/dequeue operations
-- Scheduler  ->  Consumers: context switch, priority boost, starvation detection
+# - What Goes Wrong -
 
-## Invariants
+- **Starvation**: a low-priority consumer never gets the resource because higher-priority ones keep arriving.
+- **Priority inversion**: a high-priority task waits for a low-priority task that holds a shared lock.
+- **Convoy effect**: one slow consumer holds the resource and forces others to wait in line behind it.
+- **Priority inversion**: a task holds a lock needed by a higher-priority task.
+- **Thundering herd**: waking all waiting consumers when the resource becomes available, overwhelming the system.
+- **Deadline miss**: a real-time task misses its deadline because scheduling overhead is too high.
 
-- At most one consumer may occupy the resource at any instant (for single-core scheduling).
-- A higher-priority consumer must never wait indefinitely behind a lower-priority one (priority ordering).
-- The scheduler must make progress  --  if any consumer is ready, the scheduler must eventually select one.
-- A consumer that releases the resource must be able to re-enter the ready queue (no permanent starvation by policy).
-- Preemption must save and restore consumer state completely (register file, program counter, stack pointer).
-- Time consumed by the scheduler itself must be bounded and accounted for (scheduling overhead).
+# - Design Trade-Offs -
 
-## Known Failure Modes
+- **Fairness vs. throughput**: giving everyone equal time is fair but may reduce total throughput; prioritising short tasks improves throughput but starves long ones.
+- **Preemptive vs. cooperative**: preemptive scheduling (OS controls when tasks switch) is responsive; cooperative scheduling (tasks yield voluntarily) is simpler but can freeze the system.
+- **Priority vs. deadline**: priority-based scheduling is simple but can cause starvation; deadline-based scheduling is more predictable but requires knowing deadlines in advance.
 
-- **Priority inversion**: A low-priority consumer holds a resource needed by a high-priority one, causing the high-priority consumer to wait. Mitigated by priority inheritance or priority ceiling protocols.
-- **Starvation**: A consumer never receives service because higher-priority consumers continuously arrive. Mitigated by ageing (gradually increasing priority of starved consumers) or fair queuing.
-- **Convoy effect**: A long-running consumer blocks behind a short one, or vice versa in FIFO scheduling, causing bursty latency.
-- **Thundering herd**: Multiple high-priority consumers become ready simultaneously and the scheduler cannot distinguish which to run first, causing jitter.
-- **Scheduler thrashing**: The overhead of scheduling decisions exceeds the useful work done, typically when time slices are too short or context switches are too expensive.
-- **Deadline miss cascade**: One consumer misses its deadline, causing dependent consumers to also miss theirs, amplifying failure.
+# - Related Problems -
 
-## Forces
+- **atlas/memory-allocation**: memory allocation often needs scheduling for fair sharing.
+- **hyperion/network-listener**: connection acceptance is a scheduling decision.
+- **thebe/background-compaction**: compaction must not starve foreground reads and writes.
 
-- **Throughput vs. latency**: Batch-oriented scheduling (FIFO, round-robin) maximises throughput but can starve latency-sensitive consumers; preemptive priority scheduling minimises latency for critical consumers but adds overhead and can reduce throughput.
-- **Fairness vs. urgency**: Fair schedulers (proportional share, lottery) give each consumer a guaranteed fraction; priority schedulers favour urgent work but can starve low-priority consumers.
-- **Preemptive vs. cooperative**: Preemptive scheduling guarantees responsiveness but requires atomic context switching and shared-data protection; cooperative scheduling is simpler but requires consumers to voluntarily yield, risking unbounded latency.
-- **Static vs. dynamic priority**: Static priorities are simple but cannot adapt to changing workloads; dynamic priorities (EDF, deadline-driven) adapt optimally but require knowledge of deadlines.
-- **Global vs. partitioned**: Global scheduling allows any consumer on any core but suffers from cache migration overhead; partitioned scheduling pins consumers to cores but loses load-balancing flexibility on multi-core.
+# - Getting Started -
 
-## Related Subproblems
+A simple FIFO queue. First come, first served. No priorities, no preemption, no deadlines.
 
-- **atlas/memory-allocation**: Memory allocation routines must be reentrant and limited in duration  --  they share the CPU with application code and must not cause unbounded scheduling delay.
-- **dione/power-management**: Tickless idle and frequency scaling couple scheduling decisions with energy consumption.
-- **mars/persistence**: I/O scheduling (disk, flash) must account for durability and wear-leveling constraints alongside latency.
-- **jupiter/validation**: Schedulers often include watchdog timers and deadline monitors as validation of correct scheduling.
-- **uranus/authentication**: Real-time systems must authenticate task origins before scheduling critical work.
-- **hyperion/network-listener**: Network interrupt handling must be scheduled alongside application tasks.
+# - When to Split Into Its Own Module -
 
-### ==== Practical Use ====
+- You need priority levels for different consumers.
+- Some consumers starve because higher-priority ones keep arriving.
+- You need to bound maximum wait time (no task waits more than X seconds).
+- Different consumers need different scheduling policies.
 
-#### When this pattern matters
-Any system with concurrent contention for a shared resource: RTOS task schedulers, I/O schedulers, network packet schedulers, request rate limiters.
+# - Signs You're in This Pattern -
 
-#### Start with (minimal form)
-First-come, first-served (FIFO queue). A single-threaded event loop. No priorities, no preemption, no deadlines. Python: `asyncio.Queue`. Rust: `std::collections::VecDeque`.
+- Multiple tasks or requests compete for the same resource.
+- You have a queue with a dispatching loop.
+- Some requests take much longer than others and delay everything.
+- High-priority tasks wait behind low-priority ones.
 
-#### Split into its own module when (observable triggers)
-- Some work items are more urgent than others (priorities emerge).
-- A high-priority item can arrive while a low-priority item is being processed (preemption needed).
-- Items have deadlines, and missing them causes real consequences.
-- The scheduling policy needs to be configurable (FIFO vs priority vs round-robin vs EDF).
+# - Common Mistakes -
 
-#### Signs you're in this pattern
-- Multiple tasks compete for a shared resource (CPU time, network bandwidth, disk I/O).
-- Some tasks have deadlines or quality-of-service requirements.
-- Tasks arrive unpredictably and you need to decide which runs next.
-- A naive FIFO or round-robin causes some tasks to starve or miss deadlines.
+- Implementing priority scheduling without solving starvation (low priority tasks never run).
+- Using a global lock for scheduling decisions on multi-core systems.
+- Assuming all tasks are equally important and ignoring priority entirely.
+- Not measuring scheduling overhead.
 
-#### Real project examples
-- **Flowstate** (`delay.go`): Delayed step execution  --  schedules workflow steps to run after a timeout or at a specific time using a timer heap.
-- **tiny-lsm-go** (compaction scheduler): Background compaction tasks scheduled when write amplification crosses a threshold  --  priority to level-0 compaction to bound read amplification.
-- **NessMuxer** (packet scheduling): Video packets from multiple streams are scheduled for muxing based on PTS timestamps  --  deadline-driven scheduling.
-- **smoltcp** (socket polling): Network sockets are polled round-robin with fairness guarantees  --  prevents a single socket from starving others.
+# - The Core Challenge -
 
-#### Common over-engineering traps
-- Implementing priority queues before confirming that FIFO causes missed deadlines.
-- Building a preemptive scheduler when cooperative yielding handles all cases.
-- Adding deadline-monitoring infrastructure before a single deadline has been missed.
-
-## Frame Concern
-
-**The gap between priority assignment and actual timeliness.** The scheduler assigns priority, but wait time depends on the interaction of priorities, resource holding times, shared-resource blocking, and preemption patterns. A high-priority consumer can still miss its deadline due to priority inversion (sharing a resource with a lower-priority consumer) or interrupt handling delays. The concern is how policy maps to actual temporal behaviour  --  policy is abstract, timeliness is concrete.
+The scheduler makes allocation decisions without knowing how long each consumer will need the resource. It must balance competing goals (fairness, throughput, latency, priority) based on partial information and changing conditions.
