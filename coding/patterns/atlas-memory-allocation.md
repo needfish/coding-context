@@ -1,76 +1,80 @@
-# ------------------------------------------------------------------------------
-#  atlas-memory-allocation.md
-#  Object variation -- the allocation strategy changes while the allocate/free contract stays the same.
-# ------------------------------------------------------------------------------
+# atlas -- memory allocation
 
-# - Problem -
+## Problem
 
-Your program needs to carve up a pool of memory into variable-sized blocks for different requests, then recycle those blocks when they're freed -- all while avoiding fragmentation and keeping it fast.
+A program needs to reserve blocks of memory of different sizes for different uses, then release them back when done. The strategy for finding and recycling free blocks varies by workload. Different strategies give different trade-offs between speed, memory waste, and fragmentation.
 
-# - When You'll See This -
+## Input
 
-Any system that manages dynamic memory. General-purpose allocators (malloc), heap implementations for embedded systems, slab allocators for kernel objects, pool allocators for game engines, and garbage-collected heaps. Different workloads demand different strategies.
+- Allocation request: number of bytes needed
+- Free request: a pointer to previously allocated memory
 
-# - How It Works -
+## Output
 
-- **Memory pool**: the contiguous or segmented region of memory the allocator manages.
-- **Allocation request**: a call asking for N bytes of memory.
-- **Free request**: a call returning previously allocated memory to the pool.
-- **Free list**: the data structure tracking which blocks are available.
-- **Metadata**: bookkeeping information embedded in each block (size, next/prev pointers, flags).
+- Allocation: a pointer to a block of at least the requested size, or an error (out of memory)
+- Free: nothing (the block is returned to the pool)
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every allocation returns a region of at least the requested size that doesn't overlap with any other live allocation.
-- Freeing a valid pointer returns that memory to the pool for reuse.
-- Double-free or use-after-free produces undefined behaviour -- the allocator can detect some cases but not all.
-- Metadata overhead is bounded and predictable.
-- The allocator handles concurrent access correctly (locking or lock-free).
+- Each allocation returns a block that does not overlap with any other live allocation
+- Freeing a valid pointer makes that memory available for future allocations
+- Freeing an invalid pointer (double-free, never-allocated) causes undefined behaviour
+- After many allocations and frees, the pool may have enough total free space but no contiguous block large enough for a request (fragmentation)
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Fragmentation**: after many allocations and frees, the pool has many small gaps and no single region large enough for a new request, even though total free space is sufficient.
-- **Memory leak**: allocated blocks are never freed, exhausting the pool over time.
-- **Fragmentation**: external fragmentation (gaps between blocks) and internal fragmentation (wasted space inside a block) both waste memory.
-- **False sharing**: two threads write to different data that happens to share a cache line, causing performance degradation.
-- **Blowup**: per-allocation metadata overhead becomes significant for many small allocations.
+Use the language's built-in allocator. No custom allocator needed until profiling shows it is a bottleneck.
 
-# - Design Trade-Offs -
+```c
+// C
+void *ptr = malloc(1024);
+free(ptr);
+```
 
-- **Speed vs. fragmentation**: a simple free list (first-fit) is fast but fragments; a buddy allocator is slower but fragments less.
-- **Generality vs. specialisation**: a general-purpose allocator handles any size but is slower for specific patterns; a pool allocator is fast for fixed-size objects but can't handle variable sizes.
-- **Thread-safe vs. single-threaded**: locking every allocation is safe but slow; thread-local caches are fast but risk imbalance.
+```rust
+// Rust
+let mut v = Vec::with_capacity(1024);
+```
 
-# - Related Problems -
+## Failure Modes
 
-- **dione/power-management**: memory allocation and deallocation has energy cost.
-- **phoebe/resource-lifecycle**: memory is a resource with acquire/release lifecycle.
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Fragmentation | Total free memory is sufficient but allocation fails because no single contiguous block is large enough | Switch allocation strategy (buddy allocator, slab allocator, compacting GC) |
+| Memory leak | Allocated blocks are never freed; program memory use grows over time until OOM | Track allocations; use RAII or garbage collection |
+| Double-free | Program crashes with heap corruption | Use tools (Valgrind, ASan) to detect double-frees |
+| Use-after-free | Program crashes or reads garbage from a freed block | Set pointer to NULL after free; use Rust borrow checker |
+| False sharing | Two threads write to different data on the same cache line; program runs slower than expected | Align data to cache line boundaries |
 
-# - Getting Started -
+## Design Trade-offs
 
-Use the language's built-in allocator. In C, `malloc` / `free`. In Rust, the default allocator. No custom allocator, no pool, no slab.
+| Choice | What changes |
+|---|---|
+| Speed vs. fragmentation | Simple free list (first-fit) is fast but fragments. Buddy allocator is slower but fragments less. |
+| General vs. specialised | General-purpose allocator handles any size but is slower for specific patterns. Pool allocator is fast for fixed-size objects but cannot handle variable sizes. |
+| Thread-safe vs. single-threaded | Locking every allocation is safe but slow. Thread-local caches are fast but risk imbalance. |
 
-# - When to Split Into Its Own Module -
+## Start With
 
-- You need to allocate many objects of the same size (pool allocator helps).
-- You need to bound allocation latency (real-time requirements).
-- The default allocator causes unacceptable fragmentation in your workload.
-- You need to track allocation statistics for debugging or profiling.
+Use the language's default allocator (malloc/free in C, default allocator in Rust, built-in in Python/JS). Add a pool allocator when profiling shows many allocations of the same size.
 
-# - Signs You're in This Pattern -
+## Split Into Its Own Module When
 
-- You're considering a custom memory allocator.
-- Your application uses lots of small, short-lived allocations.
+- Many objects of the same size need to be allocated (pool allocator helps).
+- Allocation latency must be bounded (real-time requirements).
+- The default allocator causes unacceptable fragmentation.
+- Allocation statistics are needed for debugging or profiling.
+
+## Signs This Is Present
+
+- A custom memory allocator is being considered.
+- The application uses many small, short-lived allocations.
 - Memory fragmentation causes OOM errors despite enough total free memory.
-- You need deterministic allocation latency.
+- Deterministic allocation latency is required.
 
-# - Common Mistakes -
+## Common Mistakes
 
 - Writing a custom allocator before profiling shows the default one is a problem.
-- Using a general-purpose allocator for fixed-size objects (pool allocator is simpler and faster).
+- Using a general-purpose allocator for fixed-size objects.
 - Ignoring alignment requirements of the platform.
 - Not handling OOM gracefully.
-
-# - The Core Challenge -
-
-Allocation is a search problem -- finding a free block of at least the requested size. The search strategy (first-fit, best-fit, buddy, slab) determines speed, fragmentation, and memory overhead. No single strategy works well for all workloads, and the allocator must choose without knowing future allocation patterns.

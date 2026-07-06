@@ -1,17 +1,13 @@
-# patterns/
+# patterns
 
-26 software design patterns organized by planet name. Each pattern addresses a
-specific problem type (data variation, behavior variation, object variation, or
-rules variation) and follows a consistent structure.
+26 software design patterns organized by planet name. Each pattern addresses a specific problem type (data variation, behavior variation, object variation, or rules variation).
 
-For a project-type-to-patterns reference, see [how-to-use.md](../how-to-use.md).
-For a full index with pressure class and frame concern, see
-[pattern-table.md](../pattern-table.md).
+For a project-type-to-patterns reference, see [how-to-use.md](../how-to-use.md). For a full index with pressure class and frame concern, see [pattern-table.md](../pattern-table.md).
 
 ## Quick Index
 
 | Planet | Pattern | File |
-|--------|---------|------|
+|---|---|---|
 | mercury | display | [mercury-display.md](mercury-display.md) |
 | venus | filtering | [venus-filtering.md](venus-filtering.md) |
 | earth | sorting | [earth-sorting.md](earth-sorting.md) |

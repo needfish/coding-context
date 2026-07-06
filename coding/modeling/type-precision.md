@@ -1,41 +1,16 @@
-# ------------------------------------------------------------------------------
-#  type-precision.md
-#  Choosing precise types over primitives for domain concepts.
-# ------------------------------------------------------------------------------
-
-A domain concept flattened into a primitive (`string`, `int`, `bool`) loses
-information. The type system can no longer distinguish a `UserId` from a
-`PostId`, a `TemperatureCelsius` from a `SpeedKmh`, or a `Status` with three
-valid values from any arbitrary string. You push validation that could be
-compile-time to runtime.
+# Type Precision
 
 ## The Principle
 
-**Prefer algebraic data types (ADTs) over primitives.** Two kinds:
-
-- **Product type**: combines several fields -- a record, struct, tuple.
-  Means "all of these." Example: `User { name: string, age: int }`.
-- **Sum type**: enumerates variants -- a discriminated union, enum.
-  Means "one of these." Example: `Status = Pending | Active | Archived`.
-
-Default to ADTs when modeling domain types. They turn ad-hoc representations
-(a raw string with a comment listing valid values) into explicit type
-definitions the compiler can check.
-
-## The Antipattern: Stringly-Typed Fields
-
-Every time you write `field: string` or `field: int` in a schema, ask:
-"Does every value of this primitive make sense here, or only a subset?"
-
-If only a subset, use one of:
+Prefer types that combine fields (records, structs) or enumerate variants (tagged unions, enums) over primitives for domain concepts. They turn ad-hoc representations (a raw string with a comment listing valid values) into explicit type definitions the compiler can check.
 
 | Instead of | Use |
 |---|---|
-| `status: string` | literal union: `"pending" \| "active" \| "archived"` |
-| `role: string` | enum: `enum Role { Admin, Editor, Viewer }` |
-| `userId: string` | branded type: `type UserId = string & { __brand: "UserId" }` |
-| `temperature: number` | newtype: `struct TemperatureCelsius(f64)` |
-| `config: dict` | product type: `struct Config { host: string, port: u16 }` |
+| status: string | literal union: "pending" | "active" | "archived" |
+| role: string | enum: enum Role { Admin, Editor, Viewer } |
+| userId: string | branded type: type UserId = string & { __brand: "UserId" } |
+| temperature: number | newtype: struct TemperatureCelsius(f64) |
+| config: dict | product type: struct Config { host: string, port: u16 } |
 
 ## Mechanisms
 
@@ -55,22 +30,17 @@ enum Status { Pending, Active, Archived }
 
 ### Branded types (TypeScript)
 
-TypeScript's structural type system treats `string` and `string` as the same
-type. A brand adds a phantom property to make them distinct:
+TypeScript's structural type system treats string and string as the same type. A brand adds a phantom property to make them distinct.
 
 ```typescript
 type Brand<T, B> = T & { __brand: B };
 type UserId = Brand<string, "UserId">;
 type PostId = Brand<string, "PostId">;
-
 function getUser(id: UserId): User { ... }
 // getUser(postId)  -- type error, even though both are strings
 ```
 
-At runtime the brand disappears -- zero cost. See
-[Learning TypeScript -- Branded Types](https://www.learningtypescript.com/articles/branded-types)
-and the TypeScript section of [refactoring-catalog.md](../refactoring/refactoring-catalog.md)
-for defunctionalization as an alternative pattern.
+At runtime the brand disappears -- zero cost.
 
 ### Newtypes (Rust)
 
@@ -81,14 +51,12 @@ struct PostId(String);   // separate type, not interchangeable
 
 ### Value objects (any language)
 
-A small object that wraps a primitive and enforces invariants in its
-constructor:
+A small object that wraps a primitive and enforces invariants in its constructor.
 
 ```python
 @dataclass(frozen=True)
 class Email:
     value: str
-
     def __init__(self, value: str):
         if "@" not in value:
             raise ValueError(f"invalid email: {value}")
@@ -109,32 +77,20 @@ Does every value of this primitive make sense here?
 
 ## Common Mistakes
 
-- **Branding everything**: not every `string` needs a brand. A `displayName`
-  is truly free text. Brand only when swapping values of the same primitive
-  type would cause a bug.
-- **Enum when the set is open**: if new variants appear without code changes
-  (user-defined roles, plugin hook names), an enum forces recompilation.
-  Use a string with validation instead.
-- **Value object without invariants**: wrapping `int` in `struct Age(int)`
-  adds no value unless the constructor enforces `>= 0`.
-- **Premature abstraction**: a single `Email` value object is fine. Building
-  a `ValueObject` base class with reflection-based equality before you have
-  three value objects is not.
+- Branding everything: not every string needs a brand. Brand only when swapping values of the same primitive type would cause a bug.
+- Enum when the set is open: if new variants appear without code changes (user-defined roles, plugin hook names), use a string with validation instead.
+- Value object without invariants: wrapping int in struct Age(int) adds no value unless the constructor enforces >= 0.
+- Premature abstraction: a single Email value object is fine. Building a base class before having three value objects is not.
 
 ## Invariants
 
-- Every domain type that accepts only a subset of a primitive's values must
-  be modeled as a distinct type, not documented in a comment.
-- At module boundaries, convert to/from primitives. Inside the module, use
-  the precise type.
-- Branded types and newtypes must be validated at construction time -- the
-  brand is a promise that the value has passed validation.
+- Every domain type that accepts only a subset of a primitive's values must be modeled as a distinct type, not documented in a comment.
+- At module boundaries, convert to/from primitives. Inside the module, use the precise type.
+- Branded types and newtypes must be validated at construction time -- the brand is a promise that the value has passed validation.
 
 ## See Also
 
-- [invariants.md](invariants.md) -- encoding strategy
-  (compile-time types top the preference chain)
-- [optionality.md](optionality.md) -- modeling absent/optional values
-- [many-forms.md](many-forms.md) -- choosing between data representations
-- [refactoring-catalog.md](../refactoring/refactoring-catalog.md) -- Opaque
-  Type Naming refactoring, defunctionalization
+- [invariants.md](invariants.md)
+- [optionality.md](optionality.md)
+- [many-forms.md](many-forms.md)
+- [refactoring-catalog.md](../refactoring/refactoring-catalog.md)

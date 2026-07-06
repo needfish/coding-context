@@ -25,4 +25,4 @@
 
 ## File Naming
 
-Follow language conventions; otherwise kebab-case for everything. Exceptions: `Dockerfile`, `Makefile`, `.env.example`, `AGENTS.md`. Types kebab-case noun phrases, functions kebab-case verb phrases, variables kebab-case noun phrases, constants `UPPER_SNAKE_CASE`. Private identifiers use `_leading_underscore`.
+Follow language conventions; otherwise kebab-case for everything. Exceptions: Dockerfile, Makefile, .env.example, AGENTS.md. Types kebab-case noun phrases, functions kebab-case verb phrases, variables kebab-case noun phrases, constants UPPER_SNAKE_CASE. Private identifiers use _leading_underscore.

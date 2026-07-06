@@ -1,76 +1,85 @@
-# ------------------------------------------------------------------------------
-#  io-command-execution.md
-#  Object variation -- the external command interface changes while the execute-per-item contract stays the same.
-# ------------------------------------------------------------------------------
+# io -- command execution
 
-# - Problem -
+## Problem
 
-You have a list of items (files, URLs, values) and you need to run an external command on each one, substituting each item into a command template.
+An external program must be run: started, given input, given time to finish, and its output collected. The program may succeed (exit code 0), fail (non-zero exit), or hang (needs timeout).
 
-# - When You'll See This -
+## Input
 
-Any tool that finds results and lets the user act on them -- unzipping archives, opening files in an editor, converting image formats, running analyses on each search result. Command execution sits after a search or collection step and before result collection or display.
+- A command string or list of arguments
+- Optional stdin data
+- Optional environment variables
+- Optional timeout duration
 
-# - How It Works -
+## Output
 
-- **Items**: the collection of paths or values to process.
-- **Command template**: the command to run, with a placeholder for the item (like `{}` in `find -exec`).
-- **Execution mode**: how items map to commands -- one command per item, batch mode (multiple items per command), or parallel execution.
-- **Result collector**: captures stdout, stderr, exit codes, and any output files.
+- stdout bytes
+- stderr bytes
+- Exit code (number)
+- Or a timeout error if the command did not finish in time
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every item is processed by the command at least once.
-- The command's exit code is checked to detect failures.
-- Stderr output is captured and surfaced to the user.
-- Long-running or parallel executions respect resource limits (max parallel processes, timeout).
+- Running the same command with the same input produces the same output and exit code
+- The command runs in a separate process (does not affect the parent process's memory)
+- The parent process can read stdout and stderr separately
+- If the command does not finish within the timeout, it is killed and a timeout error is returned
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Command injection**: an item contains special characters (`;`, `|`, `` ` ``) that change the command's meaning.
-- **No failure reporting**: the command fails silently and the item looks processed.
-- **Too many processes**: spawning one process per item for 100,000 items overwhelms the system.
-- **Path with spaces**: the filename contains spaces and the command interprets it as multiple arguments.
-- **Timeout runaway**: a command hangs on one item and blocks everything.
-- **Encoding mismatch**: the item has non-ASCII characters that the shell or command doesn't handle.
+```python
+import subprocess
 
-# - Design Trade-Offs -
+def run_command(cmd: list[str]) -> dict:
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return {
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "exit_code": result.returncode,
+    }
+```
 
-- **Sequential vs. parallel**: sequential is simple and predictable; parallel is faster but harder to control resource usage.
-- **Shell vs. exec**: using a shell (`sh -c`) gives you pipes and redirects but risks injection; direct exec avoids the shell but gives you fewer features.
-- **One-per-item vs. batch**: one command per item is simple but slow; batching reduces process overhead but makes error reporting harder.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Command not found | subprocess raises FileNotFoundError | Check command exists before running, or catch the error and return a clear message |
+| Command hangs | Program waits forever for output | Add a timeout; kill the process if it exceeds the timeout |
+| Output too large | Storing all output in memory exhausts memory | Stream output instead of capturing it all; or set a max output size |
+| Shell injection | Command string contains user input interpreted as shell syntax | Pass arguments as a list, not a string; use subprocess.run with list args |
+| Zombie process | Child process finishes but is not collected | Use subprocess.run (waits for completion) or add a signal handler for SIGCHLD |
 
-- **callisto/filesystem-walk**: walked files are often the items to process.
-- **venus/filtering**: filtered results are the items to act on.
-- **mercury/display**: results of command execution get displayed.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| Blocking vs. async | Blocking waits for the command to finish, simple but blocks the caller. Async (asyncio.create_subprocess_exec) lets the program do other work while the command runs. |
+| Capture vs. stream output | Capture collects all output in memory, simple but may exhaust memory. Stream processes output line by line as it arrives. |
+| Shell vs. no shell | Shell (shell=True) allows pipes and redirects but is vulnerable to injection. No shell (list args) is safe but cannot use shell syntax. |
 
-Use `subprocess.run()` in Python or `std::process::Command` in Rust. Iterate over items, call the command on each one, print stdout/stderr. Sequential only, no batch mode, no parallelism.
+## Start With
 
-# - When to Split Into Its Own Module -
+Use the language's subprocess module with list arguments (not shell strings) and a timeout. Capture output for small commands; stream for large output.
 
-- You need parallel execution with resource limits.
-- You need dry-run mode (show what would run without running it).
-- You need to collect and report per-item exit codes and errors.
-- Multiple command templates or execution modes emerge.
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- More than one command is run (shared timeout, error handling, logging).
+- Commands need to run in parallel.
+- Command output needs to be processed in a standard way (parse JSON, extract fields).
+- Commands are configurable (the command itself, arguments, or environment are user-provided).
 
-- You're calling `subprocess.run()` or `std::process::Command` in a loop.
-- You're constructing command strings by concatenating values.
-- You need to run the same external tool on many different inputs.
-- Error handling for command failures is scattered across your code.
+## Signs This Is Present
 
-# - Common Mistakes -
+- subprocess.run, os.system, or similar is called.
+- External tools are invoked (git, ffmpeg, curl, compiler).
+- Shell scripts are generated and executed.
+- Command-line output is parsed.
 
-- Using shell=True without sanitizing inputs (command injection).
-- Spawning unlimited parallel processes without a concurrency limit.
-- Ignoring the exit code and assuming success.
-- Not handling filenames with spaces or special characters.
+## Common Mistakes
 
-# - The Core Challenge -
-
-External commands are black boxes. You pass them input and get back output (or errors). You can't control how they handle edge cases, and you can't fix bugs in them. The challenge is treating them as reliable components despite having no control over their internals.
+- Using shell=True with user input (shell injection).
+- Not setting a timeout for external commands (program hangs forever).
+- Not capturing stderr separately from stdout.
+- Assuming the command exists on the system.
+- Not handling non-zero exit codes.
+- Building command strings instead of argument lists.

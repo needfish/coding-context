@@ -1,78 +1,95 @@
-# ------------------------------------------------------------------------------
-#  pandora-simple-workpieces.md
-#  Behavior variation -- the edit operation changes per user action, but the document state consistency contract stays the same.
-# ------------------------------------------------------------------------------
+# pandora -- simple workpieces
 
-# - Problem -
+## Problem
 
-Users edit a structured document -- text, source code, a diagram, a spreadsheet. The system must maintain internal consistency, support undo and redo, keep multiple views synchronised, and preserve state across sessions.
+A user edits a document (text, structured data, image) through a sequence of operations: insert, delete, modify. Each operation changes the document state. The user can undo (reverse the last operation) and redo (reapply the last undone operation). The document must be valid after every operation.
 
-# - When You'll See This -
+## Input
 
-Any application that creates and modifies documents. Text editors, IDEs, spreadsheet editors, image editors, CAD tools, note-taking apps. The document has internal structure (lines, cells, layers, nodes) that must stay consistent after every edit. Users expect to undo mistakes, redo reapplied operations, view the same document in multiple windows, and return to the same state after restarting.
+- An edit operation (a function that transforms the document)
+- For undo/redo: a history of past operations or document states
 
-# - How It Works -
+## Output
 
-- **Document model**: the internal representation of the workpiece -- a sequence of lines (text), a grid of cells (spreadsheet), or a graph of nodes (diagram editor).
-- **Edit operation**: a single change to the document -- insert, delete, replace, transform. Each operation is reversible (has an inverse for undo).
-- **Undo stack**: the history of applied operations, stored as deltas or snapshots. Popping from the stack and applying the inverse restores previous state.
-- **Dirty flag**: tracks whether the document has unsaved changes since the last save.
-- **View projection**: a visual representation of the document model -- multiple views can project different parts of the same model.
+- A new document state after the operation is applied
+- For undo: the previous document state before the last operation
+- For redo: the state after the last undone operation
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every edit leaves the document in a valid internal state (no half-applied changes).
-- Undo reverses exactly one edit and restores the exact previous state.
-- All views of the same document are consistent -- an edit in one view appears in all others.
-- The dirty flag accurately reflects whether unsaved changes exist.
-- A save persists the current state so that reopening the file restores it.
+- After each operation, the document is in a valid state
+- Undo reverses the most recent operation and restores the document to its previous state
+- Redo reapplies the most recently undone operation
+- Any operation that has been applied can be undone
+- After an undo, making a new edit clears the redo stack (the undone operations cannot be redone)
+- The undo stack has a limited size (oldest states are discarded when the limit is reached)
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Undo breaks after save**: saving resets the undo stack, so users can't undo changes made before the save.
-- **Inconsistent multi-view**: editing in one window doesn't update another window showing the same file.
-- **Lost work on crash**: edits since the last save disappear when the process crashes.
-- **Undo corruption**: applying undo after a long editing session produces a corrupted state because operations weren't correctly inverted.
-- **Large undo stack**: storing full snapshots for every edit consumes too much memory.
-- **Dirty flag desync**: the flag says there are unsaved changes when there aren't, or vice versa.
+```python
+class Document:
+    def __init__(self):
+        self.content = ""
+        self.history = [""]  # snapshots
+        self.history_index = 0
 
-# - Design Trade-Offs -
+    def apply(self, operation):
+        self.content = operation(self.content)
+        self.history = self.history[:self.history_index + 1]
+        self.history.append(self.content)
+        self.history_index += 1
 
-- **Delta vs. snapshot undo**: storing deltas (what changed) uses less memory but is harder to implement; storing full snapshots is simple but memory-heavy.
-- **Coalescing vs. individual undo**: grouping rapid keystrokes into one undo step is more useful but complicates the undo model.
-- **Synchronous vs. asynchronous persistence**: saving on every edit loses no work but may be slow; saving on a timer batches writes but risks losing recent edits.
+    def undo(self):
+        if self.history_index > 0:
+            self.history_index -= 1
+            self.content = self.history[self.history_index]
 
-# - Related Problems -
+    def redo(self):
+        if self.history_index < len(self.history) - 1:
+            self.history_index += 1
+            self.content = self.history[self.history_index]
+```
 
-- **mars/persistence**: documents are saved to and loaded from storage.
-- **mercury/display**: the document is displayed in one or more views.
-- **neptune/transformation**: document formats may need conversion.
+## Failure Modes
 
-# - Getting Started -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Undo breaks invariants | Undoing an operation produces a document state that was never possible through forward operations | Snapshot the document after each operation and restore from snapshot on undo |
+| Redo stack cleared unexpectedly | User undoes, then makes a new edit, and the undone operations are gone | This is correct behaviour; branching history is complex |
+| Memory exhaustion on large documents | Saving a full snapshot after every keystroke consumes too much memory | Store operations (deltas) instead of snapshots, or snapshot periodically |
+| Concurrent edit conflicts | Two users edit the same document simultaneously, producing conflicting states | Use Operational Transformation or CRDT |
+| Cursor/selection lost on undo | Undo restores document state but cursor jumps to the start | Save cursor/selection position alongside each snapshot |
 
-A text buffer (string) with insert/delete at a cursor position. Undo: store the previous string before each edit. One view. No syntax highlighting, no multi-cursor, no incremental save.
+## Design Trade-offs
 
-# - When to Split Into Its Own Module -
+| Choice | What changes |
+|---|---|
+| Full-snapshot vs. delta-based undo | Full-snapshot (save entire document before each edit) is simple but memory-intensive. Delta-based (store inverse operation) is memory-efficient but needs the inverse of every operation. |
+| Fine-grained vs. coarse-grained operations | Fine-grained (insert character) gives precise undo but creates many history entries. Coarse-grained (paste paragraph) creates fewer entries but makes undo less granular. |
+| Stateless vs. stateful document | Stateless (derived from operation list) is easy to undo/redo but slow to read. Stateful (current state in memory) is fast to read but needs careful undo handling. |
 
-- You need multiple views of the same document (split pane, minimap, outline).
-- You need coalesced undo (typing "hello" is one undo step, not five).
-- The document structure is complex enough that delta-based undo matters.
-- You need to preserve editing state across sessions (cursor position, undo stack).
+## Start With
 
-# - Signs You're in This Pattern -
+Use full-snapshot undo with an array of document states (as in the minimal code above). Switch to delta-based undo when profiling shows memory is a problem.
 
-- You're building an editor or a tool that edits structured content.
-- Users can undo and redo their changes.
-- The document has internal structure that must stay consistent.
-- Multiple UI components display the same document and need to stay in sync.
+## Split Into Its Own Module When
 
-# - Common Mistakes -
+- The document is more complex than a single string (tree, graph, rich text).
+- Undo/redo needs to be differential (delta-based) for memory efficiency.
+- The document is shared between multiple users.
+- Document validation is needed after each edit.
 
-- Storing the full document state for every edit when delta-based undo would use less memory.
-- Not coalescing rapid edits (every keystroke is a separate undo step).
-- Allowing the document to enter an invalid state during an edit.
-- Forgetting to update all views when the document changes.
+## Signs This Is Present
 
-# - The Core Challenge -
+- A document or file is opened for editing.
+- Undo/redo functionality is present.
+- A sequence of edits is tracked in a history list.
+- Operations are applied to a central data structure.
 
-An editor must maintain consistency at every step while providing a responsive, undoable editing experience. Each edit transforms the document from one valid state to another, and the sequence of edits must be reversible, composable, and persistent. The challenge is keeping the document model, undo stack, views, and storage synchronised through an unbounded sequence of user actions.
+## Common Mistakes
+
+- Allowing undo to restore a state that was never explicitly created by the user.
+- Not bounding the undo stack size (memory exhaustion on long editing sessions).
+- Making operations that cannot be reversed (side effects like network calls).
+- Storing the full document without compression for large documents.
+- Not handling the initial empty state (undo should do nothing when the document is unchanged).

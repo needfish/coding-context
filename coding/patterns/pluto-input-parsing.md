@@ -1,99 +1,79 @@
-# ------------------------------------------------------------------------------
-#  pluto-input-parsing.md
-#  Behavior variation -- the input format changes while the byte-to-structure contract stays the same.
-# ------------------------------------------------------------------------------
+# pluto -- input parsing
 
-# - Problem -
+## Problem
 
-Raw bytes arrive from a file, stdin, or network. You need to turn them into structured data your program can work with -- numbers, objects, records, or an AST.
+Raw bytes from a file, network socket, or user input must be converted into structured data the program can use. The input may be JSON, CSV, XML, a custom binary format, or any other format. Encoding (UTF-8, UTF-16, Latin-1) may need to be detected first.
 
-# - When You'll See This -
+## Input
 
-Every boundary where external data enters your system. CLI tools reading files, config loaders, compilers, interpreters, data importers, log processors, serialisation libraries, web servers. Parsing is the outermost transform -- converting untyped bytes to typed structures.
+- A byte sequence from a source (file, stdin, network, memory buffer)
+- Optional encoding metadata
 
-# - How It Works -
+## Output
 
-- **Byte source**: where the raw input comes from -- a file, socket, stdin pipe, or memory buffer.
-- **Encoding decoder**: converts raw bytes to characters according to an encoding (UTF-8, ASCII, Latin-1).
-- **Format detector**: identifies the input format from magic bytes, file extension, MIME type, or content analysis.
-- **Parser**: consumes characters and produces structured output -- a parse tree, token stream, or record sequence.
-- **Parse state**: where the parser is in the input -- byte offset, line, column, and any nesting context.
-- **Parse error**: a record of what went wrong, where, and optionally how to recover.
-- **Structured output**: the result -- a typed tree, record iterator, or event stream with position info on each element.
+- Structured data: a dictionary, list of records, AST, or configuration object
+- Or a parse error with position (line, column) and message
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every byte from the source is consumed exactly once, in order.
-- Every significant output element carries its source position (byte offset, line, column).
-- Encoding is determined before character-level parsing starts.
-- Malformed input produces at least one error -- silent data corruption is never acceptable.
-- A parse error doesn't discard already-parsed valid output (partial results are valid if declared).
-- Position tracking handles inputs up to at least 2^64 bytes.
-- The parser doesn't read past available input -- it blocks or buffers appropriately.
+- Given a valid byte sequence, produce a structured representation
+- Given an invalid byte sequence, produce a parse error
+- The same bytes always produce the same structured data
+- The parser never crashes, no matter what bytes it receives
 
-# - What Goes Wrong -
-
-- **Encoding misdetection**: bytes interpreted as the wrong encoding produce garbled text (mojibake) with no error.
-- **Silent truncation**: input ends mid-structure, and the parser produces incomplete output without error.
-- **Error cascade**: a recovery mechanism misinterprets the rest of the input after one error, creating misleading secondary errors.
-- **Position overflow**: input exceeds position counter limits, making error locations nonsensical.
-- **Catastrophic backtracking**: regex-based parsers take exponential time on crafted input (ReDoS attack).
-- **Memory blowup**: building the full parse tree in memory causes OOM on large inputs.
-- **Decompression bomb**: recursive entity expansion (XML billion laughs, YAML deep nesting) causes exponential memory growth.
-- **Partial flush**: the source provides an incomplete chunk at the end and the parser doesn't hold state across chunks.
-
-# - Design Trade-Offs -
-
-- **Strict vs. resilient**: strict parsers reject deviations (safe, no silent corruption); resilient parsers recover and continue (robust, processes more real-world data).
-- **Pull vs. push**: pull parsing (recursive descent) lets the consumer control pacing; push parsing (SAX, events) notifies on each element.
-- **Buffered vs. streaming**: buffering gives full context for error recovery and backtracking but uses O(N) memory; streaming processes arbitrarily large input in O(1) memory but limits recovery.
-- **Explicit vs. implicit format**: self-describing formats (JSON, PNG) make detection reliable; unnamed pipes need heuristics or user specification.
-
-# - Related Problems -
-
-- **neptune/transformation**: parsed data usually needs reshaping.
-- **jupiter/validation**: parsed data often needs validation against domain rules.
-- **rhea/syntax-detection**: format detection is a prerequisite for parser selection.
-- **venus/filtering**: large parsed structures might be filtered before further processing.
-- **mars/persistence**: parsed data may be stored; stored data may need reparsing on read.
-- **callisto/filesystem-walk**: file parsing follows directory traversal.
-- **hyperion/network-listener**: network input parsing follows each socket read.
-
-# - Getting Started -
-
-Read all bytes into memory. Assume UTF-8. Use the standard library's format parser. Abort on the first parse error. No position tracking, no format detection, no recovery.
+## Minimal Code
 
 ```python
 import json
-data = json.loads(sys.stdin.read())  # assumes UTF-8, panics on first error
+
+def parse_input(data: str) -> dict:
+    return json.loads(data)
 ```
 
-# - When to Split Into Its Own Module -
+Use the language's standard library parsers (csv, configparser, xml.etree) before writing a custom parser.
 
-- Input arrives in multiple formats from the same source (format detection needed).
-- Users report garbled output from files in non-UTF-8 encodings.
-- A single malformed line aborts processing of all subsequent valid input.
-- Error messages say "parse error at line 42" but the parser has no position tracking.
-- Input is too large to buffer in memory (multi-gigabyte files, streaming logs).
-- Multiple input sources need different parsing paths.
+## Failure Modes
 
-# - Signs You're in This Pattern -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Encoding ambiguity | Same bytes produce different characters on different machines | Detect encoding (BOM, charset header) or require explicit encoding |
+| Catastrophic backtracking | Some inputs take minutes to parse | Use a parser combinator or parser generator with linear-time guarantees |
+| Partial input | Input stream ends mid-record, parser returns garbage | Buffer partial data and wait for more input (streaming parser) |
+| Memory exhaustion | Loading entire gigabyte file before parsing | Use a streaming parser that processes input incrementally |
+| Ambiguous grammar | Input can be parsed two ways, producing different results | Disambiguate the grammar or require explicit markers |
 
-- Your system reads external data and converts it to an internal type.
-- A malformed input file crashes the whole process instead of producing a useful error.
-- Error messages say "invalid input" without saying where or why.
-- Encoding issues produce garbled characters in your output.
-- You have ad-hoc format detection: `if line.startswith("<?xml")`.
-- The same parsing logic appears in multiple files with minor variations.
+## Design Trade-offs
 
-# - Common Mistakes -
+| Choice | What changes |
+|---|---|
+| Single-pass vs. multi-pass | Single-pass reads once and produces output, faster but can't handle forward references. Multi-pass handles forward references but uses more memory and time. |
+| Fail-fast vs. error recovery | Fail-fast stops at first error with a clear message, reports one error per run. Error recovery skips to next record and reports multiple errors. |
+| Hand-written vs. generated | Hand-written (recursive descent) gives good error messages but is labor-intensive. Generated (PEG, LR, parser combinators) is concise but may have opaque error messages. |
 
-- Building a streaming parser before confirming the input fits in memory (most files do).
-- Writing a custom parser for a standard format when the standard library handles it.
-- Adding error recovery before measuring that first-error abort loses too much work.
-- Supporting multiple encodings before confirming non-UTF-8 input actually arrives.
-- Building a parser combinator framework before you have a second parser to write.
+## Start With
 
-# - The Core Challenge -
+Use the standard library parser for the input format. Add a custom parser (recursive descent or parser combinator) when the format is custom or complex.
 
-The producer's intent is only partially encoded in the byte stream -- encodings are underspecified, format versioning is implicit, and human error introduces malformed data at every boundary. The parser must decide what to infer when bytes are ambiguous, when to reject, and how to recover. Every choice is a trade-off between robustness (process more real-world data) and safety (never silently corrupt data).
+## Split Into Its Own Module When
+
+- More than one input format needs to be supported.
+- Input encoding detection is required.
+- The input is too large to fit in memory and requires streaming.
+- Custom parsing logic beyond what the standard library provides is needed.
+- Parse errors need position information (line, column) and error recovery.
+
+## Signs This Is Present
+
+- Raw bytes or strings are converted to structured data.
+- A JSON, YAML, CSV, or XML parser is used.
+- Format detection or encoding detection is implemented.
+- A lexer or tokeniser is implemented.
+
+## Common Mistakes
+
+- Using regex for parsing structured formats (nested structures, context-free grammars).
+- Not handling BOM (Byte Order Mark) in UTF-8 and UTF-16 input.
+- Loading the entire input into memory before parsing.
+- Assuming the input encoding is always UTF-8.
+- Not validating the parsed structure after parsing.
+- Swallowing parse errors instead of propagating them with position info.

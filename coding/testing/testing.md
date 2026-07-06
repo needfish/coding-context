@@ -2,8 +2,8 @@
 
 ## Test Structure
 
-- Mirror source in `tests/`. `src/user/auth.py` becomes `tests/test_user_auth.py`.
-- Name tests `test_<unit>_<scenario>`.
+- Mirror source in tests/. src/user/auth.py becomes tests/test_user_auth.py.
+- Name tests test_<unit>_<scenario>.
 - Test public API contracts, edge cases, and error paths. Focus on behavior.
 - Structure tests as Arrange, Act, Assert. Use one assertion per test where practical.
 
@@ -16,19 +16,22 @@ Test with:
 - Single-element input
 - Structurally invalid input (wrong type, missing field, out-of-range value)
 - Maximum-size input at the domain boundary
-- Optional/absent values -- for each optional field, test the present and absent cases. See [modeling/optionality.md](../modeling/optionality.md) for how absence is modeled.
+- Optional/absent values -- for each optional field, test the present and absent cases. See [modeling/optionality.md](../modeling/optionality.md).
 
 Add guard clauses that return Err or raise at function entry for each invalid state.
 
 ### Data Representation Walkthrough
 
-For data representations, walk through each operation on the decomposition:
-- **Empty**: root exists with no children.
-- **One**: insertion creates one instance of each node per path. Removal cleans up all and only those.
-- **Many**: containers scale. A hash table maintains O(1); a linked list degrades scan.
-- **Domain**: what happens when a field is zero, negative, absent, or outside range?
-- **Concurrency**: coarse locks serialize but are simple. Fine-grained locks need a total order to prevent deadlock.
-- **Cost**: point lookup O(1) hash / O(log n) tree. Scan O(k + log n). Insert O(1). Remove O(k) to find the cut, O(1) per edge.
+For data representations, walk through each operation on the decomposition.
+
+| Property | Check |
+|---|---|
+| Empty | Root exists with no children. |
+| One | Insertion creates one instance of each node per path. Removal cleans up all and only those. |
+| Many | Containers scale. A hash table maintains O(1); a linked list degrades scan. |
+| Domain | What happens when a field is zero, negative, absent, or outside range. |
+| Concurrency | Coarse locks serialize but are simple. Fine-grained locks need a total order to prevent deadlock. |
+| Cost | Point lookup O(1) hash / O(log n) tree. Scan O(k + log n). Insert O(1). Remove O(k) to find the cut, O(1) per edge. |
 
 ### Property-Based Testing
 

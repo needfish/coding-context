@@ -1,80 +1,82 @@
-# ------------------------------------------------------------------------------
-#  uranus-authentication.md
-#  Object variation -- the authentication provider changes while the verification contract stays the same.
-# ------------------------------------------------------------------------------
+# uranus -- authentication
 
-# - Problem -
+## Problem
 
-A user, service, or process claims an identity. Your system needs to verify that claim before letting them do anything.
+A system must check who is calling before allowing access. The caller may be a user, another service, or a device. The check method may be a password, a token, a certificate, a biometric scan, or an OAuth provider.
 
-# - When You'll See This -
+## Input
 
-Any security boundary -- API endpoints, inter-service calls, file access, privileged UI actions. Authentication answers "who is this?" It's separate from authorisation, which answers "what are they allowed to do?" Authentication gates access to routes, persistence, and commands.
+- A credential (password, token, certificate, API key)
+- A store or service that can verify credentials
 
-# - How It Works -
+## Output
 
-- **Actor**: the entity claiming an identity -- a human user, another service, a background process.
-- **Credential**: the proof of identity -- a password, API token, certificate, or biometric.
-- **Verifier**: the mechanism that checks the credential against a trusted source.
-- **Identity store**: the authoritative database of identity information -- a user database, LDAP, OAuth provider.
+- An identity (user ID, role list, permissions) if the credential is valid
+- A failure result if the credential is invalid
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- The same valid credential always authenticates as the same actor.
-- An invalid credential never authenticates as any actor.
-- Credentials are stored in a form that can't be reversed (one-way hashing).
-- The verification process doesn't leak why it failed (no "username not found" vs "wrong password" distinction).
-- A session token is bound to the actor and verifiable without re-sending the credential.
+- A caller presenting a valid credential receives an identity
+- A caller presenting an invalid credential receives a failure
+- The same credential always produces the same result
+- The credential is not written to logs, URLs, or error messages
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Credential leakage**: passwords or tokens are transmitted or stored in plain text.
-- **Timing side channel**: the verifier returns faster for "user exists" than "user doesn't exist", allowing attackers to enumerate valid usernames.
-- **Token theft**: a valid session token is intercepted and reused by someone else.
-- **Session fixation**: an attacker forces a known session token onto a legitimate user.
-- **Identity store compromised**: the user database itself is breached.
-- **Revocation delay**: a user's access is revoked but their cached token still works.
-- **Credential rotation failure**: a user's password expires and the system locks them out because the new password hasn't propagated everywhere.
+```python
+import hashlib, os
 
-# - Design Trade-Offs -
+def hash_password(password: str) -> str:
+    salt = os.urandom(16).hex()
+    return salt + ":" + hashlib.sha256((salt + password).encode()).hexdigest()
 
-- **Convenience vs. security**: passwords are easy but easy to compromise; multi-factor auth is secure but annoying.
-- **Stateless vs. stateful tokens**: JWT tokens contain everything needed for verification but can't be revoked early; server-side sessions can be revoked but need a database lookup.
-- **Centralised vs. federated**: one auth server is simple to manage but a single point of compromise; OAuth distributes trust but adds protocol complexity.
-- **Caching vs. freshness**: caching verification results is faster but risks accepting a recently-revoked credential.
+def verify_password(password: str, stored: str) -> bool:
+    salt, hash_val = stored.split(":")
+    return hash_val == hashlib.sha256((salt + password).encode()).hexdigest()
+```
 
-# - Related Problems -
+## Failure Modes
 
-- **saturn/routing**: authentication gates routing decisions.
-- **mars/persistence**: data access may require authentication.
-- **jupiter/validation**: credentials need validation before verification.
-- **mercury/display**: the UI may show different content based on who's logged in.
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Weak password hashing | Stored passwords can be cracked quickly | Use bcrypt, scrypt, or Argon2 (not MD5, SHA-1) |
+| Session fixation | Attacker can force a known session ID on a victim | Regenerate session ID after successful login |
+| Timing attack | Authentication takes observably different time for valid vs. invalid credentials | Use constant-time comparison for secrets |
+| Token leakage | API key appears in logs, URLs, or client-side code | Never log tokens; use short expiry; restrict token scope |
+| No rate limiting | Attacker can try millions of passwords | Rate-limit authentication attempts per IP and per user |
 
-# - Getting Started -
+## Design Trade-offs
 
-Hard-code a single API key checked at the entry point. `if request.headers.get("Authorization") != expected_key: return 401`. One key, one check, no database.
+| Choice | What changes |
+|---|---|
+| Stateless vs. stateful | Stateless (JWT, signed tokens) needs no server-side session store but cannot revoke individual sessions. Stateful (sessions in Redis/DB) supports revocation but needs storage. |
+| Password-based vs. passwordless | Passwords are simple but subject to reuse and phishing. Passwordless (WebAuthn, magic links, OAuth) is more secure but needs more infrastructure. |
+| Single vs. multi-factor | Single-factor is simple but weak. Multi-factor (password + TOTP + biometric) is more secure but adds user friction. |
 
-# - When to Split Into Its Own Module -
+## Start With
 
-- You have more than one user with different credentials.
-- You need to store and verify passwords securely (hashing, salting).
-- You need session management (login, logout, expiry).
-- You support multiple auth providers (password, OAuth, SSO).
+Use a well-reviewed authentication library (bcrypt for passwords, JWT library for tokens). Do not write cryptographic code from scratch.
 
-# - Signs You're in This Pattern -
+## Split Into Its Own Module When
 
-- Your code checks a password or token before allowing an action.
-- Multiple endpoints repeat the same auth check logic.
-- You need to know who made a request but the identity check is mixed in with business logic.
-- You're storing passwords anywhere.
+- More than one authentication method is supported.
+- Authentication state (sessions, tokens) must be managed.
+- Authentication logic is shared across multiple services or endpoints.
+- OAuth, SSO, or federated identity is integrated.
+- Rate limiting or brute-force protection is needed.
 
-# - Common Mistakes -
+## Signs This Is Present
 
-- Storing passwords in plain text (use bcrypt, argon2, or PBKDF2).
-- Building your own cryptographic protocol instead of using a standard one.
-- Adding OAuth before you have a second user.
-- Checking auth on every request without caching when performance matters.
+- A login form or authentication endpoint exists.
+- Tokens, session IDs, or API keys are generated and verified.
+- Password hashing (bcrypt, scrypt, Argon2) is used.
+- Authentication headers (Authorization, Cookie) are parsed.
 
-# - The Core Challenge -
+## Common Mistakes
 
-Authentication is a trust problem. Your system trusts the credential, the verifier trusts the identity store, and the user trusts your system with their credential. A breach at any level breaks the whole chain. The challenge is defining the trust boundary and protecting each link.
+- Storing passwords in plaintext or with a weak hash.
+- Rolling custom cryptography (use well-reviewed libraries).
+- Not rate-limiting authentication attempts.
+- Leaking authentication state in logs or error messages.
+- Implementing authentication but not authorisation (identity checked but no access control).
+- Session management bugs (session not invalidated on logout, session fixation).

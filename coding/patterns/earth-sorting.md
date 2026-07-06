@@ -1,75 +1,76 @@
-# ------------------------------------------------------------------------------
-#  earth-sorting.md
-#  Behavior variation -- the comparator algorithm changes per sort key.
-# ------------------------------------------------------------------------------
+# earth -- sorting
 
-# - Problem -
+## Problem
 
-You have a collection of items that need to be in a specific order. You need to arrange them by some key -- alphabetically, by number, by date, or by a custom rule.
+A list must be ordered by a comparison rule that changes per use case: by name, by date, by priority, by a custom metric. The sort must produce a predictable order and equal items must stay in their original relative order (stable sort).
 
-# - When You'll See This -
+## Input
 
-Any time items need to be presented, processed, or stored in a defined order -- ranked lists, sorted tables, ordered output, priority queues. Sorting feeds into display, further processing, or storage.
+- A list of items
+- A comparison function or sort key: takes two items and returns which comes first, or extracts a key from each item
 
-# - How It Works -
+## Output
 
-- **Source collection**: the items in whatever order they happen to be in.
-- **Comparator**: the rule that decides which item comes first (by name, by date, by score).
-- **Ordered collection**: the same items, now in the right sequence.
+- The same items in sorted order (either a new list or in-place rearrangement)
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- For any two items, one comes before the other in the result (total order).
-- If A comes before B and B comes before C, then A comes before C (transitive).
-- The sorted collection has exactly the same items as the original.
-- Equal elements keep their original relative order if you need stable sorting.
+- Sorting the same list with the same comparison always produces the same result
+- Equal items keep their original relative order (stable sort)
+- The comparison function is called many times during sorting
+- The sort completes in O(n log n) time
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Broken comparator**: A < B, B < C, but C < A -- the sort produces garbage or never finishes.
-- **Comparator with side effects**: the comparison function mutates state or makes network calls.
-- **Hidden O(n^2)**: sorting an already-sorted list with a bad comparator is way slower than it should be.
-- **Partial order confusion**: the comparator says two different items are "equal" when they're not.
+```python
+users.sort(key=lambda u: u.name)
+# or for multiple keys:
+users.sort(key=lambda u: (u.last_name, u.first_name))
+```
 
-# - Design Trade-Offs -
+```typescript
+users.sort((a, b) => a.name.localeCompare(b.name));
+```
 
-- **Stable vs. unstable**: keeping original order for equal items costs extra memory but matters for multi-key sorts.
-- **In-place vs. copying**: sorting in place saves memory but makes concurrency harder.
-- **Cheap vs. expensive comparisons**: an expensive comparator favours algorithms that minimise comparisons (merge sort); a cheap one favours cache-friendly algorithms (quicksort, timsort).
-- **Adaptive sorting**: real-world data is often nearly sorted -- an adaptive sort runs in O(n) on almost-ordered input.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Inconsistent comparator | Comparator returns different results for same pair across calls; sort produces wrong order, crashes, or never terminates | Ensure comparator is a pure function that does not depend on external state |
+| Non-transitive comparator | a < b and b < c but a > c; sort produces wrong order | Verify transitivity with property-based testing |
+| Unstable sort breaks expectations | Equal items appear in different order each run | Use a stable sort (MergeSort, TimSort) or add a tie-breaking secondary key |
+| Comparator with side effects | Comparator modifies the items being compared | Use a pure key extraction function; compute all keys before sorting |
 
-- **venus/filtering**: sort often combines with filter.
-- **mercury/display**: ordered results usually get displayed.
-- **neptune/transformation**: sort keys might need processing before comparison.
-- **mars/persistence**: sorted results might get saved.
-- **janus/reduction**: sorted elements often feed into a ranked result.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| Stable vs. unstable | Stable (MergeSort, TimSort) preserves order of equal items but uses more memory. Unstable (QuickSort, HeapSort) is in-place but may reorder equal items. |
+| Comparison-based vs. radix | Comparison sorts work on any ordered type but are O(n log n). Radix sorts are O(n * k) but need keys decomposable into digits. |
+| In-place vs. copying | In-place uses O(1) extra memory but changes the original list. Copying uses O(n) memory but leaves the original unchanged. |
 
-Use your language's built-in sort: Python `sorted(items, key=...)`, Rust `items.sort_by_key(...)`, JavaScript `items.sort(...)`. Pass a simple key-extraction function.
+## Start With
 
-# - When to Split Into Its Own Module -
+Use the language's built-in sort method with a key function. Add a custom comparator function only when the built-in key mechanism cannot express the ordering.
 
-- You need multiple sort keys (primary, secondary, tertiary).
-- The sort key is expensive to compute -- cache it.
-- The sort direction or key is configurable at runtime.
-- The collection is too large to fit in memory (external sort).
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- The comparator logic becomes complex (tie-breaking, multiple sort keys, direction per key).
+- Sorting needs to be customised at runtime by the user (clickable column headers).
+- The collection is too large for an in-memory sort and needs external sorting.
+- A custom sort algorithm is needed for performance.
 
-- Your collection needs ordering and the default order isn't what you want.
-- The comparison logic involves multiple fields, some ascending and some descending.
-- Different parts of your code need different orderings of the same data.
-- You see the same key-extraction function copied in several places.
+## Signs This Is Present
 
-# - Common Mistakes -
+- A list is sorted with a lambda or custom comparator.
+- Columns in a table are clickable to sort ascending/descending.
+- Multiple sort criteria are combined (sort by date, then by priority).
+- A sort key is computed from multiple fields with tie-breaking rules.
 
-- Writing a custom sort algorithm before proving the built-in sort is too slow.
-- Implementing stable sort when element identity doesn't matter.
-- Pre-sorting data that the consumer will re-sort anyway.
+## Common Mistakes
 
-# - The Core Challenge -
-
-The comparator defines a contract the sort algorithm depends on (total order, consistency, no side effects). But the comparator comes from outside -- it might violate that contract. You need a valid, consistent, pure comparison function.
+- Using a comparator that changes the objects being compared (side effects).
+- Assuming the sort is stable when it is not.
+- Using locale-sensitive comparison in a hot loop (expensive -- pre-extract the sort key).
+- Sorting on a field that can change during the sort.
+- Forgetting that sorting descending (reverse) is a separate operation from sorting ascending.

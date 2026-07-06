@@ -1,74 +1,76 @@
-# ------------------------------------------------------------------------------
-#  venus-filtering.md
-#  Object variation -- the predicate shape stays the same, the target collection changes.
-# ------------------------------------------------------------------------------
+# venus -- filtering
 
-# - Problem -
+## Problem
 
-You have a list of items and you want only the ones that match a certain condition. Keep the matches, discard the rest.
+A list of items must be reduced to a subset that matches certain criteria. The criteria may be a value range, a property value, a type match, or a compound condition that changes per use case.
 
-# - When You'll See This -
+## Input
 
-Any time you select a subset from a larger collection -- search results, browsing a directory, filtering a list, building a report query. Filtering usually feeds into display, transformation, or a pipeline.
+- A list of items
+- A predicate function that takes one item and returns true or false
 
-# - How It Works -
+## Output
 
-- **Source collection**: the full list of items you're filtering from.
-- **Predicate**: the rule that decides what stays and what goes. Could be a hard-coded check or something a user types in.
-- **Result collection**: the smaller list of items that passed the check.
+- A list containing only items where the predicate returned true
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every item in the result satisfies the predicate.
-- Every item from the source that satisfies the predicate shows up in the result.
-- Filtering only selects -- it doesn't change or duplicate items.
+- Every item in the output list passes the predicate: checking each item with the predicate returns true
+- The filter does not change the items themselves
+- The filter does not change the order of items
+- Running the filter twice on the same input and predicate produces the same output
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Predicate with side effects**: the filter condition modifies something or makes network calls while checking.
-- **Non-deterministic predicate**: the same item passes the check sometimes and fails other times.
-- **Slow predicate on big data**: checking each item takes too long because the condition is expensive.
-- **Stateful predicate**: the filter result depends on which items were checked before (like a running average).
-- **One bad apple crashes everything**: a predicate that throws on one item kills the whole filter pass.
+```python
+def filter_items(items, predicate):
+    return [item for item in items if predicate(item)]
 
-# - Design Trade-Offs -
+# Usage:
+result = filter_items(all_users, lambda u: u.is_active)
+```
 
-- **Eager vs. lazy**: process everything now (predictable cost) or wait until someone reads the results (lower peak, harder to predict).
-- **Generic vs. optimised**: a general predicate handles any condition but can't exploit sorted or indexed data.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Predicate with side effects | Filtering produces different results on the same input | Make the predicate a pure function |
+| Predicate depends on external state (time, random, network) | Same item passes filter one call, fails the next | Capture external state before filtering |
+| Predicate always returns false | Filtered result is always empty | Log when filter produces no results |
+| Predicate too expensive | Filtering takes too long per item | Pre-compute the filter key or cache results |
 
-- **mercury/display**: filtered results usually get shown to someone.
-- **earth/sorting**: filter then sort (or sort then filter, depending on which is cheaper).
-- **neptune/transformation**: each filtered item might need processing.
-- **janus/reduction**: count or sum the matching items.
-- **jupiter/validation**: the filter rule itself might need checking.
-- **mars/persistence**: the source data might come from disk.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| Eager vs. lazy filtering | Eager builds a new list in memory. Lazy yields items one at a time using less memory. |
+| Single predicate vs. composed predicates | Single is simple but each new criterion needs a new function. Composed (and, or, not) builds complex filters from simple parts. |
+| Client-side vs. server-side filtering | Client-side loads all items then filters in memory. Server-side sends the predicate to the database. |
 
-A `for` loop with an `if` inside. Python: `[x for x in items if condition]`. Rust: `items.iter().filter(|x| predicate(x))`. One function that takes a collection and returns the subset.
+## Start With
 
-# - When to Split Into Its Own Module -
+The minimal code above. Add composed predicates (and/or/not) when more than one criterion is needed.
 
-- Users can configure the filter condition at runtime.
-- You need AND/OR/NOT combinations of multiple filters.
-- The source is large enough that lazy streaming matters.
-- Filter logic needs its own tests separate from the rest of the pipeline.
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- Filtering logic combines more than one predicate with and/or/not.
+- The predicate needs to be configurable by the user (filter UI, query language).
+- The same predicate is used across multiple lists or modules.
+- Filtering needs optimisation (index-based filtering, predicate pushdown).
+- The filtered result is used by multiple consumers.
 
-- A loop with an `if` inside decides what to keep or discard.
-- The same filter condition appears in multiple places with tiny differences.
-- You pass a collection to a function and get back a smaller collection of the same type.
-- Filter logic is mixed with display logic, making each harder to change.
+## Signs This Is Present
 
-# - Common Mistakes -
+- A loop with an if condition selects items from a list.
+- A list comprehension or filter() call includes a condition.
+- A SQL WHERE clause or API query parameter narrows results.
+- A search or find feature filters results based on user input.
 
-- Building a filter expression parser before measuring that hard-coded conditions are the bottleneck.
-- Abstracting filter into a generic pipeline stage before you have a second stage.
-- Adding parallel filtering before profiling shows single-threaded is too slow.
+## Common Mistakes
 
-# - The Core Challenge -
-
-The predicate and the filter run in different contexts. The predicate might hold state, access external resources, or behave differently over time. The filter has to work with a predicate it can't fully trust.
+- Writing a predicate that changes the list being filtered (concurrent modification).
+- Filtering but forgetting to use the result (the original list is unchanged).
+- Using a predicate that gives different results for the same input on different calls.
+- Filtering multiple times when one pass with a combined predicate would work.
+- Not handling the case where all items are filtered out.
+- Making the predicate too expensive for the list size.

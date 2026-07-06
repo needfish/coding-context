@@ -1,77 +1,85 @@
-# ------------------------------------------------------------------------------
-#  ganymede-output-format.md
-#  Data variation -- same rendering pipeline, different styles per output context.
-# ------------------------------------------------------------------------------
+# ganymede -- output formatting
 
-# - Problem -
+## Problem
 
-Structured data needs to be rendered as human-readable output with the right formatting, escaping, and styling for the target -- a terminal, a web page, a file, or a GUI.
+Structured data must be converted to a text format for display, export, or interchange. The format changes per use case: JSON for API responses, CSV for spreadsheet import, HTML for web pages, plain text for terminal output, markdown for documentation.
 
-# - When You'll See This -
+## Input
 
-Anywhere data is formatted for output. CLI tools printing to a terminal, HTML templating for web pages, file export, client-side rendering. Formatting is the final step before output -- it takes structured entries and produces formatted text or DOM nodes.
+- Structured data (list of records, a single object, a stream of items)
+- A format specification (what fields to include, date format, locale, null handling)
 
-Variants include:
-- **CLI output**: colour-coded, width-constrained terminal display with pipe/file detection.
-- **HTML templating**: data interpolated into a fixed template with contextual escaping per slot (HTML body, attribute, URL, script). Includes component composition.
+## Output
 
-# - How It Works -
+- A string in the requested format
 
-- **Data entries**: the structured records or values to format.
-- **Output target**: where the output goes -- terminal, file, HTML response, DOM.
-- **Formatter**: applies escaping, styling, indentation, and layout rules based on the target's capabilities.
-- **Styles**: the visual presentation -- colours, fonts, icons, HTML classes.
+## Observable Behavior
 
-# - What Must Always Be True -
+- The same data and format always produce the same string
+- The formatter does not modify the input data
+- Formatting is lossless: parsing the output back gives the original data (unless loss is intended, e.g. rounding)
+- Null or missing fields are handled according to the format spec (omit, show "null", show "N/A")
 
-- Every data entry produces a corresponding output element (unless explicitly omitted).
-- Escaping matches the output context (HTML escaping for HTML, ANSI for terminal, no escaping for plain text).
-- The output is valid for its target (valid HTML, valid ANSI, valid CSV).
-- Formatting doesn't lose or corrupt data -- numbers stay precise, special characters stay intact.
+## Minimal Code
 
-# - What Goes Wrong -
+```python
+import json
 
-- **Wrong escaping**: interpolating user text into HTML without escaping creates XSS vulnerabilities.
-- **Terminal detection fails**: a tool detects a terminal and uses colours, but output is piped to a file that shows escape codes as garbage.
-- **Overflow**: output exceeds terminal width or page size and gets truncated without warning.
-- **Encoding mismatch**: the output contains characters the target can't display.
+def format_json(data) -> str:
+    return json.dumps(data, indent=2)
 
-# - Design Trade-Offs -
+def format_csv(rows: list[dict]) -> str:
+    if not rows:
+        return ""
+    keys = rows[0].keys()
+    lines = [",".join(keys)]
+    for row in rows:
+        lines.append(",".join(str(row.get(k, "")) for k in keys))
+    return "\n".join(lines)
+```
 
-- **Rich vs. compatible**: rich output (colours, formatting) is nicer but breaks in non-terminal contexts; plain text works everywhere but is bland.
-- **Eager vs. lazy formatting**: formatting everything upfront is simple but wastes work if only part is shown; lazy formatting defers work but is more complex.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Format-specific data loss | CSV output flattens nested structures, losing fields | Document what is lost, or reject formats that cannot represent the data |
+| Encoding mismatch | Characters appear garbled (mojibake) in output | Always specify the output encoding; convert explicitly |
+| Invalid output format | Produced string is not valid in the target format (malformed JSON, broken CSV with commas in values) | Use a format library (json.dumps, csv.writer) instead of hand-rolling |
+| Very large output | Building the entire output string in memory exhausts memory | Stream output: write incrementally to a file or socket |
+| Locale-dependent output | Numbers formatted as "1.000,50" in one locale and "1,000.50" in another | Always use a fixed locale (C/POSIX) for machine-readable formats; use user locale only for display |
 
-- **mercury/display**: formatting feeds into display.
-- **neptune/transformation**: data often needs transformation before formatting.
-- **venus/filtering**: only a subset might need formatting.
-- **earth/sorting**: ordered data formats differently.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| Library vs. hand-rolled | Library handles edge cases (escaping, quoting, encoding) correctly. Hand-rolled is simpler for tiny formats but easy to get wrong. |
+| Eager vs. streaming | Eager builds the full string in memory, simple but may exhaust memory. Streaming writes output piece by piece, handling any size. |
+| Machine-readable vs. human-readable | Machine-readable (JSON, protobuf) is strict and parseable. Human-readable (plain text, markdown) is flexible but harder to parse. |
 
-Print plain text with `print()`. Format a table with simple string padding or `str.format()`. No colours, no HTML, no detection.
+## Start With
 
-# - When to Split Into Its Own Module -
+Use the standard library formatter for the target format (json.dumps, csv.writer, str for plain text). Add options (null handling, date format, indentation) when needed.
 
-- You need multiple output formats (JSON, CSV, HTML, plain text).
-- You need terminal detection (colours when interactive, plain when piped).
-- You need contextual escaping (different rules for HTML body vs. attribute vs. URL).
-- You need to test formatting independently from data processing.
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- More than one output format must be supported.
+- Output formatting has configuration options (date format, locale, null handling, indentation).
+- The same format is used in multiple places.
+- Output needs to be streamed (large datasets).
+- Validation of output correctness is needed.
 
-- Your code mixes data processing with string formatting.
-- Changing the output format means editing many files.
-- You need to support both human-readable and machine-readable output.
-- You're building strings by concatenation and it's getting messy.
+## Signs This Is Present
 
-# - Common Mistakes -
+- Data is converted to a string for display or export.
+- json.dumps, csv.writer, str.format, f-strings, or template engines are used.
+- API responses are built from domain objects.
+- Output options (format, indentation, locale) are configurable.
 
-- Detecting terminal support with environment variables instead of checking stdout.
-- Adding HTML templating when plain text output is sufficient.
-- Building a custom template engine before trying an existing one.
+## Common Mistakes
 
-# - The Core Challenge -
-
-Different output targets have different capabilities, constraints, and security requirements. The same data must render correctly across all of them without repeating the formatting logic.
+- Hand-rolling format serialisation instead of using a library.
+- Not escaping special characters (commas in CSV, quotes in JSON).
+- Assuming all data fits in memory (stream large output).
+- Mixing formatting logic with display logic.
+- Not testing the round-trip (format + parse gives back the original).
+- Hard-coding formatting choices (date format, locale) that should be configurable.

@@ -1,78 +1,76 @@
-# ------------------------------------------------------------------------------
-#  callisto-filesystem-walk.md
-#  Data variation -- same traversal algorithm, different exclusion rules and root paths.
-# ------------------------------------------------------------------------------
+# callisto -- filesystem walk
 
-# - Problem -
+## Problem
 
-You need to explore a directory tree -- visiting every file, subdirectory, and symlink -- while respecting rules about what to skip, whether to follow symlinks, and how deep to go.
+A directory tree must be traversed: visit every file and directory reachable from a root path. The order of traversal (depth-first, breadth-first), filtering (skip hidden files, follow symlinks), and handling of errors (permission denied, broken symlink) vary per use case.
 
-# - When You'll See This -
+## Input
 
-Any time a system needs to enumerate filesystem contents. Search tools, backup software, file managers, build systems, linters. The walk almost always feeds into filtering, display, transformation, or command execution.
+- A root directory path (string)
+- Options: follow symlinks (yes/no), max depth, skip patterns
 
-# - How It Works -
+## Output
 
-- **Root path**: the starting directory for the traversal (or multiple starting points).
-- **Entry**: each item found during the walk -- a file, directory, or symlink.
-- **Exclusion rules**: patterns or conditions that decide which entries to skip (.git, node_modules, *.tmp).
-- **Visitor**: what you do with each entry -- collect it, process it, display it.
+- A sequence of paths (one per visited file/directory), yielded one at a time
+- Or error events for inaccessible paths
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every reachable entry is visited exactly once (unless explicitly excluded).
-- Symlinks are handled consistently -- either always followed or never followed.
-- Directory loops (symlink cycles) don't cause infinite traversal.
-- The walk respects the specified depth limit and exclusion rules.
-- Errors on individual entries (permission denied, broken symlink) don't abort the entire walk.
+- Every file and directory reachable from the root is visited exactly once (unless limited by max depth or skip patterns)
+- The order of visitation is predictable (depth-first by default)
+- Symlink loops cause infinite recursion if not detected
+- Permission errors on one directory do not prevent visiting other directories
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Symlink loops**: a symlink pointing to a parent directory creates an infinite loop.
-- **Permission denied**: the walk stops entirely when it can't read a directory.
-- **Too many files**: traversing a directory with millions of files uses too much memory or time.
-- **Encoding issues**: filenames with unusual characters cause crashes or skipped files.
-- **Race conditions**: files are added or deleted during the walk, producing inconsistent results.
-- **Exclusion rule mistakes**: a pattern like `*.tmp` doesn't match `.tmp` files in subdirectories.
+```python
+import os
 
-# - Design Trade-Offs -
+def walk(root):
+    for dirpath, dirnames, filenames in os.walk(root):
+        for f in filenames:
+            yield os.path.join(dirpath, f)
+```
 
-- **Breadth-first vs. depth-first**: BFS uses more memory but respects directory ordering; DFS is lighter but goes arbitrarily deep.
-- **Eager vs. lazy**: collecting all entries first gives you the full picture; yielding entries as you find them lets you start processing immediately.
-- **Parallel vs. single-threaded**: parallel traversal is faster on SSDs but harder to control depth and exclusions.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Symlink loop | Traversal never ends, runs until memory exhausted | Keep a set of visited inodes; skip symlinks pointing to already-visited paths |
+| Permission denied | Traversal crashes on a directory the program cannot read | Catch permission errors and skip the directory, continue with siblings |
+| Very deep nesting | Recursion hits the stack limit | Use an explicit stack (iterative traversal) instead of recursion |
+| File renamed during traversal | Same file visited twice or skipped entirely | Snapshot the directory listing before traversal, or use filesystem watches |
+| Broken symlink | Symlink target does not exist, os.path operations fail | Check if symlink target exists before following; skip broken ones |
 
-- **venus/filtering**: visited entries usually get filtered (keep only .py files).
-- **mercury/display**: results get displayed to the user.
-- **neptune/transformation**: file paths might need conversion.
-- **io/command-execution**: each visited file might be processed by an external command.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| Depth-first vs. breadth-first | Depth-first uses less memory (stack of current path only). Breadth-first uses more memory (queue of all siblings) but finds shallow files first. |
+| Recursive vs. iterative | Recursive is simpler but limited by stack depth. Iterative (explicit stack) handles any depth. |
+| Sequential vs. parallel | Sequential is simple and predictable. Parallel (thread pool) is faster on SSDs or network filesystems but needs synchronisation. |
 
-`os.walk()` in Python, `walkdir::WalkDir` in Rust, or `fs.readdirSync` recursively in JavaScript. Collect entries in a list and print them.
+## Start With
 
-# - When to Split Into Its Own Module -
+Use os.walk (Python) or std::fs::read_dir (Rust) for sequential depth-first traversal. Add symlink detection and error handling when failures appear.
 
-- You need configurable exclusion rules (ignore files, pattern matching).
-- You need to control traversal depth or follow symlinks selectively.
-- The walk logic becomes tangled with what you do with the results.
-- You need to test traversal behavior independently.
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- Traversal options (max depth, follow symlinks, skip patterns) accumulate.
+- Parallel traversal is needed for performance.
+- Traversal must support multiple roots or include/exclude filters.
+- Error handling (permission, broken symlinks) needs to be configurable.
 
-- You have a recursive function that lists files in a directory.
-- You're passing around directory paths and accumulating file lists.
-- You need to skip certain folders but the skip logic is mixed with the loop.
-- Your backup, search, or build tool walks the filesystem.
+## Signs This Is Present
 
-# - Common Mistakes -
+- os.walk, find, or recursive directory listing is used.
+- Files are processed recursively from a root directory.
+- A directory tree is scanned for matching files.
 
-- Writing a recursive traversal when `os.walk` handles it.
-- Forgetting to handle permission errors gracefully.
-- Not detecting symlink loops and crashing with a stack overflow.
-- Loading all file paths into memory before processing the first one.
+## Common Mistakes
 
-# - The Core Challenge -
-
-The filesystem is not a clean tree -- it has symlinks, permissions, race conditions, and encoding surprises. A walk must be robust to all of these while still visiting every intended entry exactly once.
+- Not handling permission errors (crash on a directory the program cannot read).
+- Not detecting symlink loops (infinite recursion).
+- Building the full list of files in memory before processing.
+- Mixing traversal logic with file processing logic.
+- Not testing with empty directories, permission-denied directories, and symlink chains.

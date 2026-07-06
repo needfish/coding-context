@@ -1,78 +1,74 @@
-# ------------------------------------------------------------------------------
-#  mercury-display.md
-#  Data variation -- same rendering pipeline, different values to display.
-# ------------------------------------------------------------------------------
+# mercury -- display
 
-# - Problem -
+## Problem
 
-Your program has data that a human needs to see. You need to format it, keep it up to date, and show it on a screen, terminal, or web page.
+Structured data (list of records, tree of files, stream of log lines) must be shown on a screen (terminal, web page, GUI, embedded display). The same data may be shown in different ways depending on the screen type.
 
-# - When You'll See This -
+## Input
 
-Any time you build something that shows data to a person. Think CLI tools that print results, dashboards, text editors, games, or monitoring UIs. Display almost always pairs with a data source (file, database, computation result) and often leads into user commands.
+- A list of items to display
+- A viewport position (scroll offset) and size (rows x columns)
 
-# - How It Works -
+## Output
 
-- **Source**: where the data comes from -- could be a file, a live stream, or just a variable in memory.
-- **Display surface**: where the output goes -- a terminal window, a GUI widget, an HTML element, or a file.
-- **User**: the person reading the display. They might respond by clicking a button or typing a command.
+- Rendered output to the screen
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every value shown on screen can be traced back to a real source value at some point in time.
-- Format conversions keep the information the user actually needs (you can drop details they don't care about).
-- Updates happen fast enough for the context -- under a second for interactive use, a few seconds for a dashboard.
-- The screen never shows contradictory data from the same source at the same time.
+- Given a list and a viewport, produce visible output for the current viewport slice
+- When the viewport position changes, update the visible output
+- When the data changes (items added, removed, modified), reflect those changes in the display
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Stale data**: the display shows old information because it hasn't refreshed.
-- **Overflow**: there's more data than fits on screen, so some of it gets cut off silently.
-- **Inconsistent views**: different parts of the UI update from different snapshots and show conflicting info.
-- **Lost precision**: a conversion drops details the user actually needed (like rounding off cents in a price).
-- **Slow updates**: the display refresh can't keep up with the data changes, causing flicker or missed states.
-- **Misleading visuals**: a colour or icon implies something that isn't true in the data.
+```
+function display_list(items, page=0, page_size=20):
+    start = page * page_size
+    end = start + page_size
+    for item in items[start:end]:
+        print(item)
+```
 
-# - Design Trade-Offs -
+## Failure Modes
 
-- **Perfect rendering vs. speed**: showing every detail accurately takes time; sometimes a rough picture fast is better.
-- **Everything vs. something useful**: showing all data at once overwhelms the user; hiding some behind navigation loses context.
-- **Smooth vs. responsive**: smoothing out updates looks nicer but adds delay.
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Flicker | Screen clears and redraws on every update | Double-buffer or use incremental updates |
+| Scroll starvation | Rendering a large dataset blocks scrolling | Virtual scrolling: render only visible rows |
+| Layout cost | 100,000 items all compute layout even though only 30 are visible | Virtual scrolling with fixed row heights |
+| Input lag | Keystroke processing lags during slow render | Render on separate thread from input |
+| Line wrap break | Resizing the window clips or breaks content | Re-layout on resize with debounce |
 
-# - Related Problems -
+## Design Trade-offs
 
-- **mars/persistence**: data often comes from storage.
-- **neptune/transformation**: raw data usually needs reshaping before display.
-- **janus/reduction**: dashboards show summaries, not every row.
-- **jupiter/validation**: user commands triggered by what they see need checking.
-- **saturn/routing**: clicks and key presses need to reach the right handler.
-- **earth/sorting**: ordered lists need sorting first.
-- **venus/filtering**: showing a subset means filtering first.
+| Choice | What changes |
+|---|---|
+| Virtual vs. full rendering | Virtual renders only visible items, scales to millions. Full renders everything, simpler but limited by memory. |
+| Immediate vs. retained | Immediate redraws everything each frame. Retained draws once, updates on change. |
+| Text vs. graphics | Text (terminal, HTML) is simple but limited layout. Graphics (canvas, OpenGL) enables rich visuals but more code. |
 
-# - Getting Started -
+## Start With
 
-Print raw values to stdout with `print()` / `console.log()` / `println!`. Format as a table with simple string padding. Re-render everything on each update.
+The minimal code above. Add pagination before virtual scrolling. Add input handling (arrow keys, mouse) after basic display works.
 
-# - When to Split Into Its Own Module -
+## Split Into Its Own Module When
 
-- You need multiple output targets (terminal, HTML file, JSON export).
-- Data arrives faster than you can re-render -- time to add throttling or diffing.
-- Users interact with the display (scroll, click, filter) -- events need to flow back to data.
-- The display layout needs to survive a restart.
+- More than one display type is needed (terminal + GUI + web).
+- Virtual scrolling is needed for datasets larger than 10,000 items.
+- User interaction (selection, scroll, search) is required.
+- The display must support themes, custom layouts, or accessibility features.
 
-# - Signs You're in This Pattern -
+## Signs This Is Present
 
-- Your computation code is mixed with `print` / `format` / `write` calls.
-- Changing the output format means editing the same functions that do the real work.
-- You're copy-pasting rendering logic for different output targets.
-- The same data flows through different display paths depending on context.
+- Code iterates and prints or renders items to a screen.
+- Scroll position, pagination, or viewport state is tracked.
+- A UI framework or library is used to present data.
+- User input (keyboard, mouse) changes what is visible.
 
-# - Common Mistakes -
+## Common Mistakes
 
-- Building a fancy widget framework before you have more than one view type.
-- Separating display from data fetching before you have a second data source.
-- Implementing virtual scrolling before measuring that rendering everything is actually slow.
-
-# - The Core Challenge -
-
-Display has a timing problem. The source data changes on its own schedule, but the display updates on a different cycle. You have to decide when to sample the data, when to push updates, and what to show during transitions -- all without the user acting on stale or inconsistent information.
+- Rendering all items in a large dataset (memory exhaustion, slow startup).
+- Not handling terminal/window resize (layout breaks or content clipped).
+- Mixing display logic (where to show) with formatting logic (how to show).
+- Blocking the input handler during a slow render (unresponsive UI).
+- Not testing with empty dataset, one item, or maximum size.

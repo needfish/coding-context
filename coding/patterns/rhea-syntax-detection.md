@@ -1,74 +1,95 @@
-# ------------------------------------------------------------------------------
-#  rhea-syntax-detection.md
-#  Behavior variation -- the detection rule mapping changes per file type heuristic.
-# ------------------------------------------------------------------------------
+# rhea -- syntax detection
 
-# - Problem -
+## Problem
 
-Given a file path, extension, shebang line, or content signature, determine what language or format the file contains so the right processing rules can be applied.
+Given a file or data stream without explicit format information (or with ambiguous information), determine what format it uses. The detector uses the filename, the first few bytes (magic bytes), the shebang line, and content patterns to make a guess.
 
-# - When You'll See This -
+## Input
 
-Any tool that needs to decide how to process a file based on its content type -- syntax highlighting, linting, formatting, diff generation. Detection must work from partial information (just the filename, or just the first line) and handle ambiguous cases gracefully.
+- A filename (may have an extension)
+- The first N bytes of the file (typically 4KB)
+- Optionally, the first line (shebang)
 
-# - How It Works -
+## Output
 
-- **File path**: the path or filename to classify -- may include extension, basename, or full path.
-- **Shebang line**: the first line of the file, like `#!/usr/bin/env python3`.
-- **Content signature**: magic bytes at the start of the file that identify the format (PDF starts with `%PDF`, PNG with `\x89PNG`).
-- **Heuristic rules**: the mapping from signals (extension, shebang, magic bytes) to language identifiers.
-- **Language identifier**: a string or enum that names the detected language (`python`, `rust`, `javascript`).
+- A format name (string): "python", "json", "png", "markdown", etc.
+- Or "unknown" if no format matches
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every input produces a language identifier -- there's always a fallback (plain text).
-- Detection based on extension is instant (no file reads).
-- Shebang detection reads at most the first line.
-- Magic byte detection doesn't read more bytes than necessary for known signatures.
-- When multiple signals conflict, the most specific one wins.
+- Every input produces a result (never crashes)
+- The same input always produces the same result
+- The detector uses a priority order: magic bytes > shebang > extension > content patterns
+- Only the first N bytes of the file are read (not the entire file)
+- The detector returns "unknown" when no format matches with sufficient confidence
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Ambiguous extension**: `.md` could be Markdown or Mandoc -- which one do you pick?
-- **Wrong shebang**: a file has `#!/usr/bin/python` but contains Rust code -- the shebang lies.
-- **Missing extension**: a file with no extension falls back to plain text even when it's valid Python.
-- **Performance**: reading content for every file in a large project slows down startup.
-- **Heuristic conflicts**: extension says JSON, shebang says nothing, content looks like XML -- what do you report?
+```python
+import os
 
-# - Design Trade-Offs -
+MAGIC_BYTES = {
+    b"\x89PNG": "png",
+    b"\xff\xd8\xff": "jpeg",
+    b"%PDF": "pdf",
+}
 
-- **Speed vs. accuracy**: extension-based detection is instant but wrong for unusual files; content-based detection is accurate but requires reading the file.
-- **Simple vs. comprehensive**: a few rules (extension map) cover 90% of cases; a full detection system (shebang, magic bytes, content analysis) covers 99% but is more code.
+def detect_format(path):
+    ext = os.path.splitext(path)[1].lower()
+    if ext in {".py", ".js", ".ts", ".rs", ".go", ".c", ".h", ".cpp"}:
+        return ext[1:]
 
-# - Related Problems -
+    with open(path, "rb") as f:
+        header = f.read(4)
 
-- **titan/syntax-highlighting**: detection selects the grammar for highlighting.
-- **pluto/input-parsing**: detection selects the format parser.
+    for magic, fmt in MAGIC_BYTES.items():
+        if header.startswith(magic):
+            return fmt
 
-# - Getting Started -
+    return "unknown"
+```
 
-A hash map from file extension to language identifier: `{".py": "python", ".rs": "rust", ".js": "javascript"}`. If not found, return "text" (plain text). No shebang, no magic bytes, no content analysis.
+## Failure Modes
 
-# - When to Split Into Its Own Module -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Ambiguous extension | .md could be Markdown or Mandoc | Check content patterns (headings, HTML tags, code fences) |
+| Heuristic conflict | Extension says JSON, content looks like XML | Define a priority order for detection signals |
+| False positive | Plain text detected as Python because it contains "def " on the first line | Combine multiple signals (shebang + keywords + indentation) |
+| False negative | Valid Ruby file detected as "unknown" because it lacks a shebang | Expand the format registry with more content patterns |
+| Large file performance | Detecting format by scanning entire file is slow | Only scan the first N bytes (typically 4KB) |
 
-- You need shebang detection (files without extensions like CLI scripts).
-- Users report wrong detection for common file types.
-- You need content-based detection for formats without standard extensions.
-- Detection logic needs independent testing from the tools that use it.
+## Design Trade-offs
 
-# - Signs You're in This Pattern -
+| Choice | What changes |
+|---|---|
+| Accuracy vs. speed | Deeper analysis (parse first few lines, check grammar) improves accuracy but takes time. Shallow analysis (extension + magic bytes) is fast but less accurate. |
+| Specificity vs. generality | Recognising 200+ formats can distinguish closely related ones but may have more false positives. Recognising 10 formats is more reliable for those 10 but fails on everything else. |
+| Extension-based vs. content-based | Extension is instant but unreliable. Content (magic bytes, shebang, patterns) is more reliable but requires scanning. |
 
-- Your code checks file extensions to decide how to process a file.
-- You have a list of extension-to-language mappings.
-- A file without a recognised extension gets treated as plain text and looks wrong.
-- You read the first line of a file to see if it has a shebang.
+## Start With
 
-# - Common Mistakes -
+Check the file extension first, then magic bytes, then content patterns. Only scan the first 4KB. Add rules for new formats as they appear.
 
-- Reading the whole file to detect the format when the first few bytes suffice.
-- Ordering extension checks so that `.js` matches before `.jsx` (specific before general).
-- Not providing a fallback language for unrecognised extensions.
+## Split Into Its Own Module When
 
-# - The Core Challenge -
+- More than 5 formats need to be detected.
+- Detection needs to be customised by the user (associate extensions with formats).
+- Detection needs to support format variants (Markdown vs. Mandoc for .md).
+- The detection logic is used by multiple consumers (highlighter, parser, file browser).
 
-Detection works with incomplete information. A filename alone doesn't guarantee the content, and reading content to confirm defeats the purpose of fast detection. The challenge is getting the right answer most of the time from minimal signals and failing gracefully when unsure.
+## Signs This Is Present
+
+- A file extension is used to decide how to process a file.
+- Magic bytes or shebang lines are checked.
+- A "detect language" or "detect format" function exists.
+- An if/elif chain checks extension -> content -> fallback.
+
+## Common Mistakes
+
+- Relying only on file extension for security-critical decisions (a .txt file can contain JavaScript).
+- Not normalising the extension before comparison (case, leading dot).
+- Scanning the entire file instead of the first N bytes.
+- Not handling binary files in content-based detection.
+- Using a heuristic that has false positives for common files.
+- Not caching the detection result when the same file is probed multiple times.

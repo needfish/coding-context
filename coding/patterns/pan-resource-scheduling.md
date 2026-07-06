@@ -1,78 +1,87 @@
-# ------------------------------------------------------------------------------
-#  pan-resource-scheduling.md
-#  Behavior variation -- the scheduling policy algorithm changes per workload requirement.
-# ------------------------------------------------------------------------------
+# pan -- resource scheduling
 
-# - Problem -
+## Problem
 
-Multiple consumers compete for a shared resource (CPU time, network bandwidth, I/O channel, memory). Your system must allocate access according to a policy while avoiding starvation, priority inversion, and overload.
+Multiple tasks need the same limited resource (CPU, network bandwidth, disk I/O, memory). A scheduler decides which task gets the resource next and for how long. The decision policy (round-robin, priority, fair share, deadline) changes per use case.
 
-# - When You'll See This -
+## Input
 
-Any system with concurrent contention for a scarce resource -- OS task schedulers, I/O schedulers, network packet schedulers, database transaction schedulers, GPU command schedulers. Consumers have different urgency levels, and the scheduler must balance throughput, latency, and fairness.
+- A list of tasks, each with a priority, deadline, or resource requirement
+- The resource capacity (CPU cores, bandwidth, IOPS)
 
-# - How It Works -
+## Output
 
-- **Consumers**: tasks, threads, requests, packets, or transactions that need the resource.
-- **Resource**: the thing they compete for -- CPU core, disk bandwidth, network link, memory arena.
-- **Scheduling policy**: the rules that decide which consumer gets the resource next (priority, FIFO, round-robin, deadline).
-- **Ready queue**: the set of consumers waiting for the resource.
-- **Dispatcher**: the mechanism that hands the resource to the chosen consumer and preempts it when its turn ends.
+- Tasks are executed in the order determined by the scheduling policy
+- Each task eventually runs and completes (unless the policy allows starvation)
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every consumer eventually gets access to the resource (no starvation).
-- The scheduling policy is followed consistently.
-- Priority inversion is bounded or prevented (a low-priority task doesn't block a high-priority one indefinitely).
-- The scheduler overhead is small compared to the resource's work time.
-- Consumers that exceed their allocation are preempted or throttled.
+- Tasks are ordered by the scheduling policy (priority, deadline, fairness)
+- A running task can be stopped (preempted) when a higher-priority task arrives or its time slice ends
+- The preempted task resumes later from where it stopped
+- The scheduler decides which task runs next in constant or logarithmic time per decision
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Starvation**: a low-priority consumer never gets the resource because higher-priority ones keep arriving.
-- **Priority inversion**: a high-priority task waits for a low-priority task that holds a shared lock.
-- **Convoy effect**: one slow consumer holds the resource and forces others to wait in line behind it.
-- **Priority inversion**: a task holds a lock needed by a higher-priority task.
-- **Thundering herd**: waking all waiting consumers when the resource becomes available, overwhelming the system.
-- **Deadline miss**: a real-time task misses its deadline because scheduling overhead is too high.
+```python
+from heapq import heappush, heappop
 
-# - Design Trade-Offs -
+class Scheduler:
+    def __init__(self):
+        self.queue = []
+        self.counter = 0
 
-- **Fairness vs. throughput**: giving everyone equal time is fair but may reduce total throughput; prioritising short tasks improves throughput but starves long ones.
-- **Preemptive vs. cooperative**: preemptive scheduling (OS controls when tasks switch) is responsive; cooperative scheduling (tasks yield voluntarily) is simpler but can freeze the system.
-- **Priority vs. deadline**: priority-based scheduling is simple but can cause starvation; deadline-based scheduling is more predictable but requires knowing deadlines in advance.
+    def submit(self, task, priority=0):
+        heappush(self.queue, (-priority, self.counter, task))
+        self.counter += 1
 
-# - Related Problems -
+    def run_next(self):
+        if not self.queue:
+            return None
+        _, _, task = heappop(self.queue)
+        return task()
+```
 
-- **atlas/memory-allocation**: memory allocation often needs scheduling for fair sharing.
-- **hyperion/network-listener**: connection acceptance is a scheduling decision.
-- **thebe/background-compaction**: compaction must not starve foreground reads and writes.
+## Failure Modes
 
-# - Getting Started -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Starvation | A low-priority task never runs because higher-priority tasks keep arriving | Use aging (increase priority over time) or fair scheduling |
+| Priority inversion | A high-priority task waits for a resource held by a low-priority task, and a medium-priority task runs instead | Use priority inheritance (the low-priority task inherits high priority temporarily) |
+| Convoy effect | A long-running task holds a resource, all other tasks queue behind it | Use preemptive scheduling with time slices |
+| Thrashing | Scheduler spends more time switching between tasks than running them | Limit the number of active tasks or increase the time slice |
+| Deadline miss | A task finishes after its deadline because the scheduler did not prioritise it in time | Use Earliest Deadline First scheduling for hard real-time tasks |
 
-A simple FIFO queue. First come, first served. No priorities, no preemption, no deadlines.
+## Design Trade-offs
 
-# - When to Split Into Its Own Module -
+| Choice | What changes |
+|---|---|
+| Preemptive vs. cooperative | Preemptive (time slice) ensures fairness but adds context-switch overhead. Cooperative (tasks yield voluntarily) has lower overhead but a misbehaving task can block the system. |
+| Priority vs. fairness | Priority ensures important tasks run first but can starve low-priority tasks. Fair (round-robin, CFS) ensures all tasks make progress but may delay high-priority tasks. |
+| Static vs. dynamic priority | Static priority (set once) is simple but does not adapt. Dynamic priority (aging, deadline-driven) adapts but adds complexity. |
 
-- You need priority levels for different consumers.
-- Some consumers starve because higher-priority ones keep arriving.
-- You need to bound maximum wait time (no task waits more than X seconds).
-- Different consumers need different scheduling policies.
+## Start With
 
-# - Signs You're in This Pattern -
+Use a priority queue (heap) for priority scheduling or a FIFO queue for round-robin. Add preemption when tasks can run longer than their allowed time slice.
 
-- Multiple tasks or requests compete for the same resource.
-- You have a queue with a dispatching loop.
-- Some requests take much longer than others and delay everything.
-- High-priority tasks wait behind low-priority ones.
+## Split Into Its Own Module When
 
-# - Common Mistakes -
+- More than one resource type is scheduled (CPU + I/O + network).
+- Multiple scheduling policies are needed (different tasks need different policies).
+- Scheduling decisions must be logged and audited.
+- The scheduler must handle preemption (suspend and resume tasks).
 
-- Implementing priority scheduling without solving starvation (low priority tasks never run).
-- Using a global lock for scheduling decisions on multi-core systems.
-- Assuming all tasks are equally important and ignoring priority entirely.
-- Not measuring scheduling overhead.
+## Signs This Is Present
 
-# - The Core Challenge -
+- A queue of tasks is maintained with ordering logic.
+- Priority, deadline, or round-robin logic is implemented.
+- Concurrency limits or rate limiters are used.
+- A thread pool or task queue is used with ordering rules.
 
-The scheduler makes allocation decisions without knowing how long each consumer will need the resource. It must balance competing goals (fairness, throughput, latency, priority) based on partial information and changing conditions.
+## Common Mistakes
+
+- Not handling priority inversion (use priority inheritance or priority ceiling).
+- Using a busy-wait loop instead of a blocking queue.
+- Assuming all tasks are equal in priority or resource requirements.
+- Not accounting for scheduling overhead (context switching, queue operations).
+- Forgetting to handle task cancellation (remove from queue, clean up resources).

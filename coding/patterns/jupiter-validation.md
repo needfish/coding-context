@@ -1,78 +1,91 @@
-# ------------------------------------------------------------------------------
-#  jupiter-validation.md
-#  Rules variation -- rules combine, grow, and change independently.
-# ------------------------------------------------------------------------------
+# jupiter -- validation
 
-# - Problem -
+## Problem
 
-Data comes into your system from the outside. Before you process it, you need to check that it meets your requirements -- right shape, right types, right ranges, right values.
+Data coming from outside the program (web form, API request, config file, imported file) must be checked against rules. Rules may check: field is present, value is in range, string matches a pattern, or multiple fields relate correctly. If any rule is violated, return a list of errors.
 
-# - When You'll See This -
+## Input
 
-Any boundary where external data enters -- user input, API requests, file imports, network messages, config files. Validation is a gate: it either passes data through or rejects it with a reason. Valid data then flows to transformation, storage, or routing.
+- Raw data: a dictionary or untyped object
+- A schema or set of rules describing valid data
 
-# - How It Works -
+## Output
 
-- **Input**: the raw data to check -- could be JSON, form fields, a text file, or bytes from the network.
-- **Rule set**: the constraints the input must satisfy -- a schema, a list of predicates, a type definition.
-- **Result**: the validated data (if it passes) or a rejection report listing what failed.
+- Either a validated data structure (if all rules pass)
+- Or a list of errors, each with a field name and message
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Accepted data satisfies every rule in the rule set.
-- Rejected data comes with a report saying which rule failed and on which field.
-- The same input and rules always produce the same result (deterministic).
-- Validation never mutates the input or any system state -- it's a pure check.
+- Data that passes all rules enters the core logic; data that fails any rule is rejected
+- The same input and rules always produce the same result
+- The validator does not change the input data
+- The output type is different from the input type (validated vs. unvalidated)
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Silent coercion**: the validator changes "123" (string) to 123 (int) without telling anyone, and downstream code gets a type the author didn't expect.
-- **Contradictory rules**: two rules can never both be true, so nothing ever passes.
-- **Too loose**: the rule is too broad and lets bad data through.
-- **Too strict**: the rule rejects valid data it should accept.
-- **Slow validation**: rules query external systems or run expensive checks, blocking the caller.
-- **Vague errors**: "invalid input" with no indication of which field or rule failed.
-- **Version drift**: the rules changed but old data was checked against an older version.
+```python
+from dataclasses import dataclass
+from typing import List
 
-# - Design Trade-Offs -
+@dataclass
+class ValidationError:
+    field: str
+    message: str
 
-- **Strict vs. lenient**: strict catches errors early but might reject borderline data; lenient accepts more but pushes detection downstream.
-- **Report all vs. report first**: showing all errors at once helps the caller fix everything; showing only the first avoids wasted work.
-- **Declarative vs. imperative**: schemas are easier to audit but less expressive; code is more flexible but harder to verify.
-- **Parsing vs. validation**: parsing checks structure (is this valid JSON?), validation checks meaning (is this value in range?). Keep them separate.
+def validate_user(data: dict) -> List[ValidationError]:
+    errors = []
+    if "name" not in data or not data["name"].strip():
+        errors.append(ValidationError("name", "Name is required"))
+    if "age" in data:
+        try:
+            age = int(data["age"])
+            if age < 0 or age > 150:
+                errors.append(ValidationError("age", "Age must be 0-150"))
+        except (ValueError, TypeError):
+            errors.append(ValidationError("age", "Age must be a number"))
+    return errors
+```
 
-# - Related Problems -
+## Failure Modes
 
-- **neptune/transformation**: validation runs before transformation -- clean data first, then reshape it.
-- **mars/persistence**: data gets validated before writing.
-- **saturn/routing**: incoming requests get validated before routing.
-- **mercury/display**: user input from a form needs validation before action.
-- **venus/filtering**: filter predicates might need validation.
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Confusing parsing with validation | Code rejects structurally valid data because it checks meaning in the parsing step | Keep parsing (structure) and validation (meaning) separate |
+| Missing validation | Invalid data reaches core logic and causes errors deep in the program | Validate at every boundary where external data enters |
+| Bypassed validation | Frontend validates but backend does not; API calls bypass checks | Always validate in the backend |
+| Inconsistent error format | Some errors say "X required", others say "X must not be empty" | Use one standard error format everywhere |
+| Expensive validation | Each request makes a database call or HTTP request just to validate | Split fast checks (type, range) from slow checks (lookups) |
 
-# - Getting Started -
+## Design Trade-offs
 
-Inline `if` checks at the point of use. Python: `if not isinstance(value, int): raise ValueError(...)`. Rust: `if value > MAX { return Err(...) }`. No schema library, no validator trait.
+| Choice | What changes |
+|---|---|
+| Declarative vs. imperative | Declarative (Zod, Pydantic, JSON Schema) is concise and machine-readable. Imperative code can express any rule but is harder to audit. |
+| Fail-fast vs. collect-all-errors | Fail-fast stops at first error, simpler but may hide other errors. Collect-all validates all rules and returns every violation. |
+| Compile-time vs. runtime | Compile-time (branded types, literal unions) catches errors before running but can't express runtime constraints. Runtime catches everything but needs tests. |
 
-# - When to Split Into Its Own Module -
+## Start With
 
-- The same validation rules appear in multiple places (you're copy-pasting).
-- The rule set grows beyond what fits on one screen (10+ rules).
-- Rules need composition (AND/OR across fields) or conditionality (field A requires field B).
-- Validation needs to produce structured error reports (field-level error codes).
+The minimal code above using if/elif chains or a schema library (Zod, Pydantic). Use collect-all-errors to give complete feedback.
 
-# - Signs You're in This Pattern -
+## Split Into Its Own Module When
 
-- Your functions start with guard clauses that check inputs and return errors.
-- The same validation checks appear in multiple functions with slight variations.
-- You need to reject bad input but the checks are mixed in with processing logic.
-- Users submit data that causes crashes because boundary conditions weren't checked.
+- Validation rules are shared across multiple endpoints or input types.
+- Validation logic exceeds 50 lines per input type.
+- Custom rules (cross-field, database lookups) are needed.
+- Validation error formats need to be consistent across the application.
 
-# - Common Mistakes -
+## Signs This Is Present
 
-- Adopting a schema library (JSON Schema, Zod, Pydantic) before you have 5+ fields to validate.
-- Building a declarative rule engine before `if` checks are proven to be the bottleneck.
-- Validating data that comes from a trusted internal source.
+- if/elif chains check field types, ranges, and formats.
+- A schema library (Zod, Yup, Pydantic, Marshmallow) is used.
+- Input data is sanitised, normalised, or coerced.
+- API responses include error details per field.
 
-# - The Core Challenge -
+## Common Mistakes
 
-The validator can only enforce the rules it's given. It can't know that a missing rule would have caught a problem. The real challenge isn't checking rules -- it's knowing you have enough rules. What the rule set doesn't say is as important as what it says.
+- Mixing validation with business logic.
+- Using exceptions for validation control flow (return errors as values instead).
+- Not validating at internal boundaries.
+- Validating the same data multiple times (validate once at entry, pass the validated type internally).
+- Assuming a field that passed validation is still valid later (concurrent modification).

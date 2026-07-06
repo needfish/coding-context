@@ -1,79 +1,97 @@
-# ------------------------------------------------------------------------------
-#  thebe-background-compaction.md
-#  Behavior variation -- the compaction policy algorithm changes per storage structure and access pattern.
-# ------------------------------------------------------------------------------
+# thebe -- background compaction
 
-# - Problem -
+## Problem
 
-Your storage accumulates incremental changes over time -- writes, inserts, log entries. You need to periodically reorganise it in the background to keep reads fast, reclaim space, and limit metadata growth -- all while foreground reads and writes continue without blocking.
+A storage system accumulates data over time. To reclaim space and keep reads fast, it reorganises data in the background (merging fragments, removing garbage, improving locality) while concurrent reads and writes must see a consistent view.
 
-# - When You'll See This -
+## Input
 
-Any system with an append-only or log-structured write path. LSM-tree storage engines, log-structured file systems, journaling systems, message queues with retention, versioned blob stores, and incremental backup systems. Writes are fast (append to the head), but reads may need to scan multiple structures, and deleted data consumes space until reclaimed.
+- Source storage: segments, pages, or log files to compact
+- A compaction strategy: when to compact, what to compact, how to merge
 
-# - How It Works -
+## Output
 
-- **Working set**: the collection of on-disk structures holding current data. In an LSM-tree: the MemTable (in-memory writes) and SST files (on-disk sorted runs) across levels.
-- **Compaction policy**: the rules for when to compact, what to compact, and what the output should look like (size ratio, tiered, leveled, or time-based).
-- **Compaction job**: a single unit of work -- reading input structures, merging/discarding entries, writing new output structures.
-- **Foreground workload**: concurrent reads and writes that must not be blocked by compaction.
-- **Space amplification**: the ratio of on-disk data to logical data -- compaction reduces this by discarding stale entries.
-- **Read amplification**: the number of structures a read must consult -- compaction reduces this by merging structures.
+- Compacted storage: less total space, fewer fragments, faster reads
+- The read/write path always sees either the old data or the new data after compaction completes
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Compaction doesn't block foreground reads or writes beyond a bounded pause.
-- After compaction, the data is logically equivalent to what existed before (same queries, same results).
-- Space amplification stays within a configured bound.
-- Compaction makes progress even under sustained write load.
-- Compaction can be interrupted (by shutdown) and resumed later without data loss.
+- A background process reads source data, merges/rewrites it, and atomically replaces old data with new data
+- Before atomic publication, reads see the old data; after, they see the new data
+- No partial compaction results are visible to readers
+- No data is lost: all source data is present in the compacted output (unless explicitly deleted as garbage)
+- Compaction does not block reads or writes beyond a brief pause for atomic publication
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Write stall**: the write-ahead log grows faster than compaction can keep up, forcing writes to block.
-- **Compaction storm**: multiple compactions trigger simultaneously, consuming all I/O bandwidth and starving foreground operations.
-- **Read amplification grows unbounded**: too many unmerged structures force every read to consult many files.
-- **Space amplification grows unbounded**: deleted or overwritten data is never fully reclaimed.
-- **Compaction falling behind**: on a busy server, compaction can't keep up with the write rate, and the situation worsens over time.
-- **Compaction of in-use data**: compacting a structure that's currently being read produces inconsistent results.
+```python
+import os, json
 
-# - Design Trade-Offs -
+SEGMENT_DIR = "segments/"
 
-- **Leveled vs. tiered compaction**: leveled compaction merges data into levels with size limits (good read performance, higher write cost); tiered compaction merges within a level (good write performance, more read amplification).
-- **Aggressive vs. lazy compaction**: aggressive compaction keeps space/read amplification low but uses more I/O; lazy compaction saves I/O but allows amplification to grow.
-- **Synchronous vs. asynchronous**: synchronous compaction blocks writes until done (simple, predictable); asynchronous compaction runs in the background (complex, but no blocking).
+def compact():
+    segments = sorted(os.listdir(SEGMENT_DIR))
+    if len(segments) < 2:
+        return
+    
+    merged = []
+    for seg in segments:
+        with open(os.path.join(SEGMENT_DIR, seg)) as f:
+            merged.extend(json.load(f))
+    
+    merged.sort(key=lambda x: x["key"])
+    
+    # Write to temp file, then atomically rename
+    tmp = os.path.join(SEGMENT_DIR, ".compact.tmp")
+    with open(tmp, "w") as f:
+        json.dump(merged, f)
+    
+    for seg in segments:
+        os.remove(os.path.join(SEGMENT_DIR, seg))
+    
+    os.rename(tmp, os.path.join(SEGMENT_DIR, "segment_0.json"))
+```
 
-# - Related Problems -
+## Failure Modes
 
-- **mars/persistence**: compaction is a storage engine concern.
-- **pan/resource-scheduling**: compaction needs I/O scheduling to avoid starving foreground operations.
-- **phoebe/resource-lifecycle**: compaction manages the lifecycle of on-disk structures.
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Write amplification | The compactor rewrites the same data many times, using more I/O than the original writes | Tune the compaction trigger threshold; use tiered compaction |
+| Read amplification | Without compaction, data is spread across many files, reads must scan all of them | Compact frequently enough to bound the number of files |
+| Compaction stalls reads | A large compaction uses so much I/O that foreground reads are delayed | Throttle compaction to a configurable I/O budget |
+| Crash during compaction | System crashes while compactor is writing new data, leaving inconsistent state | Use a write-ahead log or atomic rename; on restart, discard incomplete output and retry |
+| Infinite compaction loop | New data is written as fast as the compactor can compact it | Use level-based or tiered compaction that bounds total work |
 
-# - Getting Started -
+## Design Trade-offs
 
-Don't compact. Append-only files with periodic full rebuilds. If the data grows too large, rewrite the entire file from scratch. No background process, no incremental merging, no level management.
+| Choice | What changes |
+|---|---|
+| Leveled vs. tiered compaction | Leveled (merge into next level, one file per level) has lower read amplification but higher write amplification. Tiered (merge within a tier, multiple files per tier) has lower write amplification but higher read amplification. |
+| Synchronous vs. asynchronous | Synchronous (block writes until compaction finishes) is simple but reduces write throughput. Asynchronous (compaction runs in background, writes continue) maintains throughput but needs careful coordination. |
+| Full vs. partial | Full compaction rewrites everything, expensive but best space recovery. Partial rewrites only the most fragmented regions, cheaper but leaves some fragmentation. |
 
-# - When to Split Into Its Own Module -
+## Start With
 
-- The write workload exceeds the capacity of periodic full rebuilds.
-- Read amplification causes noticeable latency in production.
-- You need concurrent foreground access during maintenance.
-- You need configurable compaction policies for different workloads.
+Periodically merge all segments into one when the number of segments exceeds a threshold (as in the minimal code). Add level-based compaction when write amplification becomes a problem.
 
-# - Signs You're in This Pattern -
+## Split Into Its Own Module When
 
-- Your storage uses append-only or log-structured files.
-- Reads need to check multiple locations because data is spread across files.
-- Write throughput drops over time as more data accumulates.
-- You have a background task that merges or reorganises stored data.
+- The storage system accumulates more than 10 segments or files over time.
+- Read performance degrades as data accumulates.
+- Write amplification from compaction becomes a concern.
+- Compaction needs to be throttled based on system load.
 
-# - Common Mistakes -
+## Signs This Is Present
 
-- Implementing compaction before measuring that read amplification is actually a problem.
-- Letting compaction compete with foreground I/O without rate limiting.
-- Not testing compaction under sustained concurrent write load.
-- Compacting data that could be deleted instead (expired TTL entries).
+- A background task periodically merges or compacts data files.
+- A database or storage engine supports compaction.
+- Log files or segments accumulate and need periodic cleanup.
+- Read performance degrades over time until a maintenance operation runs.
 
-# - The Core Challenge -
+## Common Mistakes
 
-Compaction is a background task that trades I/O for read performance and space efficiency. The challenge is doing enough compaction to keep reads fast without consuming so much I/O that foreground operations stall. The right balance depends on the workload, and the workload changes over time.
+- Compacting during peak load (schedule during low-load periods or throttle).
+- Not testing crash recovery during compaction.
+- Using a merge strategy that does not bound the number of segments.
+- Blocking reads during compaction (use atomic pointer swap or versioning).
+- Not accounting for disk space: compaction may need free space equal to the data being compacted.

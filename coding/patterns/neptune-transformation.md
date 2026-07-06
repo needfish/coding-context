@@ -1,78 +1,77 @@
-# ------------------------------------------------------------------------------
-#  neptune-transformation.md
-#  Behavior variation -- the mapping algorithm changes per source/target pair.
-# ------------------------------------------------------------------------------
+# neptune -- transformation
 
-# - Problem -
+## Problem
 
-You have data in one shape and you need it in a different shape. Same information, different structure -- like converting a database row to a JSON response, or a Celsius reading to Fahrenheit.
+Data in one form must be converted to another form. Examples: XML to JSON, Celsius to Fahrenheit, absolute file paths to relative paths, user IDs to user names. The conversion logic changes per use case but always takes one value and returns another.
 
-# - When You'll See This -
+## Input
 
-Any time two parts of your system use different representations for the same data. Serialisation (internal objects to bytes and back), DTO mapping (database models to API responses), version migration (v1 format to v2 format). Transformation connects two subproblems that would otherwise be incompatible.
+- Data in the source representation (any type: string, dict, number, object)
 
-# - How It Works -
+## Output
 
-- **Source representation**: the input data in its original form.
-- **Target representation**: the output data in the desired form.
-- **Mapping**: the rules that translate source fields to target fields.
+- Data in the target representation (possibly a different type)
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- If the mapping is bidirectional, transforming there and back gives you the original (round-trip).
-- Source fields with no target equivalent are handled explicitly -- dropped, defaulted, or flagged as error.
-- The transformation adds no information that wasn't in the source, unless the mapping explicitly defines it.
-- Transformation has no side effects on the source or external systems.
+- Given the same input, the transform always returns the same output
+- The transform does not modify the input
+- The transform does not read files, make network calls, or change global state
+- If a field is missing or null in the input, the transform returns null/None for the corresponding output field (does not crash)
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Information loss**: the target format can't express something the source has, and nobody notices.
-- **Silent coercion**: converting a float to an int truncates the decimal without warning.
-- **Incomplete mapping**: some source fields have no target defined, producing broken output.
-- **Cyclic structures**: the source has circular references and the transformer loops forever.
-- **Version mismatch**: the source data is from a different schema version than the mapping expects.
-- **Identity loss**: two values that mean different things ("123" and 123) become identical in the target.
+```python
+def transform_user(source: dict) -> dict:
+    return {
+        "id": source["user_id"],
+        "name": source["full_name"],
+        "email": source["email_address"],
+        "active": source["status"] == "active",
+    }
+```
 
-# - Design Trade-Offs -
+## Failure Modes
 
-- **Explicit vs. convention-based**: listing every field correspondence is clear but verbose; using conventions and defaults is compact but surprising.
-- **Strict vs. forgiving**: strict mode fails on unexpected input; forgiving mode skips unknown fields.
-- **In-place vs. copy**: transforming in place saves memory but risks aliasing; copying is safe but costs time and space.
-- **Declarative vs. procedural**: declarative mappings are easier to verify; procedural transformations are more powerful.
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Lossy transformation | Nested data flattened to CSV loses some fields | Document what is lost, or provide alternative output format |
+| Side effects in transform | Calling the transform writes to a file or makes a network request | Keep transforms pure; do I/O before or after |
+| Every field change requires editing every transform | Adding one field to source means updating 10 transform functions | Use schema-driven mapping or default values for unknown fields |
+| Encoding mismatch | Characters appear garbled in output | Declare encoding at both boundaries and convert explicitly |
+| Batch partial failure | One item fails and all results are lost | Handle each item independently; skip failed items and report them |
 
-# - Related Problems -
+## Design Trade-offs
 
-- **mars/persistence**: saving data to disk is a transformation (serialisation).
-- **mercury/display**: data often needs reshaping before display.
-- **janus/reduction**: transformed elements often get reduced (map then reduce).
-- **jupiter/validation**: validation runs before transformation.
-- **venus/filtering**: filtered items might need transformation.
-- **earth/sorting**: sort keys might need transformation before comparison.
+| Choice | What changes |
+|---|---|
+| Explicit vs. schema-driven mapping | Explicit (field-by-field in code) is type-safe but verbose. Schema-driven (JSON Schema -> JSON Schema) is concise but limited to structural transforms. |
+| Eager vs. lazy | Eager produces the full output in memory, simple but may exhaust memory for large datasets. Lazy (generators) processes one item at a time. |
+| One-step vs. multi-step | One-step (source -> target) is simple but duplicates logic. Multi-step (source -> intermediate -> target) reuses intermediates. |
 
-# - Getting Started -
+## Start With
 
-Write a function that takes the source type and returns the target type. Map fields one at a time. Python: a dict comprehension or a simple loop. Rust: `From` / `Into` trait implementations or a `match` on fields.
+Write a function that takes the source type and returns the target type. Keep it pure (no side effects, no I/O). Use explicit field-by-field mapping.
 
-# - When to Split Into Its Own Module -
+## Split Into Its Own Module When
 
-- The same transformation logic is needed in multiple places.
-- The mapping has special cases, conditional logic, or error handling.
-- You need to test the transformation independently from the data sources.
-- The transformation becomes bidirectional and you need to keep both directions in sync.
+- The same transformation is needed in multiple places.
+- Transformation logic is complex enough to require unit tests.
+- A data format change requires updating multiple transforms.
+- The transformation has configuration options (include nulls, date format, locale).
 
-# - Signs You're in This Pattern -
+## Signs This Is Present
 
-- You're writing code that converts one data structure into another.
-- The conversion logic has field renames, type casts, or default values.
-- You see the same field mapping in multiple places with slight differences.
-- Adding a field means updating the conversion code in several spots.
+- A function takes one data shape and returns another data shape.
+- Data is remapped, renamed, reformatted, or converted.
+- A dto, view model, or api adapter is defined.
+- Format conversion code exists (xml_to_json, markdown_to_html).
 
-# - Common Mistakes -
+## Common Mistakes
 
-- Building a generic mapping framework before you have three different transformations.
-- Using implicit conventions (field names must match!) without documenting them.
-- Forgetting to handle null/missing fields in one direction.
-
-# - The Core Challenge -
-
-Transformation sits between two representations that evolve independently. When the source adds a field, the target might not need it -- but you need to decide explicitly whether to pass it through, drop it, or flag it. The challenge is keeping the mapping complete and correct as both sides change over time.
+- Writing transforms that modify their input.
+- Forgetting to handle null/absent fields in the source.
+- Copy-pasting the same transform logic across multiple files.
+- Doing I/O inside a transform (network call, file read, database query).
+- Assuming the source structure is always correct.
+- Not testing the round-trip (transform forward then backward gives the original).

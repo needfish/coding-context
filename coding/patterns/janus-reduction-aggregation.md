@@ -1,77 +1,94 @@
-# ------------------------------------------------------------------------------
-#  janus-reduction-aggregation.md
-#  Behavior variation -- the combining operation changes while the accumulate-over-elements contract stays the same.
-# ------------------------------------------------------------------------------
+# janus -- reduction / aggregation
 
-# - Problem -
+## Problem
 
-You have a collection of items and you need to combine them into a single value -- a sum, a product, a maximum, a concatenation, or any operation that repeatedly applies a binary function across elements.
+A list of values must be combined into a single value using a combining operation: sum, product, max, min, AND, OR, string concatenation, count, average, histogram. The combining operation must work on two values at a time and the order of combining must not change the result (associative).
 
-# - When You'll See This -
+## Input
 
-Any time you need a summary, total, count, extremum, or composite derived from a collection. Summing prices, finding the longest name, concatenating strings, counting matches. Reduction is usually the terminal step -- it consumes the output of filtering or transformation and produces the final result.
+- A list of values
+- A combining operation that takes two values and returns one value
+- An identity element for the operation (the result when the list is empty)
 
-# - How It Works -
+## Output
 
-- **Source collection**: the items to combine, each with a value or attribute.
-- **Binary operation**: the function that combines two values into one (addition, max, string concatenation, boolean AND).
-- **Initial value**: the starting point for the accumulation (0 for sum, 1 for product, empty string for concatenation, -inf for max).
-- **Accumulated result**: the single output value after processing all elements.
+- A single combined value (or the identity element if the list is empty)
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- The binary operation is associative: `op(a, op(b, c)) == op(op(a, b), c)` for all a, b, c.
-- The initial value is the identity element for the operation (0 for addition, 1 for multiplication).
-- The operation has no side effects.
-- Every element in the source contributes to the result exactly once.
-- Reducing an empty collection returns the initial value.
+- The combining operation is applied pairwise until one value remains
+- The order of combining does not change the result (associative property)
+- An empty list returns the identity element (does not crash)
+- The combining operation does not change the input values (no side effects)
+- The same input and operation always produce the same result
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Non-associative operation**: floating-point addition is not associative, so parallel reduction gives different results than sequential.
-- **Wrong initial value**: starting max at 0 means negative values are never selected.
-- **Side effects in operation**: the combining function mutates shared state.
-- **Overflow**: summing a large collection exceeds the maximum representable value.
-- **Empty collection returns nothing**: no initial value means empty input produces no result or an error.
+```python
+from functools import reduce
 
-# - Design Trade-Offs -
+total = sum(numbers)          # addition, identity: 0
+product = reduce(lambda a, b: a * b, numbers, 1)  # multiplication, identity: 1
+max_val = max(numbers) if numbers else float("-inf")
+all_active = all(items)       # boolean AND, identity: true
+any_active = any(items)       # boolean OR, identity: false
+```
 
-- **Sequential vs. parallel reduction**: sequential is simple and deterministic; parallel is faster for large collections but requires associativity and a merge step.
-- **Eager vs. lazy**: eager reduction computes immediately (predictable); lazy defers until the result is needed.
-- **Order-dependent vs. order-independent**: order-dependent reduction (string concatenation) is simpler; order-independent (sum, max) enables parallelism.
+## Identity Element Reference
 
-# - Related Problems -
+| Operation | Identity element |
+|---|---|
+| Addition | 0 |
+| Multiplication | 1 |
+| Max | -infinity |
+| Min | +infinity |
+| String concatenation | "" |
+| List concatenation | [] |
+| Boolean AND | true |
+| Boolean OR | false |
+| Set union | {} (empty set) |
+| Count | 0 |
 
-- **venus/filtering**: reduced values often come from filtered subsets.
-- **neptune/transformation**: elements may need transformation before reduction.
-- **earth/sorting**: sorted elements might feed into a ranked reduction.
-- **mercury/display**: reduced results (totals, averages, counts) are commonly displayed.
+## Failure Modes
 
-# - Getting Started -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Wrong identity element | Using 0 as identity for multiplication: result is always 0 | Use 1 as identity for multiplication |
+| Non-associative operation | Subtraction as reduction: (10 - 5) - 2 != 10 - (5 - 2) | Document that operation must be associative, or use explicit left/right fold |
+| Overflow | Summing large integers overflows | Use a wider type (long, big integer) or saturating arithmetic |
+| Floating-point error | Summing many floats accumulates rounding error | Use Kahan summation or sort by magnitude first |
+| Empty collection crash | Reduction crashes because the list is empty | Return the identity element for empty collections |
 
-A loop with an accumulator variable. Python: `total = 0; for x in items: total += x`. Rust: `items.iter().sum()`. Use your language's built-in `sum`, `max`, `reduce`, or `fold`.
+## Design Trade-offs
 
-# - When to Split Into Its Own Module -
+| Choice | What changes |
+|---|---|
+| Sequential vs. parallel | Sequential is simple but uses one core. Parallel (divide the list, reduce each part, combine results) needs the operation to be associative. |
+| Eager vs. lazy (streaming) | Eager processes the entire list at once. Lazy processes elements as they arrive, memory-efficient but needs incremental accumulation. |
+| Exact vs. approximate | Exact (sum, count) is precise but may be slow for large datasets. Approximate (HyperLogLog for distinct count, reservoir sampling for median) is fast but has error bounds. |
 
-- The reduction operation is complex (multi-field aggregation, grouping, filtering within the reduce).
-- You need multiple kinds of reduction on the same data (sum, count, average).
-- You need parallel reduction for performance.
-- The reduction logic needs independent testing.
+## Start With
 
-# - Signs You're in This Pattern -
+Use the language's built-in sum, max, min, all, any, or reduce. Only write a custom reduction when the operation is not one of the standard ones.
 
-- You have a loop that accumulates a value by processing each element.
-- You're computing a total, average, count, maximum, or concatenation.
-- The accumulation logic is mixed with element transformation.
-- You need to compute multiple aggregates from the same collection.
+## Split Into Its Own Module When
 
-# - Common Mistakes -
+- Custom reduction operations beyond simple sum/max are needed (median, mode, histogram).
+- The reduction must be parallelised for performance.
+- The reduction is streaming (elements arrive over time).
+- Multiple reductions are computed from the same list.
 
-- Writing a custom reduce when Python's `sum()` or `functools.reduce()` works.
-- Forgetting the initial value for empty collections.
-- Using floating-point addition where order independence (and thus parallelism) matters.
-- Putting side effects (print, logging, network calls) inside the combining function.
+## Signs This Is Present
 
-# - The Core Challenge -
+- A loop accumulates a value: total += x, count += 1, result = result + x.
+- reduce(), fold(), or aggregate() is used.
+- SUM, COUNT, AVG, GROUP BY queries are constructed.
+- A running total or cumulative statistic is computed.
 
-Reduction depends on associativity for correctness and parallelism. The operation must combine elements in any order and produce the same result. Floating-point arithmetic, string concatenation, and many real operations are not truly associative, which limits how you can parallelise and requires careful ordering guarantees.
+## Common Mistakes
+
+- Using a non-associative operation (subtraction, division, string concatenation with separators).
+- Forgetting the identity element and crashing on empty input.
+- Using floating-point accumulation for financial calculations (use decimal or integer cents).
+- Parallelising a reduction without ensuring the operation is associative and thread-safe.
+- Computing the same reduction multiple times over the same list.

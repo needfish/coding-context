@@ -1,78 +1,87 @@
-# ------------------------------------------------------------------------------
-#  mars-persistence.md
-#  Object variation -- the storage backend changes while the access contract stays the same.
-# ------------------------------------------------------------------------------
+# mars -- persistence
 
-# - Problem -
+## Problem
 
-Your program has state that needs to survive a restart. You need to save data to disk (or a database, or a cloud store) and read it back later.
+Data in memory must be saved to storage (file, database, cloud object store) and loaded back later, even after the program restarts. The storage type may be a file, a database, or a remote service.
 
-# - When You'll See This -
+## Input
 
-Any project where state must outlive the current run -- configuration files, user data, game saves, caches, logs. Persistence usually supports other subproblems: display reads from it, validation checks data before writing to it.
+- For save: data to persist (any structured value)
+- For load: a key or path identifying the stored data
 
-# - How It Works -
+## Output
 
-- **Working set**: the in-memory data structures you want to save.
-- **Storage medium**: where the data lives between runs -- a file, a database, a blob store.
-- **Schema**: the mapping between your in-memory structures and the storage format.
+- For save: success or failure (disk full, permission denied, network timeout)
+- For load: the previously saved data, or a default value if none exists
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- A write either completes fully or leaves the storage unchanged (atomicity).
-- A read after a completed write returns the value that was written (durability).
-- Concurrent reads and writes don't produce garbage (isolation).
-- What you save and what you load back are the same at the application level.
+- Data that is successfully saved can be loaded back to the same value
+- A failed save leaves the previously saved data unchanged
+- Two saves at the same time do not corrupt each other's data
+- Loading data that was never saved returns a default value or empty state
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Partial write**: a crash during save corrupts your data or leaves it half-written.
-- **Stale read**: reading returns old data because a write hasn't been flushed yet.
-- **Schema drift**: your code changes but the saved data still uses the old format.
-- **Disk full**: the storage medium fills up or becomes unreachable.
-- **Serialisation fails**: your data has circular references or other structures the serialiser can't handle.
-- **Impedance mismatch**: your object model doesn't map cleanly to the storage model (relational vs. document vs. key-value).
+```python
+import json, os
 
-# - Design Trade-Offs -
+SAVE_PATH = "data.json"
 
-- **Speed vs. safety**: writing straight to disk is slow; buffering is fast but risks losing data on crash.
-- **Consistency vs. availability**: strong consistency limits concurrent access; relaxed consistency accepts stale reads for higher throughput.
-- **Normalised vs. denormalised**: normalised avoids duplication but needs joins; denormalised is faster to read but duplicates data.
-- **Flexible vs. rigid schema**: flexible schemas accept anything but can't enforce constraints; rigid schemas enforce rules but are harder to change.
+def save(data):
+    with open(SAVE_PATH, "w") as f:
+        json.dump(data, f)
 
-# - Related Problems -
+def load():
+    if not os.path.exists(SAVE_PATH):
+        return {}
+    with open(SAVE_PATH) as f:
+        return json.load(f)
+```
 
-- **mercury/display**: display reads from persisted data.
-- **jupiter/validation**: data gets checked before writing.
-- **neptune/transformation**: data often needs serialisation/deserialisation.
-- **saturn/routing**: queries might need routing to the right storage backend.
-- **janus/reduction**: stored data often gets read and summarised.
-- **uranus/authentication**: accessing storage might need auth.
+## Failure Modes
 
-# - Getting Started -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Partial write | Program crashes mid-write, file contains truncated data | Write to temp file, then rename atomically |
+| Concurrent write corruption | Two threads write to same file, file contains garbage | Use file locking, a WAL, or a database |
+| Backward compatibility failure | Old version of program cannot read data written by new version | Add version number to data format, write migration functions |
+| Data loss on power failure | OS buffers writes, power loss loses buffered data | Use fsync() after critical writes |
+| Slow startup | Loading a large dataset blocks program start | Lazy-load or stream data |
 
-Read and write a single JSON file on startup and shutdown. Python: `json.load` / `json.dump`. Rust: `serde_json::from_reader` / `serde_json::to_writer`. No database, no repository pattern.
+## Design Trade-offs
 
-# - When to Split Into Its Own Module -
+| Choice | What changes |
+|---|---|
+| File vs. database | File is simple and portable but can't query data. Database adds queries, indexes, and concurrency but is another dependency. |
+| Text vs. binary format | Text (JSON, YAML) is human-readable but larger and slower. Binary (protobuf, msgpack) is compact and fast but opaque. |
+| Embedded vs. external storage | Embedded (SQLite) needs no server. External (PostgreSQL, S3) scales independently but needs a separate service. |
+| Optimistic vs. pessimistic locking | Optimistic (version number) works for low contention. Pessimistic (mutex, database lock) limits concurrency. |
 
-- You need incremental saves (not flush-all-on-exit) -- users lose work if the process crashes between saves.
-- Multiple readers or writers access the same data file.
-- You need transactional rollback on failure.
-- The storage format needs versioned migration (v1 -> v2 schema changes).
+## Start With
 
-# - Signs You're in This Pattern -
+The minimal code above using a JSON file. Add versioning and migration when the data format changes. Add a database when querying or concurrency is needed.
 
-- Your program loses state when it restarts.
-- You're writing data to a file but the format keeps changing.
-- Two parts of the system read and write the same data and sometimes see inconsistent values.
-- A crash during save corrupts the stored file.
+## Split Into Its Own Module When
 
-# - Common Mistakes -
+- More than one data type needs persistence.
+- Data size exceeds 10MB or save/load time exceeds 100ms.
+- Transactions or atomic multi-record operations are needed.
+- Migration between schema versions is required.
+- Multiple backends (file, S3, database) must be supported.
 
-- Adding a database (SQLite, PostgreSQL) when a JSON file works fine.
-- Building a repository abstraction layer before you know what queries you need.
-- Implementing atomic write before confirming partial writes are a real problem.
+## Signs This Is Present
 
-# - The Core Challenge -
+- Data is written to and read from a file, database, or cloud store.
+- A serialisation library (json, pickle, protobuf) is used.
+- Data loading happens at startup and saving at shutdown or on change.
+- Migration scripts exist for schema version upgrades.
 
-The system promises data survives beyond the current execution, but the storage medium has its own failure modes (crash, corruption, disconnection). You need to define where the guarantee ends -- what counts as "saved" and what the caller should do when saving isn't possible.
+## Common Mistakes
+
+- Not handling the first-run case (file does not exist, database is empty).
+- Assuming atomic writes on all platforms without using temp-file + rename.
+- Not testing for disk-full conditions.
+- Using pickle for long-term storage (version sensitivity, security).
+- Storing derived data alongside source data.
+- Not documenting what happens on power loss.

@@ -1,6 +1,6 @@
 # Heuristics
 
-## Starting & Decomposition
+## Starting and Decomposition
 
 - Model nouns as data structures and verbs as functions.
 - Hardcode a single use path, then fill in real logic after review. Replace stubs from the leaves up.

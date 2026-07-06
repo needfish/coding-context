@@ -1,81 +1,87 @@
-# ------------------------------------------------------------------------------
-#  hyperion-network-listener.md
-#  Object variation -- the connection lifecycle remains the same, the transport protocol changes.
-# ------------------------------------------------------------------------------
+# hyperion -- network listener
 
-# - Problem -
+## Problem
 
-Your service needs to bind to a network address, accept incoming connections, and manage them through their lifecycle -- handling simultaneous connections, TLS negotiation, connection draining, and graceful shutdown.
+A program must accept incoming connections from a network (TCP, UDP, Unix socket, TLS), read data from each connection, parse the application protocol, and pass the request to a handler. Each connection must be handled independently.
 
-# - When You'll See This -
+## Input
 
-Any networked service -- HTTP servers, databases, proxies, message brokers, custom protocol servers. The listener is the entry point for all inbound traffic. It sits before any request processing: the connection must be established before routing, authentication, or business logic can happen.
+- A network address (host and port)
+- A handler function that takes a request and returns a response
 
-# - How It Works -
+## Output
 
-- **Address**: the network endpoint to bind to -- an IP:port pair, a Unix socket path, or a dynamic (ephemeral) port.
-- **Listener socket**: the server socket that accepts new connections.
-- **Connection**: an established communication channel to a single client, with state (handshaking, open, closing, closed).
-- **Connection handler**: the code that processes data on a connection -- reads requests, parses them, and sends responses.
+- No direct return value (runs until stopped)
+- Each connection produces a response sent back to the client
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- The listener binds to the requested address or fails with a clear error.
-- New connections are accepted promptly while existing connections continue processing.
-- Each connection is handled independently -- one slow client doesn't block others.
-- TLS/SSL handshake is completed before data processing begins.
-- Shutdown drains in-flight connections before closing the listener.
-- Resources (file descriptors, memory buffers) are released when connections close.
+- The program binds to the given address and waits for connections
+- When a client connects, accept the connection and call the handler
+- The handler's response is sent back to the client
+- One connection's failure does not affect other connections
+- The listener keeps running even if a handler crashes
+- Connections are eventually closed after handling
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Address already in use**: the port is occupied by another process.
-- **Connection backlog full**: too many connections arrive before any are accepted, and new ones are rejected by the OS.
-- **Slow client blocking**: one slow client holds a thread/worker, preventing others from being served.
-- **Partial reads**: a read returns incomplete data, and the handler assumes it's the full message.
-- **Connection leak**: connections that close unexpectedly leave resources allocated.
-- **Graceful shutdown fails**: the listener closes but in-flight requests are terminated mid-processing.
+```python
+import socket
 
-# - Design Trade-Offs -
+def serve(host, port, handler):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((host, port))
+    sock.listen(128)
+    
+    while True:
+        conn, addr = sock.accept()
+        with conn:
+            data = conn.recv(4096)
+            response = handler(data, addr)
+            conn.sendall(response)
+```
 
-- **Thread-per-connection vs. event loop**: one thread per connection is simple but doesn't scale to thousands; an event loop scales well but is harder to program.
-- **Blocking vs. non-blocking I/O**: blocking I/O is simple but ties up threads; non-blocking I/O is efficient but requires managing read/write readiness.
-- **Single acceptor vs. multiple**: one accept loop is simple but can be a bottleneck; multiple acceptors improve throughput but add coordination.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Connection leak | Open file descriptors grow until the program crashes | Always close connections in a finally/defer block |
+| Slow client attack | Attacker opens connections and sends data very slowly, filling listener slots | Set read timeouts and limit concurrent connections per IP |
+| Handler crash kills listener | A handler error crashes the entire server | Catch errors per connection; the accept loop continues |
+| Port conflict | Program crashes at startup because port is already in use | Handle EADDRINUSE gracefully and log a clear error |
+| TLS handshake hang | Client connects but never completes TLS handshake | Set a handshake timeout |
 
-- **neptune/transformation**: raw connection bytes need parsing and transformation.
-- **saturn/routing**: parsed requests need routing to handlers.
-- **uranus/authentication**: connections may need TLS or authentication.
-- **jupiter/validation**: incoming data needs validation.
-- **mars/persistence**: request data may be persisted.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| Thread-per-connection vs. event loop | Thread-per-connection is simple but cannot handle 10,000+ concurrent connections. Event loop (select, epoll, kqueue) scales better but needs non-blocking I/O. |
+| Connection-oriented vs. datagram | TCP provides ordering and reliability but has head-of-line blocking. UDP has lower latency but is unordered and unreliable. |
+| Single transport vs. multi-transport | One transport (TCP only) is simpler. Multiple transports (TCP + Unix socket + TLS) mean more code. |
 
-A single `bind` + `accept` loop that spawns a thread per connection. Handle one request per connection and close. No TLS, no keep-alive, no connection pooling.
+## Start With
 
-# - When to Split Into Its Own Module -
+The minimal code above using a blocking socket. Add thread-per-connection or an event loop when concurrency demands grow. Use a library (asyncio, Tokio, Node.js net module) instead of raw sockets for real use.
 
-- You need TLS/SSL support.
-- You need connection keep-alive or HTTP/2 multiplexing.
-- You need rate limiting or connection throttling.
-- You need graceful shutdown with in-flight request draining.
-- The listener logic becomes tangled with request processing.
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- More than one transport is supported (TCP + Unix socket + TLS).
+- Connection lifecycle management (timeouts, keepalive, graceful shutdown) is needed.
+- Connection pooling or rate limiting is required.
+- The listener must support hot-reload.
 
-- Your program opens a TCP or Unix socket and waits for connections.
-- You have a loop that calls `accept()` and spawns something to handle each connection.
-- You need to manage connection timeouts, TLS handshakes, or shutdown sequences.
-- The networking code is mixed with protocol parsing and business logic.
+## Signs This Is Present
 
-# - Common Mistakes -
+- A socket is created with bind/listen/accept.
+- An HTTP server framework is used.
+- A WebSocket or gRPC endpoint is served.
+- Connection metadata (client IP, TLS version) is extracted and passed to handlers.
 
-- Writing a custom event loop when an existing framework (Tokio, asyncio, Node.js) handles it.
-- Creating a thread per connection without a limit for high-concurrency workloads.
-- Not handling `EINTR` or `EAGAIN` on `accept()` in low-level code.
-- Assuming `read()` returns a complete message in a single call.
+## Common Mistakes
 
-# - The Core Challenge -
-
-The listener mediates between the OS's connection model and the application's processing model. Connections arrive and depart asynchronously, each with its own timing and state. The challenge is managing the lifecycle of many concurrent connections without allowing one misbehaving client to affect others.
+- Blocking the accept loop with a slow operation (DNS lookup, filesystem access).
+- Not setting read/write timeouts, allowing connections to hang forever.
+- Mixing transport logic (TLS handshake, HTTP parsing) with business logic.
+- Using thread-per-connection for a service that needs 10,000+ concurrent connections.
+- Forgetting graceful shutdown (stop accepting, drain active connections).

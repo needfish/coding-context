@@ -1,76 +1,98 @@
-# ------------------------------------------------------------------------------
-#  europa-config-assembly.md
-#  Data variation -- same merge algorithm, different values per source.
-# ------------------------------------------------------------------------------
+# europa -- configuration assembly
 
-# - Problem -
+## Problem
 
-Your program needs configuration from multiple places -- CLI flags, environment variables, config files, and sensible defaults. You need to combine them with clear precedence rules.
+A program needs settings from multiple sources: command-line arguments, environment variables, config files, and defaults. These sources must be combined into one configuration, with higher-priority values overriding lower-priority ones on a per-field basis.
 
-# - When You'll See This -
+## Input
 
-Virtually every non-trivial tool. Configuration sources have a priority order (CLI overrides env var, env var overrides config file, config file overrides default). The assembly step merges them into a single validated config object that the rest of the system reads.
+- Default values (lowest priority)
+- Config file values (from TOML, YAML, JSON, or INI file)
+- Environment variable values
+- Command-line argument values (highest priority)
 
-# - How It Works -
+## Output
 
-- **CLI arguments**: command-line flags and positional args, parsed into structured options.
-- **Environment variables**: key-value pairs from the shell environment, typically uppercase with underscores.
-- **Config files**: YAML, TOML, or JSON files read from well-known paths.
-- **Defaults**: hard-coded values that apply when nothing else provides a value.
-- **Merged config**: the single validated configuration object after all sources are combined.
+- A single configuration object with all fields resolved
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Higher-priority sources override lower-priority sources on a per-field basis.
-- A field not set in any source uses its default value.
-- Type mismatches across sources (CLI says int, env var says string) are caught and reported.
-- Required fields that are missing from all sources produce a clear error at startup.
-- The final config is validated as a whole (not per-source).
+- For each config field, the value from the highest-priority source that provides it is used
+- If no source provides a value, a default is used (or an error is returned if the field is required)
+- Source priorities are: command-line > environment variable > config file > defaults
+- Missing optional fields do not cause errors
+- Unknown fields in config files or command-line args may cause errors or be silently ignored
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Partial override confusion**: setting one field via CLI but expecting others from the config file -- and the CLI clears the whole config.
-- **Silent ignore**: a config file field is misspelled and silently ignored.
-- **Type coercion surprises**: `--port=eight` parses as a string instead of failing as an invalid int.
-- **Missing required field**: the app starts but crashes later because a required config value wasn't set.
-- **Side effects during config loading**: reading a config file triggers network calls or filesystem writes.
-- **Too many config sources**: the user can't predict which source wins for a given field.
+```python
+import os, json
 
-# - Design Trade-Offs -
+def assemble_config(cli_args: dict, env_prefix: str = "APP_") -> dict:
+    config = {
+        "host": "localhost",
+        "port": 8080,
+        "debug": False,
+    }
+    # Config file
+    if os.path.exists("config.json"):
+        with open("config.json") as f:
+            file_config = json.load(f)
+            config.update(file_config)
+    # Environment variables
+    for key in config:
+        env_key = env_prefix + key.upper()
+        if env_key in os.environ:
+            config[key] = os.environ[env_key]
+    # CLI args override all
+    for key, value in cli_args.items():
+        if value is not None:
+            config[key] = value
+    return config
+```
 
-- **Flat vs. nested config**: flat keys (like `db.host`) are simple but don't compose; nested structures mirror the domain but are harder to merge.
-- **Fail-fast vs. tolerant**: fail-fast rejects invalid config at startup (clear errors, no surprises); tolerant accepts partial config and uses defaults but may hide mistakes.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Partial override not per-field | A config file that sets "host" and "port" overwrites "debug" even though the file does not specify it | Merge per-field, not by replacing the whole config object |
+| Environment variable type confusion | PORT=abc (string) assigned to port (int field) raises type error at use time | Validate types at config assembly time, not at use time |
+| Undefined keys | A typo in config file (porrt) is silently ignored | Warn or error on unknown keys |
+| Conflicting sources | Users cannot tell which source provided a value | Log the source of each resolved value |
+| Required field missing | The program starts but crashes later because a required config field is missing | Validate required fields during assembly and fail early |
 
-- **pluto/input-parsing**: config files need parsing before merging.
-- **jupiter/validation**: the merged config needs validation.
-- **mars/persistence**: config may be cached or reloaded from disk.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| Explicit priority vs. first-wins | Explicit priority (CLI > env > file > defaults) is predictable per-field. First-wins (load sources in order) is simpler but may hide higher-priority sources. |
+| Validation at assembly vs. at use | Validate at assembly: fail fast with clear message. Validate at use: may cause confusing runtime errors. |
+| Flat vs. nested config | Flat (all keys at top level) is simple. Nested (sections, groups) is organised but more complex to merge. |
 
-A dict of defaults, updated by the config file, updated by env vars, updated by CLI args. Python: `merged = {**defaults, **file_config, **env_overrides, **cli_args}`. No validation library, no config framework.
+## Start With
 
-# - When to Split Into Its Own Module -
+Use a config library (crate config in Rust, python-decouple in Python, envconfig in Go). Start with one config file and environment variables. Add command-line parsing when needed.
 
-- You have more than 10 configuration fields.
-- Configuration comes from more than two sources.
-- Configuration needs validation rules (ranges, required fields, dependencies between fields).
-- You need to reload configuration at runtime without restarting.
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- More than two config sources are used.
+- Config validation (types, required fields) is needed.
+- Config values are shared across multiple modules.
+- Config file format (TOML, YAML, JSON) needs to be configurable.
+- Config reloading (watch file for changes) is needed.
 
-- Your program accepts CLI flags, environment variables, and config files.
-- You have a block of code that reads and merges configuration at startup.
-- Changing a setting means editing multiple places (defaults, env var name, CLI flag).
-- Configuration errors only appear at the moment the misconfigured feature is used.
+## Signs This Is Present
 
-# - Common Mistakes -
+- os.environ, sys.argv, or argparse is read at startup.
+- A config file is parsed (JSON, YAML, TOML, INI).
+- Default values are defined and overridden by environment or CLI.
+- A config object is passed through the program.
 
-- Writing a custom config parser before trying an existing one (argparse, clap, Viper).
-- Adding a config file format when environment variables cover the use case.
-- Loading config from network sources at startup without a fallback or timeout.
+## Common Mistakes
 
-# - The Core Challenge -
-
-Configuration comes from untrusted, untyped sources (strings from env vars, text from files, arbitrary CLI input). The merge process must turn these into a typed, validated, predictable configuration object that the rest of the system can trust.
+- Replacing the entire config object instead of merging per-field.
+- Not validating types at assembly time (a string port crashes later).
+- Silently ignoring unknown config keys (typos go unnoticed).
+- Loading secrets into config that are later exposed in logs or errors.
+- Not documenting which config sources are available and their priority.
+- Hard-coding config file paths that are not portable.

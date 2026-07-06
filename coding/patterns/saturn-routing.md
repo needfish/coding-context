@@ -1,78 +1,84 @@
-# ------------------------------------------------------------------------------
-#  saturn-routing.md
-#  Behavior variation -- the dispatch algorithm changes per message attribute.
-# ------------------------------------------------------------------------------
+# saturn -- routing
 
-# - Problem -
+## Problem
 
-Messages arrive at your system and need to reach the right handler based on what they contain. The sender doesn't need to know which handler will process the message.
+An incoming request (HTTP request, RPC call, message) must be sent to a handler based on a key (URL path, message type, command name). As more handlers are added, the mapping from keys to handlers grows.
 
-# - When You'll See This -
+## Input
 
-Any system that receives messages (requests, events, commands) from multiple sources and dispatches them to different processing paths. Think API gateways, message brokers, event buses, UI navigation, and workflow engines.
+- A key (string: URL path, message type, command name)
+- A request object containing data to process
 
-# - How It Works -
+## Output
 
-- **Message**: the incoming data with attributes -- path, type, source, headers, payload.
-- **Route table**: the mapping from message attributes to handler identifiers.
-- **Handler**: the code that processes messages matching a particular route.
+- The response from the matching handler, or a 404/error if no handler matches
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- Every message reaches the handler that matches its attributes, or a fallback if nothing matches.
-- The route table is deterministic -- same attributes always route to the same handler.
-- Routing doesn't modify the message content (unless the route definition explicitly includes a transform).
-- A message never reaches a handler that doesn't match its attributes.
+- Given a key, look up the matching handler and call it with the request
+- If no handler matches, return a default response (404)
+- Adding or removing a route does not affect other routes
+- The same key always reaches the same handler (no side effects between dispatches)
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Ambiguous match**: two routes match the same message and the tiebreaker is undefined.
-- **Broad route shadows specific ones**: `/*` matches before `/users/:id`, so the specific route never runs.
-- **No match, no fallback**: a message matches nothing and gets silently dropped.
-- **Route table changes mid-flight**: the table updates while messages are being processed, causing inconsistent routing.
-- **Handler unavailable**: the matched handler is down or removed.
-- **Routing loop**: handler A sends to handler B which sends back to handler A.
-- **Attribute mismatch**: the message attributes don't match what the route table expects (typo, version drift).
+```python
+class Router:
+    def __init__(self):
+        self.routes = {}
 
-# - Design Trade-Offs -
+    def add(self, path, handler):
+        self.routes[path] = handler
 
-- **Static vs. dynamic routing**: a compiled route table is fast but needs recompilation to change; dynamic routing is flexible but slower and harder to verify.
-- **Exact vs. pattern matching**: exact matches are simple but rigid; pattern matching (regex, glob) is expressive but has edge cases.
-- **Single vs. multicast**: one handler per message is simple; multiple handlers enable fan-out but raise ordering questions.
-- **Centralised vs. distributed**: one router is easy to reason about but is a single point of failure.
+    def dispatch(self, path, request):
+        handler = self.routes.get(path)
+        if handler is None:
+            return 404, "Not Found"
+        return handler(request)
+```
 
-# - Related Problems -
+## Failure Modes
 
-- **jupiter/validation**: messages typically get validated before routing.
-- **neptune/transformation**: messages might need reshaping before delivery.
-- **uranus/authentication**: messages might need auth before routing.
-- **mercury/display**: UI navigation is a routing problem.
-- **mars/persistence**: stored messages might get routed on retrieval.
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Route collision | Two routes match the same key, wrong handler called | Define priority: exact match beats pattern match, most specific wins |
+| Route shadowing | A general route matches before a specific one | Order routes from most specific to most general |
+| Parameter parsing | A malformed URL parameter crashes the handler | Validate extracted parameters before passing to handler |
+| Route mutation during dispatch | Handler modifies route table while another request is being dispatched | Make route table read-only during dispatch, or use copy-on-write |
+| Trailing slash mismatch | Route is /users but request goes to /users/ | Normalize the path before dispatch |
 
-# - Getting Started -
+## Design Trade-offs
 
-A single `if/elif/else` chain or a hash map from key to handler function. Python: `{'create': create_handler, 'delete': delete_handler}`. Rust: `match command { Command::Create => ... }`.
+| Choice | What changes |
+|---|---|
+| Exact match vs. pattern match | Exact (hash map) is fast and simple but needs the full key in advance. Pattern (wildcards, regex) is flexible but slower. |
+| Centralized vs. distributed routing | One route table for all handlers is simple but can become a bottleneck. Each module registers its own routes, scales better. |
+| Static vs. dynamic routing | Routes defined at startup are predictable but need a restart to change. Routes added/removed at runtime are flexible but need thread safety. |
 
-# - When to Split Into Its Own Module -
+## Start With
 
-- The dispatch table grows beyond one screen (20+ routes).
-- Different handlers share setup/teardown logic (middleware emerges).
-- Routes need to be registered from separate files (plugin system).
-- Routing logic needs independent tests.
+The minimal code above using a dictionary for exact matches. Add pattern matching (wildcards, path parameters) when routes grow beyond 20.
 
-# - Signs You're in This Pattern -
+## Split Into Its Own Module When
 
-- A chain of `if/elif/else` or `match` dispatches based on a message property.
-- Adding a new message type means editing a central dispatch function.
-- Different message types need different pre-processing.
-- A catch-all handler silently absorbs unmatched messages.
+- The route table grows beyond 20 routes.
+- Route patterns (wildcards, parameters, regex) are needed.
+- Middleware (run before/after dispatch) is required.
+- Routes are defined across multiple files or modules.
+- Route table must be inspected or modified at runtime.
 
-# - Common Mistakes -
+## Signs This Is Present
 
-- Introducing a full middleware stack when you have 3 routes and 1 shared concern.
-- Building a trie-based router when a hash map handles your 10 endpoints.
-- Abstracting route groups before you have a second group.
+- An if/elif chain dispatches based on a string key (path, message type).
+- A dictionary maps keys to handler functions.
+- A web framework's router is used (Flask, Express, Axum, Actix).
+- URL path parameters are extracted and passed to handlers.
 
-# - The Core Challenge -
+## Common Mistakes
 
-The route table is shared knowledge that senders and handlers depend on. When it changes, in-flight messages might route inconsistently. The challenge is versioning the table and deciding what happens to messages already in transit during a change.
+- Using a linear scan for route lookup when the route table has 100+ entries (use a hash map or trie).
+- Not handling the "no matching route" case.
+- Putting business logic in the router (router dispatches; handler processes).
+- Mutating the route table during request dispatch.
+- Hard-coding routes in multiple places.
+- Not validating route parameters before passing them to the handler.

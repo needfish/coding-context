@@ -1,78 +1,87 @@
-# ------------------------------------------------------------------------------
-#  leda-feedback-control.md
-#  Behavior variation -- the control algorithm changes per plant dynamics.
-# ------------------------------------------------------------------------------
+# leda -- feedback control
 
-# - Problem -
+## Problem
 
-You need to maintain a physical or logical variable at a desired value (setpoint) by measuring the current value, comparing it to the target, and adjusting an input to minimise the error over time -- while dealing with measurement noise, external disturbances, and changing conditions.
+A system must keep a measured value (temperature, speed, voltage) close to a target (setpoint). It does this by repeatedly measuring the current value, comparing it to the target, and adjusting a control input. The rule for computing the adjustment (control law) changes per application.
 
-# - When You'll See This -
+## Input
 
-Any system that regulates a dynamic process. Temperature control (3D printer hotend, oven, HVAC), motor speed control (CNC spindle, drones), chemical process control (pH, flow rate), and software rate control (TCP congestion, rate limiters). The controller reads a sensor, computes the error, and applies a correction through an actuator.
+- The setpoint (target value)
+- The measured value (current reading from a sensor)
+- The time since the last measurement (dt)
 
-# - How It Works -
+## Output
 
-- **Plant**: the process being controlled -- a motor, heater, vehicle, or network link.
-- **Setpoint**: the target value for the controlled variable.
-- **Sensor measurement**: the current value of the variable, possibly noisy or delayed.
-- **Error**: the difference between setpoint and measured value.
-- **Controller**: the algorithm that computes a correction from the error -- typically P, PI, or PID.
-- **Actuator**: the mechanism that applies the correction to the plant.
+- A control signal (how much to adjust the actuator)
 
-# - What Must Always Be True -
+## Observable Behavior
 
-- The controller reduces the error over time toward zero.
-- The system remains stable (doesn't oscillate or diverge).
-- The controller compensates for disturbances without manual adjustment.
-- Sensor noise does not cause excessive actuator wear or instability.
-- The controller respects actuator limits (can't command more than the actuator can deliver).
+- At each time step, the controller computes error = setpoint - measured
+- The control signal is a function of the error, its history (integral), and its rate of change (derivative)
+- The control signal is sent to the actuator (heater, motor, valve)
+- Over time, the measured value converges toward the setpoint if the controller gains are tuned correctly
+- If gains are too high, the output oscillates; if too low, convergence is slow
 
-# - What Goes Wrong -
+## Minimal Code
 
-- **Integral windup**: the error accumulates while the actuator is saturated, so when the error reverses, the controller overcorrects.
-- **Derivative kick**: a sudden change in setpoint causes a large derivative spike that makes the actuator jerk.
-- **Oscillation**: the controller gains are too high, causing the system to overshoot and oscillate.
-- **Sensor delay**: the measurement is delayed, so the controller acts on old data and overcorrects.
-- **Noise amplification**: the derivative term amplifies sensor noise, causing erratic actuator movements.
-- **Stability**: adding a controller to an otherwise stable plant can make it unstable.
+```python
+class PIDController:
+    def __init__(self, kp, ki, kd, setpoint=0):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.setpoint = setpoint
+        self.integral = 0
+        self.last_error = 0
 
-# - Design Trade-Offs -
+    def update(self, measured, dt):
+        error = self.setpoint - measured
+        self.integral += error * dt
+        derivative = (error - self.last_error) / dt if dt > 0 else 0
+        self.last_error = error
+        return (self.kp * error) + (self.ki * self.integral) + (self.kd * derivative)
+```
 
-- **Aggressive vs. conservative tuning**: aggressive gains reach the setpoint fast but overshoot; conservative gains are stable but slow.
-- **P-only vs. PI vs. PID**: P-only is simple but leaves steady-state error; PI eliminates steady-state error; PID adds predictive response but amplifies noise.
-- **Fixed vs. adaptive gains**: fixed gains are simple but tuned for one operating point; adaptive gains adjust to changing plant dynamics but are much more complex.
+## Failure Modes
 
-# - Related Problems -
+| Failure | Observable symptom | Fix |
+|---|---|---|
+| Integral windup | After a sustained disturbance, the integral term has grown large; when the disturbance ends, the output overshoots significantly | Clamp the integral term or freeze integration when the actuator is saturated |
+| Oscillation | The output swings back and forth around the setpoint without settling | Reduce the proportional gain or add derivative damping |
+| Sensor noise | Controller reacts to random measurement noise rather than actual process changes | Add a low-pass filter to the sensor reading |
+| Sample jitter | Control loop does not run at a fixed frequency, causing inconsistent correction | Use a real-time timer or timestamp the samples |
+| Phase lag | Sensor or actuator has a delay; controller corrects for past error, not current error | Add a predictor (Smith predictor) |
 
-- **pan/resource-scheduling**: scheduling is a form of feedback control.
-- **dione/power-management**: power management uses feedback to adjust performance states.
+## Design Trade-offs
 
-# - Getting Started -
+| Choice | What changes |
+|---|---|
+| P vs. PI vs. PID | P is simple but has steady-state error. PI eliminates steady-state error but can overshoot. PID reduces overshoot but is sensitive to noise. |
+| Fixed vs. adaptive gains | Fixed is simple but must be tuned for one operating point. Adaptive adjusts to changing process dynamics but risks instability. |
+| Continuous vs. on-off (bang-bang) | Continuous (PID) provides smooth correction. On-off (thermostat) is simple but oscillates around the setpoint. |
 
-A simple on/off (bang-bang) controller: if temperature < setpoint, turn heater on; if temperature > setpoint + hysteresis, turn heater off. No P, I, or D terms.
+## Start With
 
-# - When to Split Into Its Own Module -
+Use a P controller first. Add integral term (PI) when steady-state error is a problem. Add derivative term (PID) when overshoot needs damping.
 
-- On/off control causes too much oscillation or wears out the actuator.
-- You need precise control around the setpoint (not just within a hysteresis band).
-- The plant dynamics change with operating conditions (different speeds, different loads).
-- You need to test the controller independently from the hardware.
+## Split Into Its Own Module When
 
-# - Signs You're in This Pattern -
+- More than one control loop exists in the system.
+- The control law needs tuning (gain scheduling, auto-tuning).
+- The controller output must be logged and analysed.
+- The control loop interacts with other control loops (cascaded control).
 
-- You read a sensor, compute a difference from a target, and adjust an output to reduce the difference.
-- Your control loop oscillates around the target.
-- You're tuning parameters (P, I, D) to make the system behave correctly.
-- The system overshoots the target and takes too long to settle.
+## Signs This Is Present
 
-# - Common Mistakes -
+- A loop measures a value and adjusts an actuator based on an error.
+- A PID, PI, or P controller is implemented.
+- A value is compared to a target and the difference drives a corrective action.
+- Hysteresis or deadband is used to prevent rapid switching.
 
-- Tuning PID gains by guesswork instead of using a systematic method (Ziegler-Nichols, Cohen-Coon).
-- Implementing derivative on the error instead of on the measurement (derivative kick).
-- Not clamping the integral term (integral windup).
-- Sampling the sensor too slowly for the plant dynamics.
+## Common Mistakes
 
-# - The Core Challenge -
-
-A controller acts on imperfect information -- noisy sensors, delayed measurements, unknown disturbances. It must correct errors without knowing whether the error is real, transient, or measurement noise. The wrong correction makes things worse.
+- Tuning the controller on a simulation and using the same gains in production (real dynamics differ).
+- Not handling sensor failure (stale or NaN readings).
+- Using the control interval as dt instead of the actual elapsed time.
+- Starting the integral term from zero when the error is large (rapid saturation).
+- Forgetting to clamp the controller output to the actuator limits.
