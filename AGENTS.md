@@ -6,3 +6,9 @@ void extreme wording (e.g every, all, no). avoid dramatic wording entirely.
 be concise. write with reference to ASD-STE100.
 keep the flow of text similar to technical textbooks.
 review and refine to get the most accurate short answer possible. no more than 100 words.
+
+Avoid breaking up text with colons, semicolons, or dashes.
+No metaphor, simile, or other figures of speech.
+Use active instead of passive.
+Avoid foreign phrase and jargons.
+Avoid the negative/contrast form: X not Y.
