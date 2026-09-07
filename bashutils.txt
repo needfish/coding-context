@@ -1,0 +1,25 @@
+eval "$(fzf --bash)"
+f() {
+  local file
+  file=$(rg --files --hidden -g '!.git' | fzf --preview 'bat --color=always --line-range=:200 {}') &&
+    "${EDITOR:-nvim}" "$file"
+}
+g() {
+  local x file line
+  x=$(rg -n --hidden -g '!.git' --no-heading "${*:-.}" | fzf --delimiter : --preview 'bat --color=always --highlight-line {2} {1}' --preview-window '+{2}-/2') || return
+  file=${x%%:*}; line=${x#*:}; line=${line%%:*}
+  "${EDITOR:-nvim}" "+$line" "$file"
+}
+a() {
+  local x file line
+  x=$(ag --nogroup --nocolor "${*:-.}" | fzf --delimiter : --preview 'bat --color=always --highlight-line {2} {1}' --preview-window '+{2}-/2') || return
+  file=${x%%:*}; line=${x#*:}; line=${line%%:*}
+  "${EDITOR:-nvim}" "+$line" "$file"
+}
+m() {
+  local x file line
+  x=$(rg -n --no-heading --hidden -g '!.git' . |
+    fzf --delimiter : --preview 'bat --color=always --highlight-line {2} {1}' --preview-window '+{2}-/2') || return
+  file=${x%%:*}; line=${x#*:}; line=${line%%:*}
+  "${EDITOR:-nvim}" "+$line" "$file"
+}
