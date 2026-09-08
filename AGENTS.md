@@ -28,10 +28,13 @@
 
 - Alternate length of sentences.
 
-# Code Guideline
+# Code Guideline : please follow this strictly.
 - Minimize amount of mutable variables, and objects with mutable state.
+  
 - Name variables with their complete meaning when available.
-- Name functions with verbs.
+- Name of functions with side effects should be verb phrases.
+- Name of functions without side effects can be verbs or the name of the target value.
+
 - Prefer functions on immutable data structures over objects with methods.
 - Keep side effects such as IO, database, web fetching, in an isolated function.
 - Bail on Fail: Panic early on side effect fail.
