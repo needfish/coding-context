@@ -26,9 +26,13 @@
 - Avoid words like only, alone, real, matters, rule, principle.
 - Avoid abstract words.
 
+- Alternate length of sentences.
+
 # Code Guideline
-- Minimize amount of mutable variables, and objects with mutable state
-- Prefer functions on immutable data structures over objects with methods
+- Minimize amount of mutable variables, and objects with mutable state.
+- Name variables with their complete meaning when available.
+- Name functions with verbs.
+- Prefer functions on immutable data structures over objects with methods.
 - Keep side effects such as IO, database, web fetching, in an isolated function.
 - Bail on Fail: Panic early on side effect fail.
 - Keep if statements higher on the call order (move to the caller), and for statements lower (make the function being called operate on a singular)
