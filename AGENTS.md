@@ -31,7 +31,7 @@
 # Code Guideline : please follow this strictly.
 - Minimize amount of mutable variables, and objects with mutable state.
   
-- Name variables with their complete meaning when available.
+- Name variables with their complete meaning when available. Use a Hash number otherwise.
 - Name of functions with side effects should be verb phrases.
 - Name of functions without side effects can be verbs or the name of the target value.
 
