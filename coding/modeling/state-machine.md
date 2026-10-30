@@ -101,4 +101,4 @@ Does the entity move through a sequence of states?
 - [invariants.md](invariants.md)
 - [type-precision.md](type-precision.md)
 - [optionality.md](optionality.md)
-- [patterns/charon-durable-workflow.md](../patterns/charon-durable-workflow.md)
+- [system-patterns/charon-durable-workflow](../system-patterns/charon-durable-workflow)

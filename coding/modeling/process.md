@@ -6,7 +6,7 @@ Write a one-sentence problem statement extracted from the user's request.
 
 ## Decompose Using the Pattern Catalog
 
-Find the project type in [how-to-use.md](../how-to-use.md) -> project type table -> core patterns. Open each core pattern from [patterns/](../patterns/) and extract its Domain, Invariants, Related Subproblems, and Decomposition sections.
+Find the project type in [how-to-use.md](../how-to-use.md) -> project type table -> core patterns. Open each core pattern from their pattern file and extract its Domain, Invariants, Related Subproblems, and Decomposition sections.
 
 ## Define Types and Operations
 

@@ -1,6 +1,6 @@
 # coding
 
-Subdirectories: toolchain/, refactoring/, modeling/, conventions/, heuristics/, error-handling/, testing/, project-conventions/, patterns/.
+Subdirectories: toolchain/, refactoring/, modeling/, conventions/, heuristics/, error-handling/, testing/, project-conventions/, application-patterns/, system-patterns.
 
 ## Interaction Rules
 

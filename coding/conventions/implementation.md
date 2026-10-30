@@ -14,7 +14,7 @@ For optional fields, choose the absent representation during stubbing -- see [mo
 
 ## Minimal Forms from Patterns
 
-Open each pattern's "Start with (minimal form)" section from [patterns/](../patterns/).
+Open each pattern's "Start with (minimal form)" section from their pattern file.
 
 ## Data Structure Choice
 

@@ -90,4 +90,4 @@ What happens when an operation fails partway through?
 - [optionality.md](optionality.md)
 - [type-precision.md](type-precision.md)
 - [testing/testing.md](../testing/testing.md)
-- [patterns/janus-reduction-aggregation.md](../patterns/janus-reduction-aggregation.md)
+- [application-patterns/janus-reduction-aggregation](../application-patterns/janus-reduction-aggregation)

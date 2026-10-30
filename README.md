@@ -32,11 +32,8 @@
     |   |-- state-machine.md
     |   +-- type-precision.md
     |-- pattern-table.md
-    |-- patterns/               # Named implementation patterns
-    |   |-- atlas-memory-allocation.md
+    |-- application-patterns/    # Patterns for application programming
     |   |-- callisto-filesystem-walk.md
-    |   |-- charon-durable-workflow.md
-    |   |-- dione-power-management.md
     |   |-- earth-sorting.md
     |   |-- eris-pipeline.md
     |   |-- europa-config-assembly.md
@@ -45,20 +42,24 @@
     |   |-- iota-command-execution.md
     |   |-- janus-reduction-aggregation.md
     |   |-- jupiter-validation.md
-    |   |-- leda-feedback-control.md
     |   |-- mars-persistence.md
     |   |-- mercury-display.md
     |   |-- neptune-transformation.md
-    |   |-- pan-resource-scheduling.md
     |   |-- pandora-simple-workpieces.md
     |   |-- phoebe-resource-lifecycle.md
     |   |-- pluto-input-parsing.md
     |   |-- rhea-syntax-detection.md
     |   |-- saturn-routing.md
-    |   |-- thebe-background-compaction.md
     |   |-- titan-syntax-highlighting.md
     |   |-- uranus-authentication.md
     |   +-- venus-filtering.md
+    |-- system-patterns/        # Patterns for systems programming
+    |   |-- atlas-memory-allocation.md
+    |   |-- charon-durable-workflow.md
+    |   |-- dione-power-management.md
+    |   |-- leda-feedback-control.md
+    |   |-- pan-resource-scheduling.md
+    |   +-- thebe-background-compaction.md
     |-- project-conventions/
     |   +-- project-conventions.md
     |-- refactoring/

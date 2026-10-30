@@ -6,7 +6,7 @@ List each assumption that failed, the evidence that disproved it, and the correc
 
 ## Check Splitting Triggers
 
-Open each pattern's "Split into its own module when" and "Common traps" sections from [patterns/](../patterns/). Check if any splitting triggers have fired.
+Open each pattern's "Split into its own module when" and "Common traps" sections from their pattern file. Check if any splitting triggers have fired.
 
 ## File-Level Splitting
 

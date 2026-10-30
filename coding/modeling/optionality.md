@@ -104,4 +104,4 @@ Is the field naturally a collection (list, set, string, map)?
 ## See Also
 
 - [invariants.md](invariants.md)
-- [patterns/neptune-transformation.md](../patterns/neptune-transformation.md)
+- [application-patterns/neptune-transformation](../application-patterns/neptune-transformation)

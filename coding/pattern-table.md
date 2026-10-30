@@ -2,36 +2,41 @@
 
 See [how-to-use.md](how-to-use.md) for a project-type-to-patterns reference.
 
-## Pattern List
+## Application patterns
 
 | Planet | Pattern | File |
 |---|---|---|
-| mercury | display | [patterns/mercury-display.md](patterns/mercury-display.md) |
-| venus | filtering | [patterns/venus-filtering.md](patterns/venus-filtering.md) |
-| earth | sorting | [patterns/earth-sorting.md](patterns/earth-sorting.md) |
-| mars | persistence | [patterns/mars-persistence.md](patterns/mars-persistence.md) |
-| jupiter | validation | [patterns/jupiter-validation.md](patterns/jupiter-validation.md) |
-| saturn | routing | [patterns/saturn-routing.md](patterns/saturn-routing.md) |
-| uranus | authentication | [patterns/uranus-authentication.md](patterns/uranus-authentication.md) |
-| neptune | transformation | [patterns/neptune-transformation.md](patterns/neptune-transformation.md) |
-| callisto | filesystem walk | [patterns/callisto-filesystem-walk.md](patterns/callisto-filesystem-walk.md) |
-| iota | command execution | [patterns/iota-command-execution.md](patterns/iota-command-execution.md) |
-| ganymede | output formatting | [patterns/ganymede-output-format.md](patterns/ganymede-output-format.md) |
-| europa | configuration assembly | [patterns/europa-config-assembly.md](patterns/europa-config-assembly.md) |
-| titan | syntax highlighting | [patterns/titan-syntax-highlighting.md](patterns/titan-syntax-highlighting.md) |
-| rhea | syntax detection | [patterns/rhea-syntax-detection.md](patterns/rhea-syntax-detection.md) |
-| janus | reduction / aggregation | [patterns/janus-reduction-aggregation.md](patterns/janus-reduction-aggregation.md) |
-| hyperion | network listener | [patterns/hyperion-network-listener.md](patterns/hyperion-network-listener.md) |
-| pan | resource scheduling | [patterns/pan-resource-scheduling.md](patterns/pan-resource-scheduling.md) |
-| atlas | memory allocation | [patterns/atlas-memory-allocation.md](patterns/atlas-memory-allocation.md) |
-| dione | power management | [patterns/dione-power-management.md](patterns/dione-power-management.md) |
-| leda | feedback control | [patterns/leda-feedback-control.md](patterns/leda-feedback-control.md) |
-| pandora | simple workpieces | [patterns/pandora-simple-workpieces.md](patterns/pandora-simple-workpieces.md) |
-| eris | pipeline | [patterns/eris-pipeline.md](patterns/eris-pipeline.md) |
-| phoebe | resource lifecycle | [patterns/phoebe-resource-lifecycle.md](patterns/phoebe-resource-lifecycle.md) |
-| pluto | input parsing | [patterns/pluto-input-parsing.md](patterns/pluto-input-parsing.md) |
-| thebe | background compaction | [patterns/thebe-background-compaction.md](patterns/thebe-background-compaction.md) |
-| charon | durable workflow | [patterns/charon-durable-workflow.md](patterns/charon-durable-workflow.md) |
+| callisto | filesystem walk | [callisto-filesystem-walk.md](application-patterns/callisto-filesystem-walk.md) |
+| earth | sorting | [earth-sorting.md](application-patterns/earth-sorting.md) |
+| eris | pipeline | [eris-pipeline.md](application-patterns/eris-pipeline.md) |
+| europa | configuration assembly | [europa-config-assembly.md](application-patterns/europa-config-assembly.md) |
+| ganymede | output formatting | [ganymede-output-format.md](application-patterns/ganymede-output-format.md) |
+| hyperion | network listener | [hyperion-network-listener.md](application-patterns/hyperion-network-listener.md) |
+| iota | command execution | [iota-command-execution.md](application-patterns/iota-command-execution.md) |
+| janus | reduction / aggregation | [janus-reduction-aggregation.md](application-patterns/janus-reduction-aggregation.md) |
+| jupiter | validation | [jupiter-validation.md](application-patterns/jupiter-validation.md) |
+| mars | persistence | [mars-persistence.md](application-patterns/mars-persistence.md) |
+| mercury | display | [mercury-display.md](application-patterns/mercury-display.md) |
+| neptune | transformation | [neptune-transformation.md](application-patterns/neptune-transformation.md) |
+| pandora | simple workpieces | [pandora-simple-workpieces.md](application-patterns/pandora-simple-workpieces.md) |
+| phoebe | resource lifecycle | [phoebe-resource-lifecycle.md](application-patterns/phoebe-resource-lifecycle.md) |
+| pluto | input parsing | [pluto-input-parsing.md](application-patterns/pluto-input-parsing.md) |
+| rhea | syntax detection | [rhea-syntax-detection.md](application-patterns/rhea-syntax-detection.md) |
+| saturn | routing | [saturn-routing.md](application-patterns/saturn-routing.md) |
+| titan | syntax highlighting | [titan-syntax-highlighting.md](application-patterns/titan-syntax-highlighting.md) |
+| uranus | authentication | [uranus-authentication.md](application-patterns/uranus-authentication.md) |
+| venus | filtering | [venus-filtering.md](application-patterns/venus-filtering.md) |
+
+## System patterns
+
+| Planet | Pattern | File |
+|---|---|---|
+| atlas | memory allocation | [atlas-memory-allocation.md](system-patterns/atlas-memory-allocation.md) |
+| charon | durable workflow | [charon-durable-workflow.md](system-patterns/charon-durable-workflow.md) |
+| dione | power management | [dione-power-management.md](system-patterns/dione-power-management.md) |
+| leda | feedback control | [leda-feedback-control.md](system-patterns/leda-feedback-control.md) |
+| pan | resource scheduling | [pan-resource-scheduling.md](system-patterns/pan-resource-scheduling.md) |
+| thebe | background compaction | [thebe-background-compaction.md](system-patterns/thebe-background-compaction.md) |
 
 ## Common Clusters
 

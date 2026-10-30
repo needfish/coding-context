@@ -39,7 +39,7 @@ When the domain has clear invariants: define the invariant, let the framework ge
 
 ## Known Failure Modes
 
-Open each pattern's "Known Failure Modes" from [patterns/](../patterns/) and test against them.
+Open each pattern's "Known Failure Modes" from their pattern file and test against them.
 
 ## Log Surprises
 
