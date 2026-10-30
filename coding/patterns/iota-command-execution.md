@@ -1,4 +1,4 @@
-# io -- command execution
+# iota -- command execution
 
 ## Problem
 

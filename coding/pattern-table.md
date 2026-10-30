@@ -15,7 +15,7 @@ See [how-to-use.md](how-to-use.md) for a project-type-to-patterns reference.
 | uranus | authentication | [patterns/uranus-authentication.md](patterns/uranus-authentication.md) |
 | neptune | transformation | [patterns/neptune-transformation.md](patterns/neptune-transformation.md) |
 | callisto | filesystem walk | [patterns/callisto-filesystem-walk.md](patterns/callisto-filesystem-walk.md) |
-| io | command execution | [patterns/io-command-execution.md](patterns/io-command-execution.md) |
+| iota | command execution | [patterns/iota-command-execution.md](patterns/iota-command-execution.md) |
 | ganymede | output formatting | [patterns/ganymede-output-format.md](patterns/ganymede-output-format.md) |
 | europa | configuration assembly | [patterns/europa-config-assembly.md](patterns/europa-config-assembly.md) |
 | titan | syntax highlighting | [patterns/titan-syntax-highlighting.md](patterns/titan-syntax-highlighting.md) |
@@ -46,7 +46,7 @@ See [how-to-use.md](how-to-use.md) for a project-type-to-patterns reference.
 | pluto (parsing) | jupiter (validation), neptune (transformation), mars (persistence) |
 | phoebe (lifecycle) | mars (persistence), hyperion (listener), atlas (memory) |
 | thebe (compaction) | mars (persistence), pan (scheduling), earth (sorting) |
-| charon (workflow) | mars (persistence), saturn (routing), io (command execution) |
+| charon (workflow) | mars (persistence), saturn (routing), iota (command execution) |
 | janus (reduction) | venus (filtering), neptune (transformation), earth (sorting), eris (pipeline) |
 
 ## Refactoring Catalog

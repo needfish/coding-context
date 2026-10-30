@@ -61,3 +61,40 @@ See [modeling/modeling-communication.md](modeling/modeling-communication.md).
 | Error handling | [error-handling/error-handling.md](error-handling/error-handling.md) |
 | Testing | [testing/testing.md](testing/testing.md) |
 | Project conventions (git, dependencies, README) | [project-conventions/project-conventions.md](project-conventions/project-conventions.md) |
+
+## File Index
+
+### modeling/
+| File | Purpose |
+|---|---|
+| [process.md](modeling/process.md) | Modeling workflow: decomposition, types, operations, entities |
+| [invariants.md](modeling/invariants.md) | Categories of invariants and encoding strategy |
+| [type-precision.md](modeling/type-precision.md) | Precise types (ADTs, branded types, newtypes) over primitives |
+| [optionality.md](modeling/optionality.md) | Modeling absent/optional values (Option, null, sentinel) |
+| [state-machine.md](modeling/state-machine.md) | State transitions as sum types |
+| [operation-invariants.md](modeling/operation-invariants.md) | Invariants for each operation (empty, absent, boundary, partial failure) |
+| [many-forms.md](modeling/many-forms.md) | Kent's catalog of 37+ representations for a single fact |
+| [modeling-communication.md](modeling/modeling-communication.md) | How to communicate modeling decisions |
+
+### conventions/
+| File | Purpose |
+|---|---|
+| [naming.md](conventions/naming.md) | Naming style, grammar patterns, types/functions/variables/constants |
+| [layout.md](conventions/layout.md) | Code layout, heading format, file naming |
+| [comments.md](conventions/comments.md) | Comment conventions (say why, not what) |
+| [implementation.md](conventions/implementation.md) | Implementation workflow (wireframes, stubs, minimal forms) |
+| [correctness-reasoning.md](conventions/correctness-reasoning.md) | Loop invariants, higher-order functions, correctness reasoning |
+
+### refactoring/
+| File | Purpose |
+|---|---|
+| [reflect.md](refactoring/reflect.md) | Reflection process: assumptions, splitting triggers, co-change analysis, 5 whys |
+| [refactoring-catalog.md](refactoring/refactoring-catalog.md) | Refactoring catalog across OOP, functional, and data-oriented paradigms |
+| [defunctionalization.md](refactoring/defunctionalization.md) | Cross-paradigm transformation: higher-order functions to data types and back |
+
+### toolchain/
+| File | Purpose |
+|---|---|
+| [toolchain-defaults.md](toolchain/toolchain-defaults.md) | Package managers, per-language toolchain, EditorConfig, pre-commit hooks |
+| [web-stack.md](toolchain/web-stack.md) | Web app stack levels (default: Level 2 -- Preact + HTMX) |
+| [safety-tools.md](toolchain/safety-tools.md) | Linting, static analysis, and safety enforcement tools per language |

@@ -460,6 +460,7 @@ interface Salesman {
 ## 33. Redundant Supertype + Subtype
 
 ```typescript
+// Redundant: the Employee supertype is not needed, the subtype carries it
 interface Employee {
   id: string;
   name: string;
@@ -526,4 +527,3 @@ When designing APIs, database schemas, or data structures:
 
 **Practical counterpart:** Evan Czaplicki's "The Life of a File" (Elm Conf 2017) demonstrates this with concrete Elm code: two checkbox lists that look identical (settings toggles vs. fruit selection with a limit) need different data models. See `refactoring-catalog.md` for the full connection.
 
-**See also:** `examined-projects.md` for real-world examples.

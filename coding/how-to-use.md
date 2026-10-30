@@ -15,7 +15,7 @@ Guide to using the software problem pattern repository. Open during the Model ph
 | Chat / real-time messaging | pluto (parsing), hyperion (listener), saturn (routing), mars (persistence), pan (scheduling), ganymede (output formatting), mercury (display) |
 | Data pipeline / ETL | pluto (parsing), eris (pipeline), neptune (transformation), mars (persistence), charon (workflow), ganymede (output formatting) |
 | Game engine | pluto (parsing), saturn (routing), mercury (display), mars (persistence), neptune (transformation), pan (scheduling), ganymede (output formatting) |
-| Testing framework | pluto (parsing), callisto (filesystem walk), saturn (routing), eris (pipeline), ganymede (output formatting), mercury (display), io (command execution) |
+| Testing framework | pluto (parsing), callisto (filesystem walk), saturn (routing), eris (pipeline), ganymede (output formatting), mercury (display), iota (command execution) |
 | API gateway / reverse proxy | pluto (parsing), hyperion (listener), saturn (routing), uranus (authentication), neptune (transformation), pan (scheduling), ganymede (output formatting) |
 | File sync / backup | pluto (parsing), callisto (filesystem walk), venus (filtering), mars (persistence), neptune (transformation), charon (workflow), ganymede (output formatting) |
 | Search engine / indexer | pluto (parsing), callisto (filesystem walk), neptune (transformation), mercury (display), ganymede (output formatting), thebe (compaction) |
@@ -158,7 +158,7 @@ def walk(root, should_skip=None):
 | Users pipe through stdin in varied encodings | pluto | Add input source abstraction, encoding detection |
 | Path format tokens keep changing | neptune | Extract path formatter, unit-test independently |
 
-After each increment, run Evaluate (check failure modes, compare against examined projects) and Reflect (5 whys on any issues). If all root causes are resolved across all patterns, the design is stable. If not, loop back to Model.
+After each increment, run Evaluate (check failure modes) and Reflect (5 whys on any issues). If all root causes are resolved across all patterns, the design is stable. If not, loop back to Model.
 
 ## When to Ignore a Pattern
 

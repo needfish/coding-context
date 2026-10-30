@@ -1,6 +1,6 @@
 # context files
 - contains general guides I feed to coding agents in my daily use, researched after a year of reading about software engineering papers.
-- includes a pretty weird attempts at mapping scenarios/patterns of code, to help with modularizing.
+- maps scenarios of code to named patterns, to help with modularizing.
 
 
 ```
@@ -9,9 +9,8 @@
 |-- README.md                  # This file
 |-- .gitignore
 |-- answering/                 # Answering style examples
-|   +-- msdn-example-2.md      # there's MS's Raymond Chen's posts here that I would like the agent to copy, but it conflicts    with the no first person rule
+|   +-- msdn-example-2.md      # there's MS's Raymond Chen's posts here that I would like the agent to copy, but it conflicts with the no first person rule
 +-- coding/                    # Coding conventions and patterns
-    |-- README.md
     |-- conventions/            # Code style conventions
     |   |-- comments.md
     |   |-- correctness-reasoning.md
@@ -20,7 +19,6 @@
     |   +-- naming.md
     |-- error-handling/
     |   +-- error-handling.md
-    |-- examined-projects.md
     |-- heuristics/
     |   +-- heuristics.md
     |-- how-to-use.md
@@ -44,7 +42,7 @@
     |   |-- europa-config-assembly.md
     |   |-- ganymede-output-format.md
     |   |-- hyperion-network-listener.md
-    |   |-- io-command-execution.md
+    |   |-- iota-command-execution.md
     |   |-- janus-reduction-aggregation.md
     |   |-- jupiter-validation.md
     |   |-- leda-feedback-control.md
