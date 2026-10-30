@@ -67,7 +67,8 @@
 - Prefer functions on immutable data structures over objects with methods.
 - Keep side effects such as IO, database, web fetching, in an isolated function.
 - Bail on Fail: Panic early on side effect fail.
-- Keep if statements higher on the call order (move to the caller), and for statements lower (make the function being called operate on a singular)
+- Push ifs up. Hoist branches to the caller. Push fors down. Callees process one item.
+- Keep file structure flat. Deep directories mean a module wants a name or a split.
 - Verification on Initialization: Put validation code on construction of a custom data type
 - In function signatures, prefer listing out all items the function will intake or modify, as well as output.
 - Always start with [DRAFT] to suggest data modeling and subsequent function signatures only, implement if user agrees.
