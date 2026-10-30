@@ -1,10 +1,9 @@
 # agents-patterns-feed
+- maps scenarios of code to named patterns, to help with modularizing.
 
 ```
 |-- AGENTS.md
 |-- README.md
-|-- answering/
-|   `-- msdn-example-2.md
 |-- bashutils.txt
 `-- coding/
     |-- README.md
@@ -52,7 +51,6 @@
     |   |-- state-machine.md
     |   `-- type-precision.md
     |-- pattern-table.md
-    |-- patterns/
     |-- project-conventions/
     |   `-- project-conventions.md
     |-- refactoring/
