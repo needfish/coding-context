@@ -13,7 +13,7 @@ Subdirectories: toolchain/, refactoring/, modeling/, conventions/, heuristics/, 
 
 ## Development Constraints
 
-- Open the catalog at [~/.context/coding/](~/.context/coding/) when starting a new project or refactoring. Start with [how-to-use.md](~/.context/coding/how-to-use.md) to find project type and core patterns.
+- Open this catalog when starting a new project or refactoring. Start with [how-to-use.md](how-to-use.md) to find project type and core patterns.
 - Serve only the immediate request. No speculative extras.
 - Use the standard library when it covers the need.
 - Prefer built-in platform features.
