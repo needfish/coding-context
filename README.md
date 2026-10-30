@@ -1,7 +1,4 @@
 # agents-patterns-feed
-- contains general guides I feed to coding agents in my daily use, researched after a year of reading about software engineering papers.
-- maps scenarios of code to named patterns, to help with modularizing.
-
 
 ```
 .
