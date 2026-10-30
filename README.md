@@ -1,4 +1,4 @@
-# agents-patterns-feed
+# coding-context
 - maps scenarios of code to named patterns, to help with modularizing.
 
 ```

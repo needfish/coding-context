@@ -1,4 +1,4 @@
-# coding
+# coding-context
 
 Subdirectories: toolchain/, refactoring/, modeling/, conventions/, heuristics/, error-handling/, testing/, project-conventions/, application-patterns/, system-patterns.
 
